@@ -1,0 +1,87 @@
+/* مزوّد — Mazood brand tokens. المصدر الوحيد للألوان والمسافات والزوايا.
+   لا تكتب أي لون hex خارج هذا الملف. لتغيير الهوية: غيّر القيم هنا فقط. */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
+
+:root, [data-theme="light"] {
+  --navy: #0F2A44;
+  --navy-700: #1E4466;
+  --navy-block: var(--navy);
+  --amber: #F2A900;
+  --steel: #5B6B7A;
+  --concrete: #EEF0F2;
+  --surface: #FFFFFF;
+  --surface-alt: #F4F6F8;
+  --ink: #0F2A44;
+  --ink-muted: #5B6B7A;
+  --line: #DDE2E7;
+  --line-strong: #8696A5;
+  --primary: var(--navy);
+  --on-primary: #FFFFFF;
+  --accent: var(--amber);
+  --on-accent: var(--navy);
+  --accent-soft: #FDF3D6;
+  --on-accent-soft: #7A5600;
+  --success: #176B47;
+  --success-soft: #E3F4EC;
+  --danger: #B93A26;
+}
+
+[data-theme="dark"] {
+  --navy-block: #2A5A86;
+  --surface: #0B1B2B;
+  --surface-alt: #12263A;
+  --ink: #EEF0F2;
+  --ink-muted: #A3B1BE;
+  --line: #24394F;
+  --line-strong: #5E7489;
+  --primary: var(--amber);
+  --on-primary: var(--navy);
+  --accent-soft: #3A2E0A;
+  --on-accent-soft: #F2C14E;
+  --success: #4CC38A;
+  --success-soft: #12352A;
+  --danger: #F08A73;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --navy-block: #2A5A86;
+    --surface: #0B1B2B;
+    --surface-alt: #12263A;
+    --ink: #EEF0F2;
+    --ink-muted: #A3B1BE;
+    --line: #24394F;
+    --line-strong: #5E7489;
+    --primary: var(--amber);
+    --on-primary: var(--navy);
+    --accent-soft: #3A2E0A;
+    --on-accent-soft: #F2C14E;
+    --success: #4CC38A;
+    --success-soft: #12352A;
+    --danger: #F08A73;
+  }
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+  --font-sans: "IBM Plex Sans Arabic", Tahoma, system-ui, sans-serif;
+}
+
+/* أنماط النص */
+.text-display { font-family: var(--font-sans); font-size: 40px; line-height: 48px; font-weight: 700; }
+.text-h1 { font-family: var(--font-sans); font-size: 28px; line-height: 36px; font-weight: 700; }
+.text-h2 { font-family: var(--font-sans); font-size: 20px; line-height: 28px; font-weight: 600; }
+.text-body { font-family: var(--font-sans); font-size: 16px; line-height: 26px; font-weight: 400; }
+.text-body-sm { font-family: var(--font-sans); font-size: 14px; line-height: 22px; font-weight: 400; }
+.text-label { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 600; }
+.text-caption { font-family: var(--font-sans); font-size: 12px; line-height: 18px; font-weight: 400; }
+.text-price { font-family: var(--font-sans); font-size: 22px; line-height: 28px; font-weight: 700; }

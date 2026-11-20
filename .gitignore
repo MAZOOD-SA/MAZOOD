@@ -1,0 +1,41 @@
+# ملفات الأسرار: ممنوع ترفع للمستودع أبدًا
+# (المسموح بس .env.example لأنه فيه أسماء المتغيرات بدون قيمها)
+.env
+.env.*
+!.env.example
+*.env
+
+# مفاتيح وشهادات وكلمات مرور
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+id_rsa*
+id_ed25519*
+secrets/
+secrets.*
+credentials.json
+service-account*.json
+google-services.json
+GoogleService-Info.plist
+*.secret
+*password*
+*passwd*
+
+# إعدادات محلية خاصة بجهاز كل شخص
+.claude/settings.local.json
+.DS_Store
+Thumbs.db
+
+# ملفات تُبنى تلقائيًا
+node_modules/
+dist/
+build/
+.expo/
+.next/
+coverage/
+*.log
