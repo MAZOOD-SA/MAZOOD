@@ -17,6 +17,11 @@
   --line-strong: #8696A5;
   --primary: var(--navy);
   --on-primary: #FFFFFF;
+  /* الزر الرئيسي: مليان كحلي في الفاتح، وبإطار كهرماني في الداكن
+     عشان يبقى زر الإجراء الأهم (accent) هو الكهرماني المليان الوحيد في الشاشة */
+  --btn-primary-bg: var(--primary);
+  --btn-primary-fg: var(--on-primary);
+  --btn-primary-border: var(--primary);
   --accent: var(--amber);
   --on-accent: var(--navy);
   --accent-soft: #FDF3D6;
@@ -36,6 +41,9 @@
   --line-strong: #5E7489;
   --primary: var(--amber);
   --on-primary: var(--navy);
+  --btn-primary-bg: transparent;
+  --btn-primary-fg: var(--amber);
+  --btn-primary-border: var(--amber);
   --accent-soft: #3A2E0A;
   --on-accent-soft: #F2C14E;
   --success: #4CC38A;
@@ -54,6 +62,9 @@
     --line-strong: #5E7489;
     --primary: var(--amber);
     --on-primary: var(--navy);
+    --btn-primary-bg: transparent;
+    --btn-primary-fg: var(--amber);
+    --btn-primary-border: var(--amber);
     --accent-soft: #3A2E0A;
     --on-accent-soft: #F2C14E;
     --success: #4CC38A;
