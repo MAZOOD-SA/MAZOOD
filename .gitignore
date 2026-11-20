@@ -23,8 +23,6 @@ service-account*.json
 google-services.json
 GoogleService-Info.plist
 *.secret
-*password*
-*passwd*
 
 # إعدادات محلية خاصة بجهاز كل شخص
 .claude/settings.local.json
