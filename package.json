@@ -1,0 +1,20 @@
+{
+  "name": "mazood",
+  "private": true,
+  "description": "منصة مزوّد: الموقع وتطبيق iPhone وتطبيق Android من كود واحد",
+  "packageManager": "pnpm@10.28.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "tokens": "node packages/brand/scripts/build-tokens.mjs",
+    "check:colors": "node scripts/check-no-hex-colors.mjs",
+    "typecheck": "pnpm --filter @mazood/app typecheck",
+    "test": "pnpm tokens && pnpm check:colors && pnpm typecheck && vitest run",
+    "web": "pnpm --filter @mazood/app web",
+    "start": "pnpm --filter @mazood/app start",
+    "build:web": "pnpm --filter @mazood/app build:web"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4",
+    "typescript": "~5.9.2"
+  }
+}

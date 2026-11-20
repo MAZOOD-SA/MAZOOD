@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "مزوّد",
+    "slug": "mazood",
+    "scheme": "mazood",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "sa.mazood.app"
+    },
+    "android": {
+      "package": "sa.mazood.app"
+    },
+    "web": {
+      "output": "single",
+      "bundler": "metro",
+      "lang": "ar"
+    },
+    "extra": {
+      "supportsRTL": true
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "asyncRoutes": false
+        }
+      ],
+      "expo-status-bar",
+      "expo-font",
+      "expo-splash-screen"
+    ]
+  }
+}
