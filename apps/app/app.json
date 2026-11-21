@@ -19,7 +19,10 @@
       "lang": "ar"
     },
     "extra": {
-      "supportsRTL": true
+      "supportsRTL": true,
+      "eas": {
+        "projectId": "85b5ac03-84e9-4cc2-b2ab-ec88d567cae4"
+      }
     },
     "plugins": [
       [
