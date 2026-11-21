@@ -1,5 +1,5 @@
 // رفع طلب جديد. «إرسال الطلب» هو زر accent الوحيد في الشاشة.
-// التحقق من المدخلات هنا للتجربة فقط. في المرحلة ٢ الخادم يتحقق من كل مدخل قبل الحفظ.
+// التحقق هنا بنفس قواعد الخادم (packages/shared) عشان الرسالة تطلع فورًا، والخادم يتحقق مرة ثانية قبل الحفظ.
 import { spacing } from "@mazood/brand";
 import { IconPaperclip, IconSend } from "@/components/icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -10,24 +10,29 @@ import { Field } from "@/components/Field";
 import { Screen, SectionTitle } from "@/components/layout";
 import { AppText, Button, Chips } from "@/components/ui";
 import { CATEGORIES, categoryById, type CategoryId } from "@/data/categories";
-import { useStore } from "@/data/store";
+import { newRequestSchema } from "@mazood/shared";
+import { useAuth } from "@/auth/AuthProvider";
+import { useRequests } from "@/data/requests";
 import type { When } from "@/data/types";
 import { useI18n } from "@/i18n/I18nProvider";
-
-const DEFAULT_LOCATION = { ar: "مدينة سدير الصناعية · مصنع 14", en: "Sudair Industrial City · Factory 14" };
+import { ApiError } from "@/lib/api";
+import { errorMessage } from "@/lib/errors";
 
 export default function NewRequest() {
   const { t, tl } = useI18n();
-  const { createRequest } = useStore();
+  const { me } = useAuth();
+  const requests = useRequests();
   const params = useLocalSearchParams<{ category?: string }>();
   const initial = CATEGORIES.some((c) => c.id === params.category) ? (params.category as CategoryId) : null;
 
   const [category, setCategory] = useState<CategoryId | null>(initial);
   const [typeId, setTypeId] = useState<string | null>(initial ? categoryById(initial).types[0].id : null);
   const [details, setDetails] = useState("");
-  const [location, setLocation] = useState(tl(DEFAULT_LOCATION));
+  // الموقع الافتراضي: المصنع نفسه، ويقدر يغيّره.
+  const [location, setLocation] = useState(me?.factory ? `${me.factory.name}، ${me.factory.city}` : "");
   const [when, setWhen] = useState<When>("tomorrow");
-  const [errors, setErrors] = useState<{ category?: string; details?: string }>({});
+  const [errors, setErrors] = useState<{ category?: string; details?: string; location?: string; form?: string }>({});
+  const [sending, setSending] = useState(false);
   const [attachNote, setAttachNote] = useState(false);
 
   const cat = category ? categoryById(category) : null;
@@ -38,30 +43,46 @@ export default function NewRequest() {
     setErrors((e) => ({ ...e, category: undefined }));
   }
 
-  function submit() {
+  /** يحوّل أخطاء التحقق (من التطبيق أو الخادم) لرسالة تحت كل خانة. */
+  function fieldErrors(paths: string[]): typeof errors {
     const next: typeof errors = {};
-    if (!category || !typeId) next.category = t("categoryRequired");
-    if (details.trim().length < 10) next.details = t("detailsTooShort");
-    setErrors(next);
-    if (next.category || next.details || !category || !typeId) return;
+    if (paths.some((p) => p === "category" || p === "typeId")) next.category = t("categoryRequired");
+    if (paths.includes("details")) next.details = t("detailsTooShort");
+    if (paths.includes("location")) next.location = t("locationRequired");
+    return next;
+  }
 
-    const type = categoryById(category).types.find((x) => x.id === typeId)!;
-    const id = createRequest({
-      category,
-      typeId,
-      title: type.name,
-      details: details.trim(),
-      location: { ar: location.trim(), en: location.trim() },
-      when,
-    });
-    router.replace({ pathname: "/request/[id]", params: { id, created: "1" } });
+  async function submit() {
+    const input = { category: category ?? "", typeId: typeId ?? "", details, location, when };
+    const check = newRequestSchema.safeParse(input);
+    if (!check.success) return setErrors(fieldErrors(check.error.issues.map((i) => String(i.path[0]))));
+    setErrors({});
+    setSending(true);
+    try {
+      const created = await requests.create(check.data);
+      router.replace({ pathname: "/request/[id]", params: { id: created.id, created: "1" } });
+    } catch (e) {
+      if (e instanceof ApiError && e.code === "invalid_input" && e.body.issues) setErrors(fieldErrors(e.body.issues.map((i) => i.path)));
+      else setErrors({ form: errorMessage(t, e) });
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
     <Screen
       title={t("newRequestTitle")}
       back
-      footer={<Button label={t("submitRequest")} icon={IconSend} variant="accent" size="lg" full onPress={submit} />}
+      footer={
+        <View style={{ gap: spacing["2"] }}>
+          {errors.form && (
+            <AppText variant="bodySm" color="danger">
+              {errors.form}
+            </AppText>
+          )}
+          <Button label={t("submitRequest")} icon={IconSend} variant="accent" size="lg" full loading={sending} disabled={sending} onPress={submit} />
+        </View>
+      }
     >
       <SectionTitle title={t("chooseCategory")} />
       {cat ? (
@@ -105,7 +126,16 @@ export default function NewRequest() {
         error={errors.details}
       />
 
-      <Field label={t("locationLabel")} value={location} onChangeText={setLocation} maxLength={200} />
+      <Field
+        label={t("locationLabel")}
+        value={location}
+        onChangeText={(v) => {
+          setLocation(v);
+          if (errors.location) setErrors((e) => ({ ...e, location: undefined }));
+        }}
+        maxLength={200}
+        error={errors.location}
+      />
 
       <SectionTitle title={t("whenLabel")} />
       <Chips<When>

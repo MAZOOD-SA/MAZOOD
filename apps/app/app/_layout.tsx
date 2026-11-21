@@ -1,4 +1,4 @@
-// الغلاف الرئيسي للتطبيق: الخط، والوضع الفاتح والداكن، واللغة، والبيانات.
+// الغلاف الرئيسي للتطبيق: الخط، والوضع الفاتح والداكن، واللغة، والدخول، والبيانات.
 // نستورد الأوزان الأربعة المستخدمة بس (400 و500 و600 و700) عشان يصغر حجم الموقع.
 import { IBMPlexSansArabic_400Regular } from "@expo-google-fonts/ibm-plex-sans-arabic/400Regular";
 import { IBMPlexSansArabic_500Medium } from "@expo-google-fonts/ibm-plex-sans-arabic/500Medium";
@@ -11,7 +11,9 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AuthProvider } from "@/auth/AuthProvider";
 import { PrototypeBanner } from "@/components/layout";
+import { RequestsProvider } from "@/data/requests";
 import { StoreProvider } from "@/data/store";
 import { I18nProvider, useI18n } from "@/i18n/I18nProvider";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
@@ -36,9 +38,13 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <I18nProvider>
-          <StoreProvider>
-            <Shell />
-          </StoreProvider>
+          <AuthProvider>
+            <StoreProvider>
+              <RequestsProvider>
+                <Shell />
+              </RequestsProvider>
+            </StoreProvider>
+          </AuthProvider>
         </I18nProvider>
       </ThemeProvider>
     </SafeAreaProvider>

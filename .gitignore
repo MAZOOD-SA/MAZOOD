@@ -37,3 +37,4 @@ build/
 .next/
 coverage/
 *.log
+apps/api/src/generated/

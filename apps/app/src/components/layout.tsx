@@ -86,7 +86,7 @@ export function ScreenHeader({ title, back }: { title: string; back?: boolean })
   );
 }
 
-/** شريط رفيع أعلى كل الشاشات يوضّح إن هذي نسخة تجريبية ببيانات وهمية. */
+/** شريط رفيع أعلى كل الشاشات يوضّح إن هذي نسخة تطوير، وإن العروض والفواتير تجريبية. */
 export function PrototypeBanner() {
   const { colors } = useTheme();
   const { t } = useI18n();

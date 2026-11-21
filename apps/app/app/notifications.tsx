@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { Screen } from "@/components/layout";
-import { AppText, Card, Row } from "@/components/ui";
+import { AppText, Card, Notice, Row } from "@/components/ui";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -23,6 +23,7 @@ export default function Notifications() {
 
   return (
     <Screen title={t("notifications")} back>
+      <Notice text={t("demoListNote")} />
       {state.notifications.length === 0 ? (
         <AppText color="inkMuted">{t("noNotifications")}</AppText>
       ) : (

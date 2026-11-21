@@ -1,0 +1,194 @@
+// شكل قاعدة البيانات للمرحلة 2. الشرح الكامل في docs/architecture.md.
+// القاعدة: أسماء الجداول والأعمدة في القاعدة نفسها snake_case، وفي الكود camelCase.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  factory
+  provider
+
+  @@map("user_role")
+}
+
+enum UserStatus {
+  active
+  suspended
+
+  @@map("user_status")
+}
+
+enum Locale {
+  ar
+  en
+
+  @@map("locale")
+}
+
+enum RequestStatus {
+  awaiting_offers
+  in_progress
+  completed
+  cancelled
+
+  @@map("request_status")
+}
+
+enum RequestWhen {
+  today
+  tomorrow
+  this_week
+
+  @@map("request_when")
+}
+
+/// كل شخص يدخل المنصة. الدخول برقم الجوال بس، وما فيه كلمات مرور.
+model User {
+  id        String     @id @default(uuid()) @db.Uuid
+  /// بصيغة +9665XXXXXXXX دائمًا (packages/shared/src/phone.ts)
+  phone     String     @unique
+  role      UserRole   @default(factory)
+  status    UserStatus @default(active)
+  locale    Locale     @default(ar)
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  memberships FactoryMember[]
+  sessions    Session[]
+
+  @@map("users")
+}
+
+/// المصانع. السجل والرقم الضريبي اختياريين لين يتجاوب سؤال 9 في PLAN.md.
+model Factory {
+  id                 String   @id @default(uuid()) @db.Uuid
+  name               String
+  city               String
+  contactName        String   @map("contact_name")
+  commercialRegister String?  @map("commercial_register")
+  vatNumber          String?  @map("vat_number")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  members  FactoryMember[]
+  requests ServiceRequest[]
+
+  @@map("factories")
+}
+
+/// مين من المستخدمين تابع لأي مصنع. في المرحلة 2 كل مستخدم له مصنع واحد (userId فريد).
+model FactoryMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  factoryId String   @map("factory_id") @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  /// owner: صاحب الحساب. أدوار ثانية (مشتريات، محاسب) لاحقًا (سؤال 11)
+  role      String   @default("owner")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  factory Factory @relation(fields: [factoryId], references: [id], onDelete: Restrict)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([factoryId])
+  @@map("factory_members")
+}
+
+/// رموز التحقق. الرمز نفسه ما يُحفظ أبدًا، نحفظ بصمته (HMAC) بس.
+model OtpChallenge {
+  id            String    @id @default(uuid()) @db.Uuid
+  phone         String
+  codeHash      String    @map("code_hash")
+  /// بصمة عنوان IP (مو العنوان نفسه)، لتحديد عدد الطلبات من نفس الجهاز
+  ipHash        String    @map("ip_hash")
+  attempts      Int       @default(0)
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
+  consumedAt    DateTime? @map("consumed_at") @db.Timestamptz(3)
+  invalidatedAt DateTime? @map("invalidated_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([phone, createdAt])
+  @@index([ipHash, createdAt])
+  @@map("otp_challenges")
+}
+
+/// جلسة دخول وحدة (جهاز واحد). الخروج أو كشف سرقة مفتاح يلغيها كاملة.
+model Session {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  client     String
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastUsedAt DateTime  @default(now()) @map("last_used_at") @db.Timestamptz(3)
+  /// نهاية الجلسة القصوى: 30 يوم من آخر تجديد
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
+  /// ليش انلغت: logout أو refresh_reuse
+  revokeReason String? @map("revoke_reason")
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  refreshTokens RefreshToken[]
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// مفاتيح التجديد. كل مفتاح ينستخدم مرة وحدة ويتبدّل. نحفظ بصمته (SHA-256) بس.
+/// إذا انستخدم مفتاح قديم (usedAt مو فاضي) معناها انسرق، فتنلغي الجلسة كلها.
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  sessionId String    @map("session_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("refresh_tokens")
+}
+
+/// طلبات المصانع.
+model ServiceRequest {
+  id          String        @id @default(uuid()) @db.Uuid
+  factoryId   String        @map("factory_id") @db.Uuid
+  createdById String        @map("created_by_id") @db.Uuid
+  /// معرّف القسم من packages/shared/src/categories.ts
+  category    String
+  typeId      String        @map("type_id")
+  details     String
+  location    String
+  when        RequestWhen
+  status      RequestStatus @default(awaiting_offers)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  cancelledAt DateTime?     @map("cancelled_at") @db.Timestamptz(3)
+
+  factory Factory @relation(fields: [factoryId], references: [id], onDelete: Restrict)
+
+  @@index([factoryId, createdAt(sort: Desc), id])
+  @@map("requests")
+}
+
+/// سجل كل إجراء: مين سوّى وش ومتى. الإضافة بس.
+/// التعديل والحذف ممنوع بـ trigger داخل قاعدة البيانات (شوف ملف الترحيل الأول).
+/// actorUserId بدون ربط (foreign key) عمدًا، عشان السجل ما يتأثر لو تغيّر المستخدم.
+model AuditLog {
+  id          BigInt   @id @default(autoincrement())
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  /// مثل auth.login أو request.create
+  action      String
+  entityType  String?  @map("entity_type")
+  entityId    String?  @map("entity_id")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([entityType, entityId])
+  @@index([actorUserId, createdAt])
+  @@map("audit_log")
+}

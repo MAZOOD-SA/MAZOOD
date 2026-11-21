@@ -3,7 +3,7 @@ import { spacing } from "@mazood/brand";
 import { router } from "expo-router";
 import { View } from "react-native";
 import { Screen } from "@/components/layout";
-import { AppText, Badge, Card, Row } from "@/components/ui";
+import { AppText, Badge, Card, Notice, Row } from "@/components/ui";
 import { invoiceTotals } from "@/data/invoices";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -14,6 +14,7 @@ export default function Invoices() {
 
   return (
     <Screen title={t("invoicesTitle")}>
+      <Notice text={t("demoListNote")} />
       {state.invoices.length === 0 ? (
         <AppText variant="bodySm" color="inkMuted">
           {t("noInvoices")}

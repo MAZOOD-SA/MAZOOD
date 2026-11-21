@@ -1,4 +1,5 @@
-// بيانات وهمية للنسخة التجريبية فقط. الأسماء والأرقام كلها من خيالنا.
+// بيانات تجريبية (وهمية) تبيّن دورة العروض والفواتير لين تُبنى حقيقية في المرحلة 4 و5.
+// الأسماء والأرقام كلها من خيالنا، وتظهر في الواجهة بشارة «تجريبي».
 // الأرقام الضريبية والسجلات هنا شكلية وغير صالحة عمدًا.
 import { riyals } from "@/lib/money";
 import type { AppNotification, Factory, Invoice, Offer, Provider, ServiceRequest } from "./types";
@@ -35,6 +36,7 @@ export function seedRequests(): ServiceRequest[] {
       when: "tomorrow",
       createdAt: minutesAgo(15),
       status: "awaiting_offers",
+      demo: true,
     },
     {
       id: "r1000",
@@ -48,6 +50,7 @@ export function seedRequests(): ServiceRequest[] {
       status: "completed",
       acceptedOfferId: "o2001",
       invoiceId: "i3001",
+      demo: true,
     },
     {
       id: "r0999",
@@ -60,6 +63,7 @@ export function seedRequests(): ServiceRequest[] {
       createdAt: minutesAgo(60 * 24 * 3),
       status: "in_progress",
       acceptedOfferId: "o2101",
+      demo: true,
     },
   ];
 }
@@ -137,32 +141,5 @@ export function seedNotifications(): AppNotification[] {
     { id: "n3", text: { ar: "وصلك 3 عروض على طلب السطحة", en: "You have 3 quotes on the flatbed request" }, createdAt: minutesAgo(2), read: false, requestId: "r1001" },
     { id: "n2", text: { ar: "الفاتورة MZ-2026-000127 جاهزة", en: "Invoice MZ-2026-000127 is ready" }, createdAt: minutesAgo(60 * 20), read: true },
     { id: "n1", text: { ar: "مؤسسة الرمال الذهبية بدأت تنفيذ طلب رمل الدفان", en: "Golden Sands started your fill sand request" }, createdAt: minutesAgo(60 * 24 * 2), read: true, requestId: "r0999" },
-  ];
-}
-
-/** عروض وهمية توصل تلقائيًا بعد ما يرفع المستخدم طلب جديد، عشان يشوف الدورة كاملة. */
-export function simulatedOffersFor(requestId: string, typeName: { ar: string; en: string }): Offer[] {
-  const now = new Date().toISOString();
-  return [
-    {
-      id: `${requestId}-a`,
-      requestId,
-      providerId: "p2",
-      priceHalalas: riyals(1850),
-      summary: { ar: `${typeName.ar} · التنفيذ بكرة · يوم واحد`, en: `${typeName.en} · tomorrow · one day` },
-      note: { ar: "السعر نهائي ويشمل كل شي.", en: "Final price, all included." },
-      createdAt: now,
-      status: "pending",
-    },
-    {
-      id: `${requestId}-b`,
-      requestId,
-      providerId: "p1",
-      priceHalalas: riyals(1700),
-      summary: { ar: `${typeName.ar} · التنفيذ خلال يومين`, en: `${typeName.en} · within two days` },
-      note: { ar: "نقدر نبدأ أبكر إذا توفرت المعدة.", en: "We can start earlier if equipment frees up." },
-      createdAt: now,
-      status: "pending",
-    },
   ];
 }

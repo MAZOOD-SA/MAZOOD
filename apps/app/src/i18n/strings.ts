@@ -4,7 +4,10 @@
 
 const ar = {
   appName: "مزوّد",
-  prototypeBanner: "نسخة تجريبية · كل البيانات وهمية",
+  prototypeBanner: "نسخة تطوير · العروض والفواتير تجريبية",
+  demo: "تجريبي",
+  demoRequestNote: "طلب تجريبي يبيّن شكل العروض والفاتورة. العروض الحقيقية تبدأ في المرحلة ٤.",
+  demoListNote: "العروض والفواتير والتنبيهات تجريبية لين المرحلة ٤ و٥.",
 
   // الدخول
   loginTitle: "ادخل برقم جوالك",
@@ -14,11 +17,46 @@ const ar = {
   sendCode: "أرسل الرمز",
   verifyTitle: "اكتب رمز التحقق",
   verifySubtitle: "أرسلنا رمز من ٦ أرقام إلى",
-  verifyPrototypeHint: "في النسخة التجريبية: أي ٦ أرقام تمشي.",
+  verifyDevHint: "وضع التطوير: الرمز يطلع في سجل الخادم (الطرفية اللي شغّلت فيها الخادم).",
+  codeWrongMany: "الرمز غلط. باقي لك {n} محاولات.",
+  codeWrongTwo: "الرمز غلط. باقي لك محاولتين.",
+  codeWrongOne: "الرمز غلط. باقي لك محاولة وحدة.",
+  codeLocked: "الرمز انلغى بعد ٥ محاولات غلط. اطلب رمز جديد.",
+  codeExpired: "الرمز انتهى أو انلغى. اطلب رمز جديد.",
+  resendCode: "أرسل رمز جديد",
+  resendIn: "رمز جديد بعد {s} ثانية",
+  codeResent: "أرسلنا رمز جديد.",
   codeLabel: "رمز التحقق",
   codeInvalid: "الرمز ٦ أرقام.",
   confirm: "تأكيد",
   changeNumber: "تغيير الرقم",
+
+  // الأخطاء العامة
+  errRateLimited: "محاولات كثيرة. جرّب بعد {m} دقيقة.",
+  errNetwork: "ما قدرنا نوصل للخادم. تأكد من الاتصال وجرّب مرة ثانية.",
+  errSms: "ما قدرنا نرسل الرسالة. جرّب بعد شوي.",
+  errSuspended: "حسابك موقوف. تواصل مع الدعم.",
+  errInvalidState: "ما ينفع هذا الإجراء على حالة الطلب الحالية.",
+  errGeneric: "صار خطأ عندنا. جرّب مرة ثانية.",
+  retry: "جرّب مرة ثانية",
+  loadMore: "عرض المزيد",
+  goHome: "ارجع للرئيسية",
+
+  // بيانات المصنع
+  profileTitle: "بيانات المصنع",
+  profileSubtitle: "نحتاجها مرة وحدة، عشان يعرف المزوّد مين يخدم ووين.",
+  factoryNameLabel: "اسم المصنع",
+  cityLabel: "المدينة",
+  contactNameLabel: "اسم المسؤول",
+  crLabel: "السجل التجاري (اختياري)",
+  vatLabel: "الرقم الضريبي (اختياري)",
+  saveProfile: "احفظ وكمّل",
+  saveChanges: "احفظ التعديلات",
+  editProfile: "عدّل بيانات المصنع",
+  nameRequired: "اكتب حرفين على الأقل.",
+  crInvalid: "السجل التجاري ١٠ أرقام.",
+  vatInvalid: "الرقم الضريبي ١٥ رقم، يبدأ بـ ٣ وينتهي بـ ٣.",
+  contactPerson: "المسؤول",
 
   // التبويبات
   tabHome: "الرئيسية",
@@ -62,7 +100,8 @@ const ar = {
   whenThisWeek: "خلال أسبوع",
   attachments: "المرفقات",
   addAttachment: "إضافة مرفق",
-  attachmentsLater: "رفع المرفقات يشتغل في المرحلة ٢.",
+  attachmentsLater: "رفع المرفقات يشتغل في مرحلة جاية.",
+  locationRequired: "اكتب الموقع.",
   submitRequest: "إرسال الطلب",
   requestSent: "وصل طلبك. بنبلغك أول ما يوصل عرض.",
 
@@ -89,6 +128,8 @@ const ar = {
   keepRequest: "رجوع",
   requestCancelled: "تم إلغاء الطلب.",
   notFound: "ما لقينا هذا الطلب.",
+  requestCancelledNote: "الطلب ملغي. تقدر ترفع طلب جديد بنفس القسم.",
+  newRequestSameCategory: "ارفع طلب جديد",
   back: "رجوع",
 
   // الفواتير
@@ -123,14 +164,17 @@ const ar = {
   privacyPolicy: "سياسة الخصوصية",
   signOut: "تسجيل الخروج",
   comingLater: "تشتغل في مرحلة لاحقة.",
-  prototypeNote: "هذي نسخة تجريبية (المرحلة ١) لعرض الشكل والتنقل. ما فيه خادم ولا بيانات حقيقية، وأي تغيير يرجع لأصله إذا حدّثت الصفحة.",
+  prototypeNote: "الدخول والطلبات حقيقية وتنحفظ في الخادم. العروض والفواتير والتنبيهات تجريبية لين المرحلة ٤ و٥، وترجع لأصلها إذا حدّثت الصفحة.",
 };
 
 export type StringKey = keyof typeof ar;
 
 const en: Record<StringKey, string> = {
   appName: "Mazood",
-  prototypeBanner: "Prototype · all data is sample data",
+  prototypeBanner: "Development build · quotes and invoices are sample data",
+  demo: "Sample",
+  demoRequestNote: "Sample request showing how quotes and invoices look. Real quotes start in phase 4.",
+  demoListNote: "Quotes, invoices and notifications are sample data until phases 4 and 5.",
 
   loginTitle: "Sign in with your mobile",
   loginSubtitle: "We'll text you a verification code.",
@@ -139,11 +183,44 @@ const en: Record<StringKey, string> = {
   sendCode: "Send code",
   verifyTitle: "Enter the code",
   verifySubtitle: "We sent a 6-digit code to",
-  verifyPrototypeHint: "Prototype: any 6 digits work.",
+  verifyDevHint: "Development mode: the code is printed in the server log (the terminal running the server).",
+  codeWrongMany: "Wrong code. {n} attempts left.",
+  codeWrongTwo: "Wrong code. 2 attempts left.",
+  codeWrongOne: "Wrong code. 1 attempt left.",
+  codeLocked: "This code was cancelled after 5 wrong attempts. Request a new one.",
+  codeExpired: "This code expired or was cancelled. Request a new one.",
+  resendCode: "Send a new code",
+  resendIn: "New code in {s}s",
+  codeResent: "We sent a new code.",
   codeLabel: "Verification code",
   codeInvalid: "The code is 6 digits.",
   confirm: "Confirm",
   changeNumber: "Change number",
+
+  errRateLimited: "Too many attempts. Try again in {m} min.",
+  errNetwork: "We couldn't reach the server. Check your connection and try again.",
+  errSms: "We couldn't send the text. Try again shortly.",
+  errSuspended: "Your account is suspended. Contact support.",
+  errInvalidState: "This action isn't possible in the request's current state.",
+  errGeneric: "Something went wrong on our side. Try again.",
+  retry: "Try again",
+  loadMore: "Show more",
+  goHome: "Back to home",
+
+  profileTitle: "Factory details",
+  profileSubtitle: "We need this once, so providers know who and where they're serving.",
+  factoryNameLabel: "Factory name",
+  cityLabel: "City",
+  contactNameLabel: "Contact person",
+  crLabel: "Commercial registration (optional)",
+  vatLabel: "VAT number (optional)",
+  saveProfile: "Save and continue",
+  saveChanges: "Save changes",
+  editProfile: "Edit factory details",
+  nameRequired: "Enter at least 2 characters.",
+  crInvalid: "Commercial registration is 10 digits.",
+  vatInvalid: "VAT number is 15 digits, starting and ending with 3.",
+  contactPerson: "Contact",
 
   tabHome: "Home",
   tabRequests: "Requests",
@@ -183,7 +260,8 @@ const en: Record<StringKey, string> = {
   whenThisWeek: "Within a week",
   attachments: "Attachments",
   addAttachment: "Add attachment",
-  attachmentsLater: "Attachments arrive in phase 2.",
+  attachmentsLater: "Attachments arrive in a later phase.",
+  locationRequired: "Enter the location.",
   submitRequest: "Send request",
   requestSent: "Request received. We'll notify you when the first quote arrives.",
 
@@ -209,6 +287,8 @@ const en: Record<StringKey, string> = {
   keepRequest: "Back",
   requestCancelled: "Request cancelled.",
   notFound: "We couldn't find this request.",
+  requestCancelledNote: "This request is cancelled. You can post a new one in the same category.",
+  newRequestSameCategory: "Post a new request",
   back: "Back",
 
   invoicesTitle: "Invoices",
@@ -241,7 +321,7 @@ const en: Record<StringKey, string> = {
   privacyPolicy: "Privacy policy",
   signOut: "Sign out",
   comingLater: "Coming in a later phase.",
-  prototypeNote: "This is a prototype (phase 1) to show the look and navigation. There is no server or real data, and changes reset when you reload.",
+  prototypeNote: "Sign-in and requests are real and saved on the server. Quotes, invoices and notifications are sample data until phases 4 and 5, and reset when you reload.",
 };
 
 export const strings = { ar, en };

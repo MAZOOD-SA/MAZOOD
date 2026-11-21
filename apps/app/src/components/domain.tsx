@@ -71,7 +71,7 @@ export function RequestStatusBadge({ request, pendingOffers }: { request: Servic
 }
 
 export function RequestCard({ request, pendingOffers, onPress }: { request: ServiceRequest; pendingOffers: number; onPress: () => void }) {
-  const { tl, relative } = useI18n();
+  const { t, tl, relative } = useI18n();
   return (
     <Card onPress={onPress} style={{ paddingVertical: spacing["3"], paddingHorizontal: 14 }}>
       <Row style={{ justifyContent: "space-between" }}>
@@ -83,7 +83,10 @@ export function RequestCard({ request, pendingOffers, onPress }: { request: Serv
             {relative(request.createdAt)}
           </AppText>
         </View>
-        <RequestStatusBadge request={request} pendingOffers={pendingOffers} />
+        <Row gap="1">
+          {request.demo && <Badge label={t("demo")} tone="muted" />}
+          <RequestStatusBadge request={request} pendingOffers={pendingOffers} />
+        </Row>
       </Row>
     </Card>
   );

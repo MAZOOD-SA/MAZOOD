@@ -1,21 +1,22 @@
 // حسابي: بيانات المصنع، واللغة، والمظهر، والخروج.
 import { spacing } from "@mazood/brand";
-import { IconInfoCircle, IconLogout } from "@/components/icons";
+import { IconInfoCircle, IconLogout, IconPencil } from "@/components/icons";
 import { router } from "expo-router";
 import { View } from "react-native";
 import { Screen, SectionTitle } from "@/components/layout";
 import { AppText, Button, Card, Chips, Divider, Notice } from "@/components/ui";
-import { FACTORY } from "@/data/seed";
-import { useStore } from "@/data/store";
+import { localMobile } from "@mazood/shared";
+import { useAuth } from "@/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Locale } from "@/lib/format";
 import { useTheme, type ThemeMode } from "@/theme/ThemeProvider";
 
 export default function Account() {
-  const { t, tl, locale, setLocale, digits, code } = useI18n();
+  const { t, locale, setLocale, digits, code } = useI18n();
   const { mode, setMode } = useTheme();
-  const { state, dispatch } = useStore();
-  const phone = state.phone ? `0${state.phone.slice(4)}` : "";
+  const { me, signOut } = useAuth();
+  const factory = me?.factory;
+  const phone = me ? localMobile(me.user.phone) : "";
 
   return (
     <Screen title={t("accountTitle")}>
@@ -23,13 +24,21 @@ export default function Account() {
         <AppText variant="caption" color="inkMuted">
           {t("factory")}
         </AppText>
-        <AppText variant="h2">{tl(FACTORY.name)}</AppText>
+        <AppText variant="h2">{factory?.name}</AppText>
         <AppText variant="bodySm" color="inkMuted" style={{ writingDirection: "ltr", textAlign: locale === "ar" ? "right" : "left" }}>
           {digits(phone)}
         </AppText>
         <Divider />
-        <InfoRow label={t("commercialRegister")} value={code(FACTORY.commercialRegister)} />
-        <InfoRow label={t("vatNumber")} value={code(FACTORY.vatNumber)} />
+        <InfoRow label={t("cityLabel")} value={factory?.city ?? "—"} ltr={false} />
+        <InfoRow label={t("contactPerson")} value={factory?.contactName ?? "—"} ltr={false} />
+        <InfoRow label={t("commercialRegister")} value={factory?.commercialRegister ? code(factory.commercialRegister) : "—"} />
+        <InfoRow label={t("vatNumber")} value={factory?.vatNumber ? code(factory.vatNumber) : "—"} />
+        <Button
+          label={t("editProfile")}
+          variant="ghost"
+          icon={IconPencil}
+          onPress={() => router.push({ pathname: "/complete-profile", params: { edit: "1" } })}
+        />
       </Card>
 
       <SectionTitle title={t("language")} />
@@ -59,8 +68,8 @@ export default function Account() {
         label={t("signOut")}
         variant="secondary"
         icon={IconLogout}
-        onPress={() => {
-          dispatch({ type: "signOut" });
+        onPress={async () => {
+          await signOut();
           router.replace("/login");
         }}
       />
@@ -68,13 +77,13 @@ export default function Account() {
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value, ltr = true }: { label: string; value: string; ltr?: boolean }) {
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: spacing["2"] }}>
       <AppText variant="bodySm" color="inkMuted">
         {label}
       </AppText>
-      <AppText variant="bodySm" style={{ writingDirection: "ltr" }}>
+      <AppText variant="bodySm" style={ltr ? { writingDirection: "ltr" } : undefined}>
         {value}
       </AppText>
     </View>

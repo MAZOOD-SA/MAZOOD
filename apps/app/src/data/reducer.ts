@@ -1,16 +1,12 @@
-// منطق الطلبات والعروض في النسخة التجريبية (بدون خادم).
-// القواعد هنا هي نفس قواعد العمل اللي بتنتقل للخادم في المرحلة ٢ و٤:
+// منطق العروض والفواتير التجريبية (بدون خادم). الطلبات الحقيقية صارت في الخادم (المرحلة ٢)،
+// وهذا الملف يخدم الطلبات التجريبية بس. القواعد هنا بتنتقل للخادم في المرحلة ٤ و٥:
 //   - المصنع يقبل عرض واحد بس، وباقي العروض تُرفض تلقائيًا.
 //   - ما ينقبل عرض إلا على طلب «بانتظار العروض».
 //   - تأكيد الاستلام يكمّل الطلب ويُصدر فاتورة.
 //   - الإلغاء مسموح بس قبل قبول أي عرض.
-import type { CategoryId } from "./categories";
-import type { AppNotification, Invoice, Offer, ServiceRequest, When } from "./types";
-import type { Localized } from "@/i18n/I18nProvider";
+import type { AppNotification, Invoice, Offer, ServiceRequest } from "./types";
 
 export type State = {
-  signedIn: boolean;
-  phone: string | null;
   requests: ServiceRequest[];
   offers: Offer[];
   invoices: Invoice[];
@@ -18,21 +14,7 @@ export type State = {
   invoiceCounter: number;
 };
 
-export type NewRequestInput = {
-  id: string;
-  category: CategoryId;
-  typeId: string;
-  title: Localized;
-  details: string;
-  location: Localized;
-  when: When;
-  now: string;
-};
-
 export type Action =
-  | { type: "signIn"; phone: string }
-  | { type: "signOut" }
-  | { type: "createRequest"; input: NewRequestInput }
   | { type: "offersArrived"; offers: Offer[]; now: string }
   | { type: "acceptOffer"; offerId: string; now: string }
   | { type: "confirmReceipt"; requestId: string; now: string }
@@ -41,29 +23,6 @@ export type Action =
 
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case "signIn":
-      return { ...state, signedIn: true, phone: action.phone };
-
-    case "signOut":
-      return { ...state, signedIn: false, phone: null };
-
-    case "createRequest": {
-      const { input } = action;
-      const request: ServiceRequest = {
-        id: input.id,
-        category: input.category,
-        typeId: input.typeId,
-        title: input.title,
-        // النص اللي كتبه المستخدم يظهر نفسه في اللغتين.
-        details: { ar: input.details, en: input.details },
-        location: input.location,
-        when: input.when,
-        createdAt: input.now,
-        status: "awaiting_offers",
-      };
-      return { ...state, requests: [request, ...state.requests] };
-    }
-
     case "offersArrived": {
       if (action.offers.length === 0) return state;
       const requestId = action.offers[0].requestId;

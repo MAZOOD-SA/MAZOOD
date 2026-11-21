@@ -1,10 +1,11 @@
-// أنواع البيانات في النسخة التجريبية. نفس الشكل المبسّط اللي في PLAN.md (القسم ٣)،
-// وفي المرحلة ٢ تصير جداول حقيقية في قاعدة البيانات.
+// أنواع البيانات اللي تعرضها الشاشات.
+// الطلبات: حقيقية من الخادم (demo: false)، أو تجريبية من seed.ts (demo: true) عشان تبان دورة العروض والفواتير.
+// العروض والفواتير والتنبيهات: تجريبية لين المرحلة 4 و5.
+import type { RequestStatus, When } from "@mazood/shared";
 import type { Localized } from "@/i18n/I18nProvider";
 import type { CategoryId } from "./categories";
 
-export type RequestStatus = "awaiting_offers" | "in_progress" | "completed" | "cancelled";
-export type When = "today" | "tomorrow" | "this_week";
+export type { RequestStatus, When };
 
 export type ServiceRequest = {
   id: string;
@@ -18,6 +19,8 @@ export type ServiceRequest = {
   status: RequestStatus;
   acceptedOfferId?: string;
   invoiceId?: string;
+  /** true: بيانات تجريبية (ما تنحفظ في الخادم). تظهر عليها شارة «تجريبي». */
+  demo: boolean;
 };
 
 export type Provider = {

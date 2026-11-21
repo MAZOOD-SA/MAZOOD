@@ -4,8 +4,6 @@ import { seedInvoices, seedNotifications, seedOffers, seedRequests } from "./see
 
 const now = "2026-11-20T12:00:00.000Z";
 const initial = (): State => ({
-  signedIn: true,
-  phone: "+966551234567",
   requests: seedRequests(),
   offers: seedOffers(),
   invoices: seedInvoices(),

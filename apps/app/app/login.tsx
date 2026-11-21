@@ -1,26 +1,40 @@
-// الدخول برقم الجوال. في النسخة التجريبية ما ترسل رسالة حقيقية.
-// في المرحلة ٢: الخادم يرسل رمز التحقق، ويحدد عدد المحاولات لكل رقم ولكل جهاز.
+// الدخول برقم الجوال: الخادم يرسل رمز تحقق، ويحدد عدد المحاولات لكل رقم ولكل جهاز.
 import { spacing } from "@mazood/brand";
-import { router } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
+import { useAuth } from "@/auth/AuthProvider";
+import { Field } from "@/components/Field";
 import { Screen } from "@/components/layout";
 import { LogoMark } from "@/components/Logo";
-import { Field } from "@/components/Field";
 import { AppText, Button } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
+import { api } from "@/lib/api";
+import { errorMessage } from "@/lib/errors";
 import { normalizeSaudiMobile } from "@/lib/format";
 
 export default function Login() {
   const { t } = useI18n();
+  const { me } = useAuth();
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
-  function submit() {
+  if (me) return <Redirect href="/" />;
+
+  async function submit() {
     const normalized = normalizeSaudiMobile(phone);
     if (!normalized) return setError(t("phoneInvalid"));
     setError(null);
-    router.push({ pathname: "/verify", params: { phone: normalized } });
+    setSending(true);
+    try {
+      await api.requestOtp(normalized);
+      router.push({ pathname: "/verify", params: { phone: normalized } });
+    } catch (e) {
+      setError(errorMessage(t, e));
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -43,11 +57,12 @@ export default function Login() {
         placeholder="05XXXXXXXX"
         keyboardType="phone-pad"
         autoComplete="tel"
+        maxLength={20}
         error={error}
         onSubmitEditing={submit}
         ltr
       />
-      <Button label={t("sendCode")} variant="accent" size="lg" full onPress={submit} />
+      <Button label={t("sendCode")} variant="accent" size="lg" full loading={sending} disabled={sending} onPress={submit} />
     </Screen>
   );
 }

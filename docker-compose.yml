@@ -1,0 +1,26 @@
+# قاعدة بيانات للتطوير والاختبارات على جهاز المبرمج. مو للتشغيل الحقيقي.
+# التشغيل: pnpm db:up  (أو: docker compose up -d db)
+#
+# اسم المستخدم وكلمة المرور هنا (mazood/mazood) للتطوير على الجهاز بس، وما تفتح إلا على localhost.
+# قاعدة التشغيل الحقيقي لها كلمة مرور مختلفة في إعدادات الاستضافة السرية.
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mazood
+      POSTGRES_PASSWORD: mazood
+      POSTGRES_DB: mazood
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - mazood-db:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mazood -d mazood"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  mazood-db:

@@ -10,7 +10,8 @@ import { LogoMark } from "@/components/Logo";
 import { AppText, Button } from "@/components/ui";
 import { CATEGORIES } from "@/data/categories";
 import { pendingOffersFor } from "@/data/reducer";
-import { FACTORY } from "@/data/seed";
+import { useAuth } from "@/auth/AuthProvider";
+import { useAllRequests } from "@/data/requests";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -20,10 +21,12 @@ const header = brandColors.light;
 
 export default function Home() {
   const { colors } = useTheme();
-  const { t, tl } = useI18n();
+  const { t } = useI18n();
+  const { me } = useAuth();
   const { state } = useStore();
+  const all = useAllRequests();
   const unread = state.notifications.some((n) => !n.read);
-  const recent = state.requests.slice(0, 3);
+  const recent = all.slice(0, 3);
   const width = { width: "100%" as const, maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" as const };
 
   return (
@@ -45,7 +48,7 @@ export default function Home() {
             </Pressable>
           </View>
           <AppText variant="bodySm" style={{ color: header.concrete, opacity: 0.8, marginTop: 18, fontSize: 13 }}>
-            {tl(FACTORY.name)} · {tl(FACTORY.city)}
+            {me?.factory?.name} · {me?.factory?.city}
           </AppText>
           <AppText variant="h2" weight={700} style={{ color: header.concrete, fontSize: 22, lineHeight: 30, marginTop: 2 }}>
             {t("homeQuestion")}
@@ -76,7 +79,7 @@ export default function Home() {
           <SectionTitle
             title={t("yourRequests")}
             action={
-              state.requests.length > 3 ? <Button label={t("viewAll")} variant="ghost" onPress={() => router.push("/requests")} style={{ paddingVertical: 4, paddingHorizontal: 8 }} /> : undefined
+              all.length > 3 ? <Button label={t("viewAll")} variant="ghost" onPress={() => router.push("/requests")} style={{ paddingVertical: 4, paddingHorizontal: 8 }} /> : undefined
             }
           />
         </View>

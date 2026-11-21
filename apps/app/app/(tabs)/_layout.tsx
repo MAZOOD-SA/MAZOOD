@@ -3,18 +3,21 @@ import { fontFamilyByWeight } from "@mazood/brand";
 import { IconClipboardList, IconFileInvoice, IconHome, IconUser } from "@/components/icons";
 import { Redirect, Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useStore } from "@/data/store";
+import { useAuth } from "@/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useTheme } from "@/theme/ThemeProvider";
 
 export default function TabsLayout() {
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { state } = useStore();
+  const { state, me } = useAuth();
   const insets = useSafeAreaInsets();
 
-  // الشاشات هذي للمستخدم الداخل بس.
-  if (!state.signedIn) return <Redirect href="/login" />;
+  // الشاشات هذي للمستخدم الداخل اللي كمّل بيانات مصنعه بس.
+  // (هذا للتنقل فقط: الخادم نفسه يرفض أي طلب بدون جلسة صالحة.)
+  if (state.status === "loading") return null;
+  if (!me) return <Redirect href="/login" />;
+  if (!me.factory) return <Redirect href="/complete-profile" />;
 
   return (
     <Tabs

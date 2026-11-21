@@ -1,3 +1,9 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# الحزم المسموح لها تشغّل سكربت عند التثبيت (pnpm يمنعها افتراضيًا للأمان)
+onlyBuiltDependencies:
+  - "@prisma/engines"
+  - prisma
+  - esbuild

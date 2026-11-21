@@ -15,6 +15,7 @@ export { default as IconHourglass } from "@tabler/icons-react-native/icons/IconH
 export { default as IconInfoCircle } from "@tabler/icons-react-native/icons/IconInfoCircle";
 export { default as IconLogout } from "@tabler/icons-react-native/icons/IconLogout";
 export { default as IconMapPin } from "@tabler/icons-react-native/icons/IconMapPin";
+export { default as IconPencil } from "@tabler/icons-react-native/icons/IconPencil";
 export { default as IconPaperclip } from "@tabler/icons-react-native/icons/IconPaperclip";
 export { default as IconPlus } from "@tabler/icons-react-native/icons/IconPlus";
 export { default as IconRosetteDiscountCheck } from "@tabler/icons-react-native/icons/IconRosetteDiscountCheck";
