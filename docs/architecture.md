@@ -82,8 +82,9 @@
 | `POST /v1/auth/logout` | داخل | يلغي الجلسة |
 | `GET /v1/me` | داخل | المستخدم ومصنعه |
 | `PUT /v1/factory` | مصنع | يحفظ بيانات الشركة |
-| `POST /v1/requests` | مصنع | يرفع طلب |
-| `GET /v1/requests`, `GET /v1/requests/:id` | مصنع | طلبات مصنعه فقط |
+| `POST /v1/requests` | مصنع | يرفع طلب. الرد فيه `reach`: كم مزوّد موثّق وصله (القرار ٤٠) |
+| `GET /v1/requests`, `GET /v1/requests/:id` | مصنع | طلبات مصنعه فقط. القائمة فيها `offerCount` و`newOfferCount`، والتفاصيل فيها `reach` |
+| `GET /v1/account/deletion`, `POST /v1/account/deletion` | مصنع أو مزوّد | حالة «طلب حذف الحساب»، وإرساله (السبب اختياري). ما ينمسح شي تلقائيًا (القرار ٣٩) |
 | `POST /v1/requests/:id/cancel` | مصنع | الإلغاء المباشر في أي حالة قبل ما يبدأ المزوّد. قبل القبول مجاني دائمًا، وبعده تنحسب الرسوم من السياسة المحفوظة (صفر الحين). يقبل `Idempotency-Key` |
 | `POST /v1/requests/:id/cancellation`, `/cancellation/withdraw` | مصنع | «اطلب الإلغاء» بعد البدء مع السبب (المزوّد يرد خلال المهلة)، أو سحبه |
 | `POST /v1/requests/:id/republish` | مصنع | إعادة نشر الطلب المنتهي، مع تعديل اختياري (`details`, `area`, `location`, `when`) |
@@ -153,9 +154,14 @@
 | `(tabs)/home.tsx` | `/home` | الرئيسية |
 | `(tabs)/requests.tsx` | `/requests` | طلباتي |
 | `(tabs)/invoices.tsx` | `/invoices` | الفواتير |
-| `(tabs)/account.tsx` | `/account` | حسابي (اللغة والمظهر والخروج) |
+| `(tabs)/account.tsx` | `/account` | حسابي: بيانات المصنع، وموظفين المصنع، واللغة والمظهر، وطلب حذف الحساب |
 | `factory-profile.tsx` | `/factory-profile` | بيانات المصنع (الوضع الحقيقي) |
-| `provider/index.tsx` | `/provider` | المزوّد: حالة التوثيق ومستنداته |
+| `provider/index.tsx` | `/provider` | المزوّد قبل التوثيق: حالة التوثيق ومستنداته (بعد التوثيق يحوّل للطلبات المتاحة) |
+| `provider/(tabs)/requests.tsx` | `/provider/requests` | الطلبات المتاحة. في الكمبيوتر: القائمة ونموذج العرض جنب بعض |
+| `provider/(tabs)/work.tsx` | `/provider/work` | شغلي: الشغل الجاري، وعروضي الفعّالة، والمنتهية، وحركة «انقبل عرضك» |
+| `provider/(tabs)/account.tsx` | `/provider/account` | حسابي للمزوّد: التقييم ورقم الالتزام، والمستندات، والتفضيلات، وطلب الحذف |
+| `provider/request/[id].tsx` | `/provider/request/:id` | الطلب المتاح ونموذج العرض (الجوال) |
+| `provider/job/[id].tsx` | `/provider/job/:id` | الطلب المنفّذ: بدأت، والصور، وتم التنفيذ، وتعديل السعر، والإلغاء، والاعتذار، والبلاغ |
 | `provider/profile.tsx` | `/provider/profile` | تسجيل بيانات المزوّد |
 | `provider/upload.tsx` | `/provider/upload` | رفع مستند |
 | `admin/index.tsx` | `/admin` | اللوحة: قائمة التوثيق، والمستندات المنتهية، والمزوّدين |
@@ -165,11 +171,21 @@
 
 كل مجموعة (`provider/`, `admin/`, `(tabs)/`) لها `_layout.tsx` يحوّل المستخدم لشاشاته حسب نوع حسابه (`src/lib/home-route.ts`).
 | `request/new.tsx` | `/request/new` | طلب جديد |
-| `request/[id].tsx` | `/request/:id` | تفاصيل الطلب والعروض |
+| `request/[id].tsx` | `/request/:id` | تفاصيل الطلب: مقارنة العروض والقبول، والتنفيذ، والإلغاء، والتأكيد، والتقييم، والبلاغ. الأزرار من الخادم (`actions`) |
 | `invoice/[id].tsx` | `/invoice/:id` | عرض الفاتورة |
 | `notifications.tsx` | `/notifications` | التنبيهات |
 
-المجلد `(tabs)` بين قوسين يعني: الشاشات فيه تظهر مع شريط التبويبات السفلي، والاسم ما يدخل في الرابط.
+المجلد `(tabs)` بين قوسين يعني: الشاشات فيه تظهر مع شريط التبويبات السفلي (في الجوال)، والاسم ما يدخل في الرابط.
+
+**الجوال والكمبيوتر (الخطوة ١١، القرار ٣٧):** المقاسات من `brand/tokens.json` عن طريق `useLayout()` (`src/lib/layout.ts`). في التابلت والكمبيوتر القائمة الجانبية (`src/components/nav.tsx`) تلف كل الشاشات من `app/_layout.tsx`، والتبويبات تختفي. أدوات الترتيب في `src/components/layout.tsx`: `Screen` (عرض `content` للنماذج أو `page` للقوائم)، و`TwoColumn` (عمودين في الكمبيوتر)، و`Grid` (عدد البطاقات حسب العرض).
+
+**ملفات مهمة في الواجهة:**
+- `src/api/types.ts`: شكل ردود الخادم لشاشات المرحلة ٤.
+- `src/demo/server.ts`: الخادم التجريبي داخل المتصفح (القرار ٣٦).
+- `src/components/flow.tsx`: التحديث كل ٢٠ ثانية (`useAutoRefresh`)، وحركة المكافأة (`CountUp` و`RewardCheck`، تحترم «تقليل الحركة»)، والنجوم، والخط الزمني.
+- `src/components/provider.tsx`: بطاقة الطلب المتاح، ونموذج العرض، وبطاقة الشغل.
+- `src/components/account.tsx`: التفضيلات، وطلب حذف الحساب، والخروج.
+- `src/i18n/strings-flow.ts`: نصوص شاشات المرحلة ٤.
 
 ## كيف تتواصل الأجزاء
 
@@ -180,7 +196,7 @@
 
 ## قاعدة البيانات
 
-PostgreSQL. الشكل الكامل المخطط في `PLAN.md` (القسم ٣) و`docs/plans/phase-4.md` (القسم ٥). المبني للحين (`migrations/001` إلى `010`):
+PostgreSQL. الشكل الكامل المخطط في `PLAN.md` (القسم ٣) و`docs/plans/phase-4.md` (القسم ٥). المبني للحين (`migrations/001` إلى `011`):
 
 | الجدول | وش يحفظ |
 | --- | --- |
@@ -189,6 +205,7 @@ PostgreSQL. الشكل الكامل المخطط في `PLAN.md` (القسم ٣) 
 | `sessions` | بصمة توكن الجلسة، والانتهاء، والإلغاء |
 | `factories`, `factory_members` | المصنع وبياناته ومدينته، وموظفينه (مدير أو موظف، فعّال أو موقوف) |
 | `requests` | طلبات المصانع: المدينة، والمنطقة (تظهر للمزوّد)، والموقع بالضبط (بعد القبول بس)، والحالة، و`expires_at` |
+| `account_deletion_requests` | طلبات حذف الحساب من «حسابي» (تنتظر موظف ينفّذها، القرار ٣٩) |
 | `cities`, `provider_cities`, `staff_cities` | المدن (البداية سدير)، ومدن كل مزوّد، وحصر الموظف بمدن (فاضي = كل المدن) |
 | `settings` | إعدادات المنصة (صلاحية العرض، ومدة الطلب، وأقصى عروض، وسياسة الإلغاء...). القيم الافتراضية والتحقق في `packages/shared/src/settings.ts` |
 | `offers`, `offer_revisions` | العروض (سعر المزوّد **بالهللة قبل الضريبة**، والمدة، والصلاحية، والحالة)، ونسخها القديمة. عرض فعّال واحد لكل مزوّد على الطلب (فهرس فريد) |
