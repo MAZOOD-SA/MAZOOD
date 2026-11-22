@@ -1,5 +1,6 @@
 // المرحلة ٤، الخطوة ٦: مقارنة العروض، والقبول كعملية وحدة، والموافقة الداخلية، وموظفين المصنع،
 // وكشف بيانات التواصل بعد القبول بس.
+import { DEFAULT_CANCELLATION_POLICY } from "@mazood/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { auth, createTestCtx, validRequest, type TestCtx } from "./test-helpers.ts";
 
@@ -82,7 +83,7 @@ describe("القبول", () => {
       [id],
     );
     expect(Number(order.price_halalas)).toBe(245_000);
-    expect(order.cancellation_policy).toEqual({ responseHours: 24, feeHalalas: 0 });
+    expect(order.cancellation_policy).toEqual(DEFAULT_CANCELLATION_POLICY);
     // خط زمني للطلب
     const events = await ctx.db.query<{ event: string }>("SELECT event FROM order_events WHERE request_id=$1", [id]);
     expect(events.map((e) => e.event)).toContain("accepted");

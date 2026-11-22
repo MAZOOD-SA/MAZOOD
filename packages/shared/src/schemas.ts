@@ -62,6 +62,16 @@ export const createRequestBody = z
   .refine((v) => isValidCategoryType(v.category, v.typeId), { path: ["typeId"], message: "type_not_in_category" });
 export type CreateRequestBody = z.infer<typeof createRequestBody>;
 
+/** إعادة نشر الطلب المنتهي (بدون عروض خلال المدة): يقدر يعدّل التفاصيل والمنطقة والموقع والموعد وهو يعيد النشر. */
+export const republishBody = z
+  .object({
+    details: freeText(10, 2000).optional(),
+    area: freeText(2, 120).optional(),
+    location: freeText(2, 200).optional(),
+    when: whenSchema.optional(),
+  })
+  .strict();
+
 /** السجل التجاري السعودي: ١٠ أرقام. الرقم الضريبي: ١٥ رقم ويبدأ وينتهي بـ ٣. */
 const digits = (n: number, msg: string) => z.string().regex(new RegExp(`^\\d{${n}}$`), msg);
 

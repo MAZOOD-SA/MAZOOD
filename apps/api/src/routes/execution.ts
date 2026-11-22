@@ -3,7 +3,7 @@
 // المزوّد: بدأت، والصور، وتم التنفيذ، وطلب تعديل السعر أو سحبه. على طلباته المنفّذة بس.
 // المصنع: تأكيد الاستلام، والموافقة على تعديل السعر أو رفضه. على طلباته بس.
 // الصور: تنفتح برابط مؤقت موقّع باسم المستخدم، والخادم يتأكد لحظة الفتح إن له حق يشوفها.
-import { ORDER_PHOTO_STAGES, ORDER_PHOTOS_PER_STAGE, priceChangeBody, UPLOAD_MAX_BYTES, uuidSchema } from "@mazood/shared";
+import { ORDER_PHOTO_STAGES, ORDER_PHOTOS_PER_STAGE, parseCancellationPolicy, priceChangeBody, UPLOAD_MAX_BYTES, uuidSchema } from "@mazood/shared";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { ApiError } from "../errors.ts";
@@ -19,6 +19,7 @@ import {
   startJob,
   withdrawPriceChange,
 } from "../execution.ts";
+import { disputeForParty, feeFor, latestCancellationRequest } from "../cancellations.ts";
 import { verifyPhotoLink } from "../files.ts";
 import { idempotent, parse, type Ctx, type Guards } from "../http.ts";
 import { sniffMime } from "../storage.ts";
@@ -27,7 +28,7 @@ import { rejectContactInfo } from "./offers.ts";
 
 const photoFields = z.object({ stage: z.enum(ORDER_PHOTO_STAGES) }).strict();
 
-function uuidParam(req: FastifyRequest, name: string): string {
+export function uuidParam(req: FastifyRequest, name: string): string {
   const v = (req.params as Record<string, string>)[name];
   if (!uuidSchema.safeParse(v).success) throw new ApiError(404, "not_found");
   return v;
@@ -36,29 +37,7 @@ function uuidParam(req: FastifyRequest, name: string): string {
 export function executionRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
   const { db } = ctx;
 
-  /** الطلب المنفّذ للمزوّد مع تفاصيل التنفيذ. هنا يشوف اسم المصنع والموقع ورقم التواصل لأن عرضه انقبل. */
-  async function providerJob(userId: string, orderId: string) {
-    const providerId = await providerIdFor(db, userId);
-    const [j] = await db.query<Record<string, unknown> & { price_halalas: string; factory_name: string | null; factory_phone: string; delivered_at: Date | null }>(
-      `SELECT o.id AS "orderId", o.request_id AS "requestId", r.status, r.category, r.type_id AS "typeId", r.details, r.area,
-              r.location, r.needed_when AS "when", o.price_halalas, o.accepted_at AS "acceptedAt", o.started_at AS "startedAt",
-              o.delivered_at AS "deliveredAt", o.confirmed_at AS "confirmedAt", o.cancellation_policy AS "cancellationPolicy",
-              f.name AS factory_name, u.phone AS factory_phone
-         FROM orders o JOIN requests r ON r.id = o.request_id JOIN factories f ON f.id = o.factory_id JOIN users u ON u.id = o.accepted_by
-        WHERE o.id=$1 AND o.provider_id=$2 AND o.state <> 'withdrawn'`,
-      [orderId, providerId],
-    );
-    if (!j) throw new ApiError(404, "not_found");
-    const { price_halalas, factory_name, factory_phone, ...rest } = j;
-    return {
-      job: {
-        ...rest,
-        priceHalalas: Number(price_halalas),
-        factory: { name: factory_name, contactPhone: factory_phone },
-        execution: await executionDetails(db, ctx.config.authSecret, orderId, userId, ctx.now()),
-      },
-    };
-  }
+  const providerJob = (userId: string, orderId: string) => providerJobView(ctx, userId, orderId);
 
   app.get("/v1/provider/jobs/:orderId", async (req) => {
     const user = await g.requireProviderUser(req);
@@ -161,4 +140,38 @@ export function executionRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       .header("content-security-policy", "sandbox; default-src 'none'; img-src 'self'")
       .send(bytes);
   });
+}
+
+/**
+ * الطلب المنفّذ للمزوّد مع تفاصيل التنفيذ. هنا يشوف اسم المصنع والموقع ورقم التواصل لأن عرضه انقبل.
+ * ومعه: طلب الإلغاء (لو المصنع طلب)، والبلاغ، ورسوم الاعتذار لو اعتذر الحين (قبل البدء).
+ */
+export async function providerJobView(ctx: Ctx, userId: string, orderId: string) {
+  const { db } = ctx;
+  const providerId = await providerIdFor(db, userId);
+  const [j] = await db.query<Record<string, unknown> & { status: string; price_halalas: string; factory_name: string | null; factory_phone: string; cancellationPolicy: unknown }>(
+    `SELECT o.id AS "orderId", o.request_id AS "requestId", r.status, r.category, r.type_id AS "typeId", r.details, r.area,
+            r.location, r.needed_when AS "when", o.price_halalas, o.accepted_at AS "acceptedAt", o.started_at AS "startedAt",
+            o.delivered_at AS "deliveredAt", o.confirmed_at AS "confirmedAt", o.cancellation_policy AS "cancellationPolicy",
+            f.name AS factory_name, u.phone AS factory_phone
+       FROM orders o JOIN requests r ON r.id = o.request_id JOIN factories f ON f.id = o.factory_id JOIN users u ON u.id = o.accepted_by
+      WHERE o.id=$1 AND o.provider_id=$2 AND o.state <> 'withdrawn'`,
+    [orderId, providerId],
+  );
+  if (!j) throw new ApiError(404, "not_found");
+  const { price_halalas, factory_name, factory_phone, cancellationPolicy, ...rest } = j;
+  const now = ctx.now();
+  return {
+    job: {
+      ...rest,
+      priceHalalas: Number(price_halalas),
+      cancellationPolicy: parseCancellationPolicy(cancellationPolicy),
+      factory: { name: factory_name, contactPhone: factory_phone },
+      execution: await executionDetails(db, ctx.config.authSecret, orderId, userId, now),
+      cancellationRequest: await latestCancellationRequest(db, orderId),
+      // قبل البدء يقدر يعتذر: نبيّن له الرسوم بالضبط قبل ما يضغط (صفر الحين).
+      withdrawalFee: j.status === "accepted" ? await feeFor(db, orderId, "provider", "after_accept", now) : null,
+      dispute: await disputeForParty(db, orderId, "provider"),
+    },
+  };
 }

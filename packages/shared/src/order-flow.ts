@@ -99,7 +99,15 @@ export function allowedActions(from: RequestStatus, actor: FlowActor): FlowActio
  * وchoose_other (اختيار عرض ثاني)، وreorder (اطلب مرة ثانية)، وrate (التقييم)، وadd_note (ملاحظة على البلاغ).
  * الاختبار يتأكد إن كل حالة فيها زر واحد على الأقل.
  */
-export type FactoryUiAction = FlowAction | "edit" | "request_cancel" | "choose_other" | "reorder" | "rate" | "add_note";
+export type FactoryUiAction =
+  | FlowAction
+  | "edit"
+  | "request_cancel"
+  | "withdraw_cancel_request"
+  | "choose_other"
+  | "reorder"
+  | "rate"
+  | "add_note";
 
 export const FACTORY_ACTIONS: Record<RequestStatus, { primary: FactoryUiAction | null; others: FactoryUiAction[] }> = {
   // «اقبل العرض» يظهر بس لما يكون فيه عروض (أو «رشّح للمدير» لموظف المصنع).
@@ -113,3 +121,30 @@ export const FACTORY_ACTIONS: Record<RequestStatus, { primary: FactoryUiAction |
   cancelled: { primary: "reorder", others: [] },
   disputed: { primary: null, others: ["add_note"] },
 };
+
+/** معلومات عن الطلب تغيّر الأزرار داخل نفس الحالة. */
+export type FactoryActionFlags = {
+  /** فيه عروض صالحة يقدر يقبلها */
+  hasLiveOffers?: boolean;
+  /** المزوّد المقبول اعتذر، فرجع الطلب مفتوح (الإضافة ١١) */
+  reopenedAfterWithdrawal?: boolean;
+  /** المصنع طلب الإلغاء بعد البدء، وينتظر رد المزوّد */
+  cancellationPending?: boolean;
+};
+
+/**
+ * أزرار المصنع الفعلية لطلب معيّن: FACTORY_ACTIONS معدّلة حسب وضع الطلب. الخادم يرجّعها مع تفاصيل الطلب،
+ * والواجهة تبيّنها كما هي. الاختبار يمر على كل حالة وكل تركيبة ويتأكد إن فيه زر دائمًا.
+ */
+export function factoryActions(status: RequestStatus, flags: FactoryActionFlags = {}): { primary: FactoryUiAction | null; others: FactoryUiAction[] } {
+  const base = FACTORY_ACTIONS[status];
+  if (status === "awaiting_offers") {
+    // بعد اعتذار المزوّد: «اختر عرض ثاني» من العروض اللي لسا صالحة. وبدون عروض: ينتظر، ويقدر يعدّل أو يلغي.
+    if (!flags.hasLiveOffers) return { primary: null, others: base.others };
+    return { primary: flags.reopenedAfterWithdrawal ? "choose_other" : "accept", others: base.others };
+  }
+  if (status === "in_progress" && flags.cancellationPending) {
+    return { primary: null, others: ["withdraw_cancel_request", "open_dispute"] };
+  }
+  return { primary: base.primary, others: [...base.others] };
+}

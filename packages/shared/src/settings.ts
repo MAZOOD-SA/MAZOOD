@@ -2,6 +2,7 @@
 // فتتغيّر بدون مبرمج (بالأمر pnpm api:set-setting الحين، ومن لوحة الإدارة في المرحلة ٦).
 // القيم هنا هي المقترحة في docs/plans/phase-4.md (القسم ٣)، ونرجع لها لو ما فيه قيمة محفوظة.
 import { z } from "zod";
+import { cancellationPolicySchema, DEFAULT_CANCELLATION_POLICY, upgradeCancellationPolicy } from "./cancellation.ts";
 
 const hours = (max: number) => z.number().int().min(1).max(max);
 
@@ -18,12 +19,12 @@ export const SETTINGS_SCHEMA = z
     /** تذكير المصنع بتأكيد الاستلام (ساعات بعد «تم التنفيذ»). */
     confirmReminderHours: z.array(hours(24 * 14)).max(5),
     /**
-     * سياسة الإلغاء (سؤال ١٥). قبل ما يبدأ المزوّد: إلغاء مجاني مباشر.
+     * سياسة الإلغاء ورسومه (سؤال ١٥): الشرح كامل في cancellation.ts. قبل القبول دائمًا مجاني.
      * بعد البدء: «طلب إلغاء» يرد عليه المزوّد خلال responseHours، وإلا يتحوّل بلاغ.
-     * feeHalalas: رسوم الإلغاء بالهللة (صفر الحين، تنحسب فعليًا في المرحلة ٥).
-     * السياسة تنحفظ مع الطلب وقت القبول، فتغييرها ما يأثّر على طلب قديم.
+     * الرسوم كلها صفر لين يقرر المالك. السياسة تنحفظ مع الطلب وقت القبول، فتغييرها ما يأثّر على طلب قديم.
+     * (الشكل القديم { responseHours, feeHalalas } ينقرى ويترقّى تلقائيًا.)
      */
-    cancellation: z.object({ responseHours: hours(24 * 7), feeHalalas: z.number().int().min(0) }).strict(),
+    cancellation: z.preprocess(upgradeCancellationPolicy, cancellationPolicySchema),
     /** الأحداث اللي توصل برسالة نصية (لها تكلفة). الباقي إشعار وتنبيه داخل التطبيق. سؤال ١٩. */
     smsEvents: z.array(z.enum(["first_offer", "offer_accepted", "cancellation_requested"])).max(3),
   })
@@ -39,6 +40,6 @@ export const SETTING_DEFAULTS: Settings = {
   maxOffersPerRequest: 10,
   autoConfirmHours: 72,
   confirmReminderHours: [24, 48],
-  cancellation: { responseHours: 24, feeHalalas: 0 },
+  cancellation: DEFAULT_CANCELLATION_POLICY,
   smsEvents: ["first_offer", "offer_accepted", "cancellation_requested"],
 };

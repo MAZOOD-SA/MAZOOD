@@ -15,6 +15,7 @@ import {
 } from "@mazood/shared";
 import type { FastifyInstance } from "fastify";
 import { audit } from "../audit.ts";
+import { providerReliability } from "../cancellations.ts";
 import { ApiError } from "../errors.ts";
 import { signFileLink, verifyFileLink } from "../files.ts";
 import { actorOf, addDays, parse, todayRiyadh, type Ctx, type Guards } from "../http.ts";
@@ -111,6 +112,8 @@ export function adminRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
         verified: s.effectiveVerified,
         allApprovedValid: s.allApprovedValid,
         documents: s.slots.map(slotView),
+        // كم مرة انقبل عرضه، وكم مرة اعتذر بعد القبول (قرار الإيقاف عند الإدارة: إجراء «إيقاف مزوّد مخالف»).
+        reliability: await providerReliability(db, p.id),
       },
       checklists: DOC_CHECKLISTS,
     };

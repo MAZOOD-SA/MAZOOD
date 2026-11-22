@@ -32,6 +32,8 @@ async function openRequestsFor(db: Db, p: ActiveProvider, now: Date, maxOffers: 
        FROM requests r
       WHERE r.status = 'awaiting_offers' AND r.expires_at > $1
         AND r.category = ANY($3::text[]) AND r.city_id = ANY($4::text[])
+        -- المزوّد اللي اعتذر عن الطلب ما يشوفه مرة ثانية (عشان ما يعتذر ويرجع بسعر أعلى).
+        AND NOT EXISTS (SELECT 1 FROM orders w WHERE w.request_id = r.id AND w.provider_id = $2 AND w.state = 'withdrawn')
         AND ($5::uuid IS NULL OR r.id = $5::uuid)
         AND ($6::text IS NULL OR r.category = $6::text)
       ORDER BY r.created_at DESC
@@ -147,6 +149,8 @@ export function offerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       );
       const visible = r && r.status === "awaiting_offers" && new Date(r.expires_at) > now && p.categories.includes(r.category) && p.cityIds.includes(r.city_id);
       if (!visible) throw new ApiError(404, "not_found");
+      const withdrew = await t.query("SELECT 1 FROM orders WHERE request_id=$1 AND provider_id=$2 AND state='withdrawn'", [id, p.id]);
+      if (withdrew.length) throw new ApiError(404, "not_found");
       // عرضه القديم اللي انتهت صلاحيته ما يمنعه يرسل جديد.
       await t.query(
         "UPDATE offers SET status='expired', updated_at=$3 WHERE request_id=$1 AND provider_id=$2 AND status='active' AND valid_until <= $3",

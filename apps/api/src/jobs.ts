@@ -1,8 +1,10 @@
-// المهام الدورية: تشتغل كل دقيقة داخل الخادم (server.ts). اليوم: التأكيد التلقائي، وحفظ حالة الطلبات المنتهية.
+// المهام الدورية: تشتغل كل دقيقة داخل الخادم (server.ts). اليوم: التأكيد التلقائي، وحفظ حالة الطلبات المنتهية،
+// وطلبات الإلغاء اللي ما رد عليها المزوّد في المهلة (تتحوّل بلاغ).
 // كل مهمة لازم تكون آمنة لو اشتغلت مرتين أو تأخرت: الحالة الفعلية تنحسب وقت القراءة أصلًا
 // (effectiveStatus في orders.ts)، والمهمة بس تثبّتها في القاعدة.
 // التنبيهات والتذكيرات تنضاف هنا في الخطوة ١٠.
 import type { Db } from "./db.ts";
+import { cancellationTimeoutsDue } from "./cancellations.ts";
 import { autoConfirmDue } from "./execution.ts";
 
 export const JOBS_INTERVAL_MS = 60_000;
@@ -14,7 +16,8 @@ export async function runScheduledJobs(db: Db, now: Date) {
     [now],
   );
   const autoConfirmed = await autoConfirmDue(db, now);
-  return { expired: expired.length, autoConfirmed: autoConfirmed.length };
+  const cancellationTimeouts = await cancellationTimeoutsDue(db, now);
+  return { expired: expired.length, autoConfirmed: autoConfirmed.length, cancellationTimeouts: cancellationTimeouts.length };
 }
 
 /** يشغّل المهام كل دقيقة. الخطأ ينكتب في السجل وما يوقف الخادم. يرجّع دالة توقفها. */

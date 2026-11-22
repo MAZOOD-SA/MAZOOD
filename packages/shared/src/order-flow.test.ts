@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import {
   FACTORY_ACTIONS,
+  factoryActions,
   FLOW_ACTORS,
   OrderFlowError,
   REQUEST_STATUSES,
@@ -102,5 +103,36 @@ describe("ولا مرة طريق مسدود", () => {
 
   it("الزر الكهرماني واحد بالكثير في كل حالة", () => {
     for (const s of REQUEST_STATUSES) expect(typeof FACTORY_ACTIONS[s].primary === "string" || FACTORY_ACTIONS[s].primary === null).toBe(true);
+  });
+});
+
+describe("أزرار المصنع الفعلية (factoryActions)", () => {
+  const FLAG_COMBOS = [false, true].flatMap((hasLiveOffers) =>
+    [false, true].flatMap((reopenedAfterWithdrawal) => [false, true].map((cancellationPending) => ({ hasLiveOffers, reopenedAfterWithdrawal, cancellationPending }))),
+  );
+
+  it.each(REQUEST_STATUSES)("في حالة %s، ومع أي وضع للطلب، فيه زر للمصنع", (status) => {
+    for (const flags of FLAG_COMBOS) {
+      const a = factoryActions(status, flags);
+      expect(a.primary !== null || a.others.length > 0).toBe(true);
+    }
+  });
+
+  it("بدون عروض صالحة ما يطلع «اقبل العرض»، ويبقى التعديل والإلغاء", () => {
+    expect(factoryActions("awaiting_offers", { hasLiveOffers: false })).toEqual({ primary: null, others: ["edit", "cancel"] });
+    expect(factoryActions("awaiting_offers", { hasLiveOffers: true }).primary).toBe("accept");
+  });
+
+  it("بعد اعتذار المزوّد: «اختر عرض ثاني» هو الزر الكهرماني", () => {
+    expect(factoryActions("awaiting_offers", { hasLiveOffers: true, reopenedAfterWithdrawal: true }).primary).toBe("choose_other");
+  });
+
+  it("طلب إلغاء ينتظر: «اسحب طلب الإلغاء» و«افتح بلاغ» بدل «اطلب الإلغاء»", () => {
+    expect(factoryActions("in_progress", { cancellationPending: true })).toEqual({ primary: null, others: ["withdraw_cancel_request", "open_dispute"] });
+    expect(factoryActions("in_progress").others).toContain("request_cancel");
+  });
+
+  it("المنتهي: «أعد نشر الطلب» هو الزر الكهرماني، ومعه الإلغاء", () => {
+    expect(factoryActions("expired")).toEqual({ primary: "republish", others: ["cancel"] });
   });
 });

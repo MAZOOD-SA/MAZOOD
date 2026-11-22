@@ -1,5 +1,14 @@
 // مسارات المصنع: الحساب والطلبات. كل استعلام مقيّد بمصنع الجلسة.
-import { addFactoryMemberBody, createRequestBody, factoryProfileBody, priceForFactory, uuidSchema } from "@mazood/shared";
+import {
+  addFactoryMemberBody,
+  createRequestBody,
+  factoryActions,
+  factoryProfileBody,
+  parseCancellationPolicy,
+  priceForFactory,
+  uuidSchema,
+  type RequestStatus,
+} from "@mazood/shared";
 import type { FastifyInstance } from "fastify";
 import { audit } from "../audit.ts";
 import type { Db } from "../db.ts";
@@ -8,7 +17,8 @@ import { activeCities, resolveCityId } from "../cities.ts";
 import { getSettings } from "../settings.ts";
 import { rejectContactInfo } from "./offers.ts";
 import { actorOf, idempotent, parse, type Ctx, type Guards } from "../http.ts";
-import { acceptOffer, cancelBeforeStart, effectiveStatus, nominateOffer, providerIsActive, withdrawNomination } from "../orders.ts";
+import { acceptOffer, effectiveStatus, nominateOffer, providerIsActive, withdrawNomination } from "../orders.ts";
+import { cancelBeforeStart, disputeForParty, feeFor, latestCancellationRequest, latestWithdrawal } from "../cancellations.ts";
 import { executionDetails } from "../execution.ts";
 import { publicUser } from "./auth.ts";
 
@@ -192,10 +202,41 @@ type RequestRow = Record<string, unknown> & { status: string; expiresAt: Date };
  * (الصور بروابط مؤقتة باسم viewerId، وطلبات تعديل السعر، والخط الزمني).
  */
 export async function factoryRequestView(ctx: Ctx, factoryId: string, id: string, viewerId: string) {
-  const request = withStatus(await ownRequest(ctx.db, factoryId, id), ctx.now());
-  const details = await requestDetails(ctx.db, id, ctx.now());
-  const execution = details.order ? await executionDetails(ctx.db, ctx.config.authSecret, details.order.id, viewerId, ctx.now()) : null;
-  return { request, ...details, execution };
+  const { db } = ctx;
+  const now = ctx.now();
+  const request = withStatus(await ownRequest(db, factoryId, id), now);
+  const status = request.status as RequestStatus;
+  const details = await requestDetails(db, id, now);
+  const orderId = details.order?.id ?? null;
+  const execution = orderId ? await executionDetails(db, ctx.config.authSecret, orderId, viewerId, now) : null;
+  const cancellationRequest = orderId ? await latestCancellationRequest(db, orderId) : null;
+  const withdrawal = status === "awaiting_offers" ? await latestWithdrawal(db, id) : null;
+  // الإلغاء الحين بكم؟ المصنع يشوف المبلغ بالضبط في نافذة التأكيد قبل ما يضغط (صفر الحين).
+  // قبل القبول مجاني دائمًا (ما فيه طلب منفّذ). بعد البدء: هذي رسوم «طلب الإلغاء» لو وافق المزوّد.
+  const cancellationFee =
+    orderId && status === "accepted"
+      ? await feeFor(db, orderId, "factory", "after_accept", now)
+      : orderId && status === "in_progress"
+        ? await feeFor(db, orderId, "factory", "after_start", now)
+        : null;
+  // قبل القبول: سياسة الإلغاء الحالية، عشان تظهر في بطاقة العرض (الرسوم واضحة قبل ما يقبل).
+  const currentPolicy = details.order ? null : (await getSettings(db)).cancellation;
+  const actions = factoryActions(status, {
+    hasLiveOffers: details.offers.some((o) => o.status === "active"),
+    reopenedAfterWithdrawal: !!withdrawal,
+    cancellationPending: cancellationRequest?.status === "pending",
+  });
+  return {
+    request,
+    ...details,
+    execution,
+    actions,
+    cancellationPolicy: currentPolicy,
+    cancellationFee,
+    cancellationRequest,
+    withdrawal,
+    dispute: orderId ? await disputeForParty(db, orderId, "factory") : null,
+  };
 }
 
 /** الحالة الفعلية (الطلب المفتوح اللي عدّت مدته = منتهي). */
@@ -278,7 +319,7 @@ async function requestDetails(db: Db, requestId: string, now: Date) {
           startedAt: order.started_at && new Date(order.started_at).toISOString(),
           deliveredAt: order.delivered_at && new Date(order.delivered_at).toISOString(),
           confirmedAt: order.confirmed_at && new Date(order.confirmed_at).toISOString(),
-          cancellationPolicy: order.cancellation_policy,
+          cancellationPolicy: parseCancellationPolicy(order.cancellation_policy),
           provider: { tradeName: order.trade_name, contactPhone: order.provider_phone, verified: await providerIsActive(db, order.provider_id, now) },
         }
       : null,

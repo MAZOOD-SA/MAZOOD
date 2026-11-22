@@ -15,6 +15,7 @@ import { CSRF_HEADER, CSRF_VALUE, makeGuards, readSessionToken, type Ctx } from 
 import { sessionUserByToken } from "./auth.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { authRoutes } from "./routes/auth.ts";
+import { cancellationRoutes } from "./routes/cancellations.ts";
 import { factoryRoutes } from "./routes/factory.ts";
 import { offerRoutes } from "./routes/offers.ts";
 import { executionRoutes } from "./routes/execution.ts";
@@ -124,6 +125,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   providerRoutes(app, ctx, guards);
   offerRoutes(app, ctx, guards);
   executionRoutes(app, ctx, guards);
+  cancellationRoutes(app, ctx, guards);
   adminRoutes(app, ctx, guards);
   return app;
 }

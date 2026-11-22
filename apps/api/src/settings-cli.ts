@@ -1,7 +1,7 @@
 // تعديل إعداد من سطر الأوامر على الخادم (لين تجي شاشة الإعدادات في لوحة الإدارة، المرحلة ٦).
 // الأمر:  pnpm api:set-setting -- <المفتاح> <القيمة بصيغة JSON>
 // أمثلة:  pnpm api:set-setting -- offerValidityHours 24
-//         pnpm api:set-setting -- cancellation '{"responseHours":24,"feeHalalas":0}'
+//         pnpm api:set-setting -- cancellation "$(cat cancellation.json)"   (الشكل كامل في packages/shared/src/cancellation.ts)
 // بدون قيمة: يعرض كل الإعدادات الحالية.
 import { SETTING_KEYS, type SettingKey } from "@mazood/shared";
 import { loadConfig } from "./config.ts";
