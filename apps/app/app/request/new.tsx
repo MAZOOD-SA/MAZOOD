@@ -3,6 +3,8 @@
 import { spacing } from "@mazood/brand";
 import { IconPaperclip, IconSend } from "@/components/icons";
 import { router, useLocalSearchParams } from "expo-router";
+import { ApiClientError } from "@/api/client";
+import { errorKey } from "@/api/mapping";
 import { useState } from "react";
 import { View } from "react-native";
 import { CategoryTile } from "@/components/domain";
@@ -29,6 +31,8 @@ export default function NewRequest() {
   const [when, setWhen] = useState<When>("tomorrow");
   const [errors, setErrors] = useState<{ category?: string; details?: string }>({});
   const [attachNote, setAttachNote] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const cat = category ? categoryById(category) : null;
 
@@ -38,7 +42,8 @@ export default function NewRequest() {
     setErrors((e) => ({ ...e, category: undefined }));
   }
 
-  function submit() {
+  async function submit() {
+    if (busy) return;
     const next: typeof errors = {};
     if (!category || !typeId) next.category = t("categoryRequired");
     if (details.trim().length < 10) next.details = t("detailsTooShort");
@@ -46,14 +51,23 @@ export default function NewRequest() {
     if (next.category || next.details || !category || !typeId) return;
 
     const type = categoryById(category).types.find((x) => x.id === typeId)!;
-    const id = createRequest({
-      category,
-      typeId,
-      title: type.name,
-      details: details.trim(),
-      location: { ar: location.trim(), en: location.trim() },
-      when,
-    });
+    setBusy(true);
+    setSubmitError(null);
+    let id: string;
+    try {
+      id = await createRequest({
+        category,
+        typeId,
+        title: type.name,
+        details: details.trim(),
+        location: { ar: location.trim(), en: location.trim() },
+        when,
+      });
+    } catch (e) {
+      setSubmitError(t(errorKey(e instanceof ApiClientError ? e.code : "server")));
+      setBusy(false);
+      return;
+    }
     router.replace({ pathname: "/request/[id]", params: { id, created: "1" } });
   }
 
@@ -61,7 +75,7 @@ export default function NewRequest() {
     <Screen
       title={t("newRequestTitle")}
       back
-      footer={<Button label={t("submitRequest")} icon={IconSend} variant="accent" size="lg" full onPress={submit} />}
+      footer={<Button label={t("submitRequest")} icon={IconSend} variant="accent" size="lg" full onPress={submit} disabled={busy} />}
     >
       <SectionTitle title={t("chooseCategory")} />
       {cat ? (
@@ -117,6 +131,12 @@ export default function NewRequest() {
           { value: "this_week", label: t("whenThisWeek") },
         ]}
       />
+
+      {submitError && (
+        <AppText variant="bodySm" color="danger">
+          {submitError}
+        </AppText>
+      )}
 
       <SectionTitle title={t("attachments")} />
       <Button label={t("addAttachment")} icon={IconPaperclip} variant="secondary" onPress={() => setAttachNote(true)} />

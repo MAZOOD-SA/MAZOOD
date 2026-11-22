@@ -3,6 +3,8 @@
 import { spacing } from "@mazood/brand";
 import { IconCalendar, IconCircleCheck, IconHourglass, IconMapPin } from "@/components/icons";
 import { router, useLocalSearchParams } from "expo-router";
+import { ApiClientError } from "@/api/client";
+import { errorKey } from "@/api/mapping";
 import { useState } from "react";
 import { View } from "react-native";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -20,7 +22,8 @@ export default function RequestDetails() {
   const { id, created } = useLocalSearchParams<{ id: string; created?: string }>();
   const { t, tl, num, relative } = useI18n();
   const { colors } = useTheme();
-  const { state, dispatch } = useStore();
+  const { state, dispatch, cancelRequest } = useStore();
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [accepting, setAccepting] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
@@ -43,6 +46,7 @@ export default function RequestDetails() {
 
   return (
     <Screen title={t("requestDetails")} back>
+      {cancelError && <Notice text={cancelError} />}
       {created && request.status === "awaiting_offers" && pending.length === 0 && <Notice icon={IconCircleCheck} text={t("requestSent")} />}
 
       <Card style={{ gap: spacing["3"] }}>
@@ -125,8 +129,13 @@ export default function RequestDetails() {
         confirmLabel={t("cancelRequest")}
         cancelLabel={t("keepRequest")}
         onCancel={() => setCancelling(false)}
-        onConfirm={() => {
-          dispatch({ type: "cancelRequest", requestId: request.id });
+        onConfirm={async () => {
+          try {
+            await cancelRequest(request.id);
+            setCancelError(null);
+          } catch (e) {
+            setCancelError(t(errorKey(e instanceof ApiClientError ? e.code : "server")));
+          }
           setCancelling(false);
         }}
       />

@@ -3,6 +3,8 @@ import { spacing } from "@mazood/brand";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
+import { api, ApiClientError, LIVE } from "@/api/client";
+import { errorKey } from "@/api/mapping";
 import { Field } from "@/components/Field";
 import { Screen } from "@/components/layout";
 import { AppText, Button, Notice } from "@/components/ui";
@@ -11,15 +13,30 @@ import { useI18n } from "@/i18n/I18nProvider";
 
 export default function Verify() {
   const { t, digits } = useI18n();
-  const { dispatch } = useStore();
+  const { dispatch, startSession } = useStore();
   const { phone } = useLocalSearchParams<{ phone: string }>();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  function submit() {
+  async function submit() {
+    if (busy) return;
     const latin = code.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
     if (!/^\d{6}$/.test(latin)) return setError(t("codeInvalid"));
-    dispatch({ type: "signIn", phone: phone ?? "" });
+    if (LIVE) {
+      setBusy(true);
+      try {
+        const res = await api<{ token: string }>("/v1/auth/otp/verify", { method: "POST", body: { phone, code: latin } });
+        await startSession(res.token, phone ?? "");
+      } catch (e) {
+        setError(t(errorKey(e instanceof ApiClientError ? e.code : "server")));
+        setBusy(false);
+        return;
+      }
+      setBusy(false);
+    } else {
+      dispatch({ type: "signIn", phone: phone ?? "" });
+    }
     router.replace("/home");
   }
 
@@ -37,7 +54,7 @@ export default function Verify() {
           </AppText>
         </AppText>
       </View>
-      <Notice text={t("verifyPrototypeHint")} />
+      {!LIVE && <Notice text={t("verifyPrototypeHint")} />}
       <Field
         label={t("codeLabel")}
         value={code}
@@ -52,7 +69,7 @@ export default function Verify() {
         onSubmitEditing={submit}
         ltr
       />
-      <Button label={t("confirm")} variant="accent" size="lg" full onPress={submit} />
+      <Button label={t("confirm")} variant="accent" size="lg" full onPress={submit} disabled={busy} />
       <Button label={t("changeNumber")} variant="ghost" onPress={() => router.back()} />
     </Screen>
   );

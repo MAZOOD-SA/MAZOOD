@@ -9,14 +9,13 @@ import { Screen } from "@/components/layout";
 import { LogoMark } from "@/components/Logo";
 import { AppText, Badge, Button, Card, Divider, Notice, Row } from "@/components/ui";
 import { invoiceTotals } from "@/data/invoices";
-import { FACTORY } from "@/data/seed";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
 
 export default function InvoiceView() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, tl, money, date, code } = useI18n();
-  const { state } = useStore();
+  const { state, factory: FACTORY } = useStore();
   const [downloadNote, setDownloadNote] = useState(false);
   const inv = state.invoices.find((i) => i.id === id);
 

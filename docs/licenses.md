@@ -32,6 +32,18 @@
 | react-native-screens | 4.30.1 | MIT |
 | react-native-svg | 15.16.0 | MIT |
 | @react-native-async-storage/async-storage | 2.2.0 | MIT |
+| expo-secure-store (حفظ الجلسة مشفّرة على الجوال) | 58.0.3 | MIT |
+
+## مكتبات الخادم (`apps/api`) والحزمة المشتركة
+
+| المكتبة | الإصدار | الرخصة |
+| --- | --- | --- |
+| fastify | 5.12.8 | MIT |
+| @fastify/cors | 11.4.3 | MIT |
+| @fastify/rate-limit | 10.3.0 | MIT |
+| pg (اتصال PostgreSQL) | 8.23.1 | MIT |
+| zod (التحقق من المدخلات) | 3.25.76 | MIT |
+| @electric-sql/pglite (PostgreSQL داخل العملية، للاختبارات والتطوير) | 0.3.16 | Apache-2.0 |
 
 ## أدوات التطوير (ما تدخل في المنتج)
 

@@ -5,7 +5,7 @@ import { router } from "expo-router";
 import { View } from "react-native";
 import { Screen, SectionTitle } from "@/components/layout";
 import { AppText, Button, Card, Chips, Divider, Notice } from "@/components/ui";
-import { FACTORY } from "@/data/seed";
+import { LIVE } from "@/api/client";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Locale } from "@/lib/format";
@@ -14,7 +14,7 @@ import { useTheme, type ThemeMode } from "@/theme/ThemeProvider";
 export default function Account() {
   const { t, tl, locale, setLocale, digits, code } = useI18n();
   const { mode, setMode } = useTheme();
-  const { state, dispatch } = useStore();
+  const { state, factory: FACTORY, profileComplete, signOut } = useStore();
   const phone = state.phone ? `0${state.phone.slice(4)}` : "";
 
   return (
@@ -23,7 +23,7 @@ export default function Account() {
         <AppText variant="caption" color="inkMuted">
           {t("factory")}
         </AppText>
-        <AppText variant="h2">{tl(FACTORY.name)}</AppText>
+        <AppText variant="h2">{profileComplete ? tl(FACTORY.name) : t("profileMissingName")}</AppText>
         <AppText variant="bodySm" color="inkMuted" style={{ writingDirection: "ltr", textAlign: locale === "ar" ? "right" : "left" }}>
           {digits(phone)}
         </AppText>
@@ -31,6 +31,14 @@ export default function Account() {
         <InfoRow label={t("commercialRegister")} value={code(FACTORY.commercialRegister)} />
         <InfoRow label={t("vatNumber")} value={code(FACTORY.vatNumber)} />
       </Card>
+
+      {LIVE && (
+        <Button
+          label={profileComplete ? t("editProfile") : t("completeProfile")}
+          variant={profileComplete ? "secondary" : "primary"}
+          onPress={() => router.push("/factory-profile")}
+        />
+      )}
 
       <SectionTitle title={t("language")} />
       <Chips<Locale>
@@ -53,14 +61,14 @@ export default function Account() {
         ]}
       />
 
-      <Notice icon={IconInfoCircle} text={t("prototypeNote")} />
+      {!LIVE && <Notice icon={IconInfoCircle} text={t("prototypeNote")} />}
 
       <Button
         label={t("signOut")}
         variant="secondary"
         icon={IconLogout}
-        onPress={() => {
-          dispatch({ type: "signOut" });
+        onPress={async () => {
+          await signOut();
           router.replace("/login");
         }}
       />

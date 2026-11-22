@@ -10,7 +10,6 @@ import { LogoMark } from "@/components/Logo";
 import { AppText, Button } from "@/components/ui";
 import { CATEGORIES } from "@/data/categories";
 import { pendingOffersFor } from "@/data/reducer";
-import { FACTORY } from "@/data/seed";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -21,7 +20,7 @@ const header = brandColors.light;
 export default function Home() {
   const { colors } = useTheme();
   const { t, tl } = useI18n();
-  const { state } = useStore();
+  const { state, factory: FACTORY, profileComplete } = useStore();
   const unread = state.notifications.some((n) => !n.read);
   const recent = state.requests.slice(0, 3);
   const width = { width: "100%" as const, maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" as const };
@@ -45,7 +44,7 @@ export default function Home() {
             </Pressable>
           </View>
           <AppText variant="bodySm" style={{ color: header.concrete, opacity: 0.8, marginTop: 18, fontSize: 13 }}>
-            {tl(FACTORY.name)} · {tl(FACTORY.city)}
+            {profileComplete ? `${tl(FACTORY.name)} · ${tl(FACTORY.city)}` : t("welcome")}
           </AppText>
           <AppText variant="h2" weight={700} style={{ color: header.concrete, fontSize: 22, lineHeight: 30, marginTop: 2 }}>
             {t("homeQuestion")}

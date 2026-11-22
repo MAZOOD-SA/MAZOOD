@@ -7,6 +7,7 @@
 import type { CategoryId } from "./categories";
 import type { AppNotification, Invoice, Offer, ServiceRequest, When } from "./types";
 import type { Localized } from "@/i18n/I18nProvider";
+import { LIVE } from "@/api/client";
 
 export type State = {
   signedIn: boolean;
@@ -32,6 +33,8 @@ export type NewRequestInput = {
 export type Action =
   | { type: "signIn"; phone: string }
   | { type: "signOut" }
+  | { type: "setRequests"; requests: ServiceRequest[] }
+  | { type: "upsertRequest"; request: ServiceRequest }
   | { type: "createRequest"; input: NewRequestInput }
   | { type: "offersArrived"; offers: Offer[]; now: string }
   | { type: "acceptOffer"; offerId: string; now: string }
@@ -45,7 +48,16 @@ export function reducer(state: State, action: Action): State {
       return { ...state, signedIn: true, phone: action.phone };
 
     case "signOut":
-      return { ...state, signedIn: false, phone: null };
+      // نمسح بيانات الجلسة من الذاكرة: ما نخلي طلبات مستخدم تبقى لمستخدم يدخل بعده على نفس الجهاز.
+      return { ...state, signedIn: false, phone: null, ...(LIVE ? { requests: [], offers: [], invoices: [], notifications: [] } : {}) };
+
+    case "setRequests":
+      return { ...state, requests: action.requests };
+
+    case "upsertRequest":
+      return state.requests.some((r) => r.id === action.request.id)
+        ? { ...state, requests: state.requests.map((r) => (r.id === action.request.id ? action.request : r)) }
+        : { ...state, requests: [action.request, ...state.requests] };
 
     case "createRequest": {
       const { input } = action;

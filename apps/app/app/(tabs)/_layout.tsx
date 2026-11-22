@@ -10,10 +10,11 @@ import { useTheme } from "@/theme/ThemeProvider";
 export default function TabsLayout() {
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { state } = useStore();
+  const { state, ready } = useStore();
   const insets = useSafeAreaInsets();
 
   // الشاشات هذي للمستخدم الداخل بس.
+  if (!ready) return null;
   if (!state.signedIn) return <Redirect href="/login" />;
 
   return (

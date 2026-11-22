@@ -4,6 +4,8 @@ import { spacing } from "@mazood/brand";
 import { router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
+import { api, ApiClientError, LIVE } from "@/api/client";
+import { errorKey } from "@/api/mapping";
 import { Screen } from "@/components/layout";
 import { LogoMark } from "@/components/Logo";
 import { Field } from "@/components/Field";
@@ -15,11 +17,29 @@ export default function Login() {
   const { t } = useI18n();
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  function submit() {
+  async function submit() {
+    if (busy) return;
     const normalized = normalizeSaudiMobile(phone);
     if (!normalized) return setError(t("phoneInvalid"));
     setError(null);
+    if (LIVE) {
+      setBusy(true);
+      try {
+        await api("/v1/auth/otp/request", { method: "POST", body: { phone: normalized } });
+      } catch (e) {
+        // فاصل ٦٠ ثانية: المستخدم غالبًا طلب الرمز قبل شوي، نوديه لشاشة الرمز عشان يدخل اللي وصله.
+        if (e instanceof ApiClientError && e.code === "otp_cooldown") {
+          setBusy(false);
+          return router.push({ pathname: "/verify", params: { phone: normalized } });
+        }
+        setError(t(errorKey(e instanceof ApiClientError ? e.code : "server")));
+        setBusy(false);
+        return;
+      }
+      setBusy(false);
+    }
     router.push({ pathname: "/verify", params: { phone: normalized } });
   }
 
@@ -47,7 +67,7 @@ export default function Login() {
         onSubmitEditing={submit}
         ltr
       />
-      <Button label={t("sendCode")} variant="accent" size="lg" full onPress={submit} />
+      <Button label={t("sendCode")} variant="accent" size="lg" full onPress={submit} disabled={busy} />
     </Screen>
   );
 }

@@ -1,4 +1,5 @@
 // هيكل الشاشات: الغلاف، والعنوان مع زر الرجوع، والشريط التجريبي.
+import { LIVE } from "@/api/client";
 import { radius, spacing } from "@mazood/brand";
 import { IconArrowLeft, IconArrowRight } from "@/components/icons";
 import { router } from "expo-router";
@@ -94,7 +95,7 @@ export function PrototypeBanner() {
   return (
     <View style={{ backgroundColor: colors.accentSoft, paddingTop: insets.top + 4, paddingBottom: 4, alignItems: "center" }}>
       <AppText variant="caption" color="onAccentSoft" weight={600}>
-        {t("prototypeBanner")}
+        {LIVE ? t("testBanner") : t("prototypeBanner")}
       </AppText>
     </View>
   );
