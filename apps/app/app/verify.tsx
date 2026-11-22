@@ -14,7 +14,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 
 export default function Verify() {
   const { t, digits } = useI18n();
-  const { dispatch, startSession } = useStore();
+  const { startSession } = useStore();
   const { phone, as } = useLocalSearchParams<{ phone: string; as?: string }>();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,27 +24,21 @@ export default function Verify() {
     if (busy) return;
     const latin = code.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
     if (!/^\d{6}$/.test(latin)) return setError(t("codeInvalid"));
-    if (LIVE) {
-      setBusy(true);
-      try {
-        // الموقع: الخادم يحط الجلسة في كوكي محمي وما يرجّع الرمز. الجوال: الرمز يرجع وينحفظ في الخزنة.
-        const res = await api<{ token?: string }>("/v1/auth/otp/verify", {
-          method: "POST",
-          body: { phone, code: latin, ...(as === "provider" ? { as: "provider" } : {}), ...(IS_WEB ? { channel: "web" } : {}) },
-        });
-        const role = await startSession(res.token ?? null, phone ?? "");
-        setBusy(false);
-        return router.replace(homeRouteFor(role));
-      } catch (e) {
-        setError(t(errorKey(e instanceof ApiClientError ? e.code : "server")));
-        setBusy(false);
-        return;
-      }
+    setBusy(true);
+    try {
+      // الموقع: الخادم يحط الجلسة في كوكي محمي وما يرجّع الرمز. الجوال: الرمز يرجع وينحفظ في الخزنة.
+      // في النسخة التجريبية نفس الطلب يروح للخادم التجريبي داخل المتصفح (أي ٦ أرقام تمشي).
+      const res = await api<{ token?: string }>("/v1/auth/otp/verify", {
+        method: "POST",
+        body: { phone, code: latin, ...(as === "provider" ? { as: "provider" } : {}), ...(IS_WEB ? { channel: "web" } : {}) },
+      });
+      const role = await startSession(res.token ?? null, phone ?? "");
       setBusy(false);
-    } else {
-      dispatch({ type: "signIn", phone: phone ?? "" });
+      router.replace(homeRouteFor(role));
+    } catch (e) {
+      setError(t(errorKey(e instanceof ApiClientError ? e.code : "server")));
+      setBusy(false);
     }
-    router.replace("/home");
   }
 
   // الرقم يظهر بصيغة محلية: 05XXXXXXXX

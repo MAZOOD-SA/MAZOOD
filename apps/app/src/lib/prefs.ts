@@ -2,7 +2,8 @@
 // ممنوع تُحفظ هنا أي بيانات حساسة أو مفاتيح دخول: هذا تخزين عادي غير مشفّر.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-type PrefKey = "theme" | "locale";
+// seenJobs: أرقام الطلبات المنفّذة اللي شافها المزوّد (عشان حركة «انقبل عرضك» تطلع مرة وحدة بس).
+type PrefKey = "theme" | "locale" | "seenJobs";
 
 export async function loadPref(key: PrefKey): Promise<string | null> {
   try {

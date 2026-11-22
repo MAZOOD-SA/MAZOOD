@@ -1,9 +1,11 @@
 // أنواع البيانات في النسخة التجريبية. نفس الشكل المبسّط اللي في PLAN.md (القسم ٣)،
 // وفي المرحلة ٢ تصير جداول حقيقية في قاعدة البيانات.
 import type { Localized } from "@/i18n/I18nProvider";
+import type { RequestStatus } from "@mazood/shared";
 import type { CategoryId } from "./categories";
 
-export type RequestStatus = "awaiting_offers" | "in_progress" | "completed" | "cancelled";
+export type { RequestStatus };
+
 export type When = "today" | "tomorrow" | "this_week";
 
 export type ServiceRequest = {
@@ -21,6 +23,9 @@ export type ServiceRequest = {
   status: RequestStatus;
   acceptedOfferId?: string;
   invoiceId?: string;
+  /** عدد العروض الصالحة، وكم واحد منها ما انفتح (من قائمة الطلبات في الخادم). */
+  offerCount?: number;
+  newOfferCount?: number;
 };
 
 export type Provider = {

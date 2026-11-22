@@ -1,24 +1,28 @@
-// حسابي: بيانات المصنع، واللغة، والمظهر، والخروج.
+// حسابي (للمصنع): بيانات المصنع، وموظفين المصنع (المدير يضيف ويوقف)، واللغة، والمظهر، وطلب حذف الحساب، والخروج.
 import { spacing } from "@mazood/brand";
-import { IconInfoCircle, IconLogout } from "@/components/icons";
+import { normalizeSaudiMobile } from "@mazood/shared";
 import { router } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
-import { Screen, SectionTitle } from "@/components/layout";
-import { AppText, Button, Card, Chips, Divider, Notice } from "@/components/ui";
-import { LIVE } from "@/api/client";
+import { ApiClientError, LIVE } from "@/api/client";
+import { errorKey } from "@/api/mapping";
+import { DeleteAccountSection, PreferencesSection, SignOutButton } from "@/components/account";
+import { Field } from "@/components/Field";
+import { IconInfoCircle, IconUsers } from "@/components/icons";
+import { Screen, SectionTitle, TwoColumn } from "@/components/layout";
+import { AppText, Badge, Button, Card, Chips, Divider, Notice, Row } from "@/components/ui";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
-import type { Locale } from "@/lib/format";
-import { useTheme, type ThemeMode } from "@/theme/ThemeProvider";
+
+type Member = { userId: string; phone: string; role: "manager" | "member"; active: boolean; joined: boolean };
 
 export default function Account() {
-  const { t, tl, locale, setLocale, digits, code } = useI18n();
-  const { mode, setMode } = useTheme();
-  const { state, factory: FACTORY, profileComplete, signOut } = useStore();
+  const { t, tl, locale, digits, code } = useI18n();
+  const { state, factory: FACTORY, profileComplete, factoryRole } = useStore();
   const phone = state.phone ? `0${state.phone.slice(4)}` : "";
 
-  return (
-    <Screen title={t("accountTitle")}>
+  const main = (
+    <>
       <Card style={{ gap: spacing["2"] }}>
         <AppText variant="caption" color="inkMuted">
           {t("factory")}
@@ -31,48 +35,112 @@ export default function Account() {
         <InfoRow label={t("commercialRegister")} value={code(FACTORY.commercialRegister)} />
         <InfoRow label={t("vatNumber")} value={code(FACTORY.vatNumber)} />
       </Card>
-
-      {LIVE && (
-        <Button
-          label={profileComplete ? t("editProfile") : t("completeProfile")}
-          variant={profileComplete ? "secondary" : "primary"}
-          onPress={() => router.push("/factory-profile")}
-        />
-      )}
-
-      <SectionTitle title={t("language")} />
-      <Chips<Locale>
-        value={locale}
-        onChange={setLocale}
-        options={[
-          { value: "ar", label: "العربية" },
-          { value: "en", label: "English" },
-        ]}
-      />
-
-      <SectionTitle title={t("appearance")} />
-      <Chips<ThemeMode>
-        value={mode}
-        onChange={setMode}
-        options={[
-          { value: "system", label: t("themeSystem") },
-          { value: "light", label: t("themeLight") },
-          { value: "dark", label: t("themeDark") },
-        ]}
-      />
-
-      {!LIVE && <Notice icon={IconInfoCircle} text={t("prototypeNote")} />}
-
       <Button
-        label={t("signOut")}
-        variant="secondary"
-        icon={IconLogout}
-        onPress={async () => {
-          await signOut();
-          router.replace("/login");
-        }}
+        label={profileComplete ? t("editProfile") : t("completeProfile")}
+        variant={profileComplete ? "secondary" : "primary"}
+        onPress={() => router.push("/factory-profile")}
       />
+      <Members manager={factoryRole !== "member"} />
+    </>
+  );
+
+  const side = (
+    <>
+      <PreferencesSection />
+      {!LIVE && <Notice icon={IconInfoCircle} text={t("prototypeNote")} />}
+      <SignOutButton />
+      <DeleteAccountSection />
+    </>
+  );
+
+  return (
+    <Screen title={t("accountTitle")} width="page">
+      <TwoColumn main={main} side={side} />
     </Screen>
+  );
+}
+
+/** موظفين المصنع: الكل يشوف القائمة، والمدير بس يضيف (برقم الجوال والدور) ويوقف (سؤال ١٦). */
+function Members({ manager }: { manager: boolean }) {
+  const { t, digits } = useI18n();
+  const { authed, state } = useStore();
+  const [members, setMembers] = useState<Member[] | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [role, setRole] = useState<"member" | "manager">("member");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(() => {
+    authed<{ members: Member[] }>("/v1/factory/members")
+      .then((r) => setMembers(r.members))
+      .catch(() => setMembers([]));
+  }, [authed]);
+  useEffect(load, [load]);
+
+  async function add() {
+    const normalized = normalizeSaudiMobile(phone);
+    if (!normalized) return setError(t("phoneInvalid"));
+    setBusy(true);
+    setError(null);
+    try {
+      await authed("/v1/factory/members", { method: "POST", body: { phone: normalized, role } });
+      setPhone("");
+      setAdding(false);
+      load();
+    } catch (e) {
+      setError(t(errorKey(e instanceof ApiClientError ? e.code : "server")));
+    }
+    setBusy(false);
+  }
+
+  async function toggle(m: Member) {
+    await authed(`/v1/factory/members/${m.userId}/${m.active ? "suspend" : "activate"}`, { method: "POST" }).catch(() => {});
+    load();
+  }
+
+  return (
+    <View style={{ gap: spacing["3"] }}>
+      <SectionTitle title={t("factoryMembers")} action={manager && !adding ? <Button label={t("addMember")} icon={IconUsers} variant="ghost" onPress={() => setAdding(true)} /> : undefined} />
+      {adding && (
+        <Card style={{ gap: spacing["3"] }}>
+          <Field label={t("phoneLabel")} value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="05XXXXXXXX" error={error} onSubmitEditing={add} ltr />
+          <Chips
+            value={role}
+            onChange={setRole}
+            options={[
+              { value: "member", label: t("roleMember") },
+              { value: "manager", label: t("roleManager") },
+            ]}
+          />
+          <AppText variant="caption" color="inkMuted">
+            {t("memberHint")}
+          </AppText>
+          <Row style={{ flexWrap: "wrap" }}>
+            <Button label={t("addMember")} variant="primary" loading={busy} onPress={add} />
+            <Button label={t("back")} variant="ghost" onPress={() => setAdding(false)} />
+          </Row>
+        </Card>
+      )}
+      {(members ?? []).map((m) => (
+        <Card key={m.userId} style={{ paddingVertical: spacing["3"] }}>
+          <Row style={{ justifyContent: "space-between", flexWrap: "wrap" }}>
+            <View style={{ gap: 2 }}>
+              <AppText variant="bodySm" weight={600} style={{ writingDirection: "ltr", alignSelf: "flex-start" }}>
+                {digits(`0${m.phone.slice(4)}`)}
+              </AppText>
+              <Row gap="1">
+                <Badge label={t(m.role === "manager" ? "roleManager" : "roleMember")} tone="muted" />
+                {!m.active && <Badge label={t("inactive")} tone="bad" />}
+              </Row>
+            </View>
+            {manager && m.phone !== state.phone && (
+              <Button label={m.active ? t("deactivate") : t("activate")} variant="ghost" tone={m.active ? "danger" : "default"} onPress={() => toggle(m)} />
+            )}
+          </Row>
+        </Card>
+      ))}
+    </View>
   );
 }
 

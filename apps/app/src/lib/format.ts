@@ -75,3 +75,26 @@ export function codeForDisplay(s: string, locale: Locale): string {
   const ltrMarked = localizeDigits(s, locale).replace(/([^٠-٩])/g, "\u200E$1\u200E");
   return `\u2066${ltrMarked}\u2069`;
 }
+
+/** مدة التنفيذ بالساعات: «٦ ساعات»، «يوم»، «٣ أيام». */
+export function formatDuration(hours: number, locale: Locale): string {
+  const n = (x: number) => formatNumber(x, locale);
+  if (hours % 24 === 0) {
+    const d = hours / 24;
+    if (locale === "ar") return d === 1 ? "يوم" : d === 2 ? "يومين" : d <= 10 ? `${n(d)} أيام` : `${n(d)} يوم`;
+    return d === 1 ? "1 day" : `${n(d)} days`;
+  }
+  if (locale === "ar") return hours === 1 ? "ساعة" : hours === 2 ? "ساعتين" : hours <= 10 ? `${n(hours)} ساعات` : `${n(hours)} ساعة`;
+  return hours === 1 ? "1 hour" : `${n(hours)} hours`;
+}
+
+/** وقت في المستقبل (صلاحية العرض، ومهلة الرد): «خلال ٥ ساعات»، أو التاريخ لو بعيد. */
+export function formatUntil(iso: string, locale: Locale, now: Date = new Date()): string {
+  const diffMin = Math.round((new Date(iso).getTime() - now.getTime()) / 60000);
+  const n = (x: number) => formatNumber(x, locale);
+  if (diffMin <= 0) return locale === "ar" ? "انتهى" : "Ended";
+  if (diffMin < 60) return locale === "ar" ? `خلال ${n(diffMin)} دقيقة` : `in ${n(diffMin)} min`;
+  const h = Math.round(diffMin / 60);
+  if (h < 48) return locale === "ar" ? `خلال ${formatDuration(h, locale)}` : `in ${formatDuration(h, locale)}`;
+  return formatDate(iso, locale);
+}

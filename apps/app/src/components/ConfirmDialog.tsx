@@ -1,6 +1,8 @@
 // نافذة تأكيد قبل أي إجراء مهم (قبول عرض، إلغاء طلب). تشتغل بنفس الشكل في الموقع والجوال.
+// فيها مكان لحقول (children) للنوافذ اللي تطلب سبب أو سعر. Esc يقفلها في الموقع (onRequestClose).
 import { radius, spacing } from "@mazood/brand";
-import { Modal, Pressable, View } from "react-native";
+import type { ReactNode } from "react";
+import { Modal, Pressable, ScrollView, View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { AppText, Button, type ButtonVariant } from "./ui";
 
@@ -13,15 +15,23 @@ export function ConfirmDialog({
   confirmVariant = "primary",
   onConfirm,
   onCancel,
+  children,
+  busy,
+  error,
+  confirmDisabled,
 }: {
   visible: boolean;
   title: string;
-  body: string;
+  body?: string;
   confirmLabel: string;
   cancelLabel: string;
   confirmVariant?: ButtonVariant;
   onConfirm: () => void;
   onCancel: () => void;
+  children?: ReactNode;
+  busy?: boolean;
+  error?: string | null;
+  confirmDisabled?: boolean;
 }) {
   const { colors } = useTheme();
   return (
@@ -35,9 +45,11 @@ export function ConfirmDialog({
         <View style={{ position: "absolute", top: 0, bottom: 0, start: 0, end: 0, backgroundColor: colors.navy, opacity: 0.5 }} />
         <Pressable
           onPress={() => {}}
+          accessibilityViewIsModal
           style={{
             width: "100%",
-            maxWidth: 400,
+            maxWidth: 440,
+            maxHeight: "90%",
             backgroundColor: colors.surface,
             borderRadius: radius.lg,
             borderWidth: 1,
@@ -46,12 +58,22 @@ export function ConfirmDialog({
             gap: spacing["3"],
           }}
         >
-          <AppText variant="h2">{title}</AppText>
-          <AppText variant="bodySm" color="inkMuted">
-            {body}
-          </AppText>
-          <View style={{ flexDirection: "row", gap: spacing["2"], marginTop: spacing["2"] }}>
-            <Button label={confirmLabel} variant={confirmVariant} onPress={onConfirm} />
+          <ScrollView contentContainerStyle={{ gap: spacing["3"] }} keyboardShouldPersistTaps="handled">
+            <AppText variant="h2">{title}</AppText>
+            {!!body && (
+              <AppText variant="bodySm" color="inkMuted">
+                {body}
+              </AppText>
+            )}
+            {children}
+            {!!error && (
+              <AppText variant="bodySm" color="danger">
+                {error}
+              </AppText>
+            )}
+          </ScrollView>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing["2"], marginTop: spacing["2"] }}>
+            <Button label={confirmLabel} variant={confirmVariant} onPress={onConfirm} loading={busy} disabled={confirmDisabled} />
             <Button label={cancelLabel} variant="ghost" onPress={onCancel} />
           </View>
         </Pressable>

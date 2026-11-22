@@ -1,0 +1,98 @@
+// صور تلقائية لكل شاشة بثلاث مقاسات (٣٩٠ و٧٦٨ و١٤٤٠)، مع فحصين لكل صورة:
+//   ١. الصفحة ما فيها تمرير أفقي.
+//   ٢. الزر الكهرماني واحد بالكثير (قاعدة ٣ في CLAUDE.md).
+// يشتغل على النسخة التجريبية (بدون خادم) بعد البناء:
+//   pnpm build:web && node scripts/screens.mjs [مجلد الصور]
+// يستخدم Playwright (لازم يكون مثبّت على الجهاز: npx playwright install chromium).
+import { createReadStream, existsSync, mkdirSync, statSync } from "node:fs";
+import { createServer } from "node:http";
+import { extname, join, resolve } from "node:path";
+import { createRequire } from "node:module";
+
+// require بدل import: يلقى Playwright المثبّت على الجهاز حتى لو ما هو في مكتبات المشروع.
+const { chromium } = createRequire(import.meta.url)("playwright");
+
+const DIST = resolve(import.meta.dirname, "../apps/app/dist");
+const OUT = resolve(process.argv[2] ?? "screens");
+const WIDTHS = [
+  { name: "phone", width: 390, height: 844 },
+  { name: "tablet", width: 768, height: 1024 },
+  { name: "desktop", width: 1440, height: 900 },
+];
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".ttf": "font/ttf", ".png": "image/png", ".json": "application/json" };
+
+if (!existsSync(DIST)) {
+  console.error("✗ ما فيه بناء. شغّل أول: pnpm build:web");
+  process.exit(1);
+}
+mkdirSync(OUT, { recursive: true });
+
+// خادم صغير للملفات: أي مسار ما له ملف يرجّع index.html (التطبيق يحدد الشاشة من الرابط).
+const server = createServer((req, res) => {
+  const path = decodeURIComponent((req.url ?? "/").split("?")[0]);
+  let file = join(DIST, path);
+  if (!existsSync(file) || statSync(file).isDirectory()) file = join(DIST, "index.html");
+  res.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream" });
+  createReadStream(file).pipe(res);
+}).listen(0);
+const base = `http://localhost:${server.address().port}`;
+
+const FACTORY = ["/home", "/requests", "/request/r1", "/request/r2", "/request/r3", "/request/r4", "/request/new", "/account", "/factory-profile", "/invoices", "/notifications"];
+const PROVIDER = ["/provider/requests", "/provider/work", "/provider/job/d8", "/provider/request/r5", "/provider/account"];
+
+const problems = [];
+const browser = await chromium.launch();
+
+async function shoot(page, size, route, label) {
+  await page.goto(`${base}${route}`);
+  await page.waitForTimeout(1200);
+  const name = `${label}-${route.replace(/\//g, "_").replace(/^_/, "") || "root"}-${size.name}`;
+  await page.screenshot({ path: join(OUT, `${name}.png`), fullPage: true });
+  const r = await page.evaluate(() => ({
+    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    accents: [...document.querySelectorAll('[data-accent="true"]')].filter((el) => el.getBoundingClientRect().width > 0).length,
+  }));
+  if (r.overflow > 1) problems.push(`${name}: تمرير أفقي ${r.overflow}px`);
+  if (r.accents > 1) problems.push(`${name}: ${r.accents} أزرار كهرمانية`);
+  console.log(`${r.overflow > 1 || r.accents > 1 ? "✗" : "✓"} ${name}`);
+}
+
+async function signIn(page, buttonText) {
+  await page.goto(`${base}/login`);
+  await page.getByRole("button", { name: buttonText }).click();
+  await page.waitForTimeout(1500);
+}
+
+for (const size of WIDTHS) {
+  for (const [label, button, routes, scheme] of [
+    ["factory", "ادخل كمصنع", FACTORY, "light"],
+    ["provider", "ادخل كمزوّد", PROVIDER, "light"],
+  ]) {
+    const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, colorScheme: scheme });
+    const page = await context.newPage();
+    page.on("pageerror", (e) => problems.push(`${label} ${size.name}: خطأ في الصفحة: ${e.message}`));
+    await shoot(page, size, "/login", label);
+    await signIn(page, button);
+    for (const route of routes) await shoot(page, size, route, label);
+    await context.close();
+  }
+}
+
+// الوضع الداكن والإنجليزي: عيّنة على الكمبيوتر والجوال.
+for (const size of [WIDTHS[0], WIDTHS[2]]) {
+  const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, colorScheme: "dark" });
+  await context.addInitScript(() => localStorage.setItem("mazood.locale", "en"));
+  const page = await context.newPage();
+  await signIn(page, "Sign in as factory");
+  await shoot(page, size, "/request/r1", "factory-dark-en");
+  await shoot(page, size, "/home", "factory-dark-en");
+  await context.close();
+}
+
+await browser.close();
+server.close();
+if (problems.length) {
+  console.error(`\n✗ ${problems.length} مشكلة:\n${problems.join("\n")}`);
+  process.exit(1);
+}
+console.log(`\n✓ كل الشاشات بدون تمرير أفقي، وزر كهرماني واحد بالكثير. الصور في ${OUT}`);

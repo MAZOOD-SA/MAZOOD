@@ -1,8 +1,9 @@
-// الشاشة الرئيسية للمزوّد في المرحلة ٣: حالة التوثيق ومستنداته.
+// حالة التوثيق للمزوّد قبل ما يتوثّق (الشاشة الوحيدة له قبل التوثيق): بياناته ومستنداته والخطوة الجاية.
+// بعد التوثيق يروح مباشرة للطلبات المتاحة.
 // «ولا مرة طريق مسدود»: في كل حالة فيه زر واضح يقول له وش الخطوة الجاية.
 import { spacing } from "@mazood/brand";
 import { IconAlertTriangle, IconLogout, IconSend, IconUpload } from "@/components/icons";
-import { router } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
 import { ApiClientError } from "@/api/client";
@@ -44,6 +45,9 @@ export default function ProviderHome() {
       </Screen>
     );
   }
+
+  // بعد التوثيق: شاشاته الأساسية (الطلبات المتاحة وشغلي وحسابي). حالة التوثيق تبقى في «حسابي».
+  if (provider?.verified) return <Redirect href="/provider/requests" />;
 
   // أول مرة: ما سجّل بياناته للحين.
   if (provider === null) {
