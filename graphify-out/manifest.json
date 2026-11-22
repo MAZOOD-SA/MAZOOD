@@ -312,9 +312,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1795281383.3270397,
-    "seen": 1795339076.7042263,
-    "ast_hash": "8a81db5708a8b28757beab2b947077f9",
+    "mtime": 1795339325.7387888,
+    "seen": 1795339330.2420833,
+    "ast_hash": "4f759181fa09a63a72018d333834bf40",
     "semantic_hash": ""
   },
   "brand/BRAND.md": {
@@ -342,15 +342,15 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1795281383.3329408,
-    "seen": 1795339076.7042363,
-    "ast_hash": "6985fd80095f722f1d6fda3601e82334",
+    "mtime": 1795339325.739453,
+    "seen": 1795339330.24209,
+    "ast_hash": "e66ff8c7630963b47150fdc77eee0962",
     "semantic_hash": ""
   },
   "docs/licenses.md": {
-    "mtime": 1795281383.3329408,
-    "seen": 1795339076.7042372,
-    "ast_hash": "148aead89a2322883ee9fcb70f1bc8f8",
+    "mtime": 1795339325.7391489,
+    "seen": 1795339330.242092,
+    "ast_hash": "172ad55936311f9722b09adbe6dff56b",
     "semantic_hash": ""
   },
   "docs/product.md": {

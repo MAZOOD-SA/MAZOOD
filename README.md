@@ -49,6 +49,38 @@ pnpm test
 3. يفحص أنواع TypeScript.
 4. يشغّل اختبارات Vitest: الهوية، والمبالغ والضريبة، والتنسيق، ومنطق الطلبات والعروض.
 
+## رسم المعرفة (graphify): للمبرمج وللـ Claude Code
+
+المستودع فيه رسم يربط الكود بالوثائق (`PLAN.md` و`docs/`)، وهو في `graphify-out/`. يختصر البحث في المشروع: بدل ما تقرأ ملفات كثير، تسأل الرسم فيرجّع الأجزاء المرتبطة بس. وهو أداة تطوير فقط، ما يدخل في المنتج.
+
+**التثبيت (مرة وحدة)**، ويحتاج Python 3.10 أو أحدث:
+
+```bash
+pip install graphifyy
+graphify claude install
+```
+
+الأمر الثاني يضيف قسم graphify في `CLAUDE.md` وhooks في `.claude/settings.json`. وهما موجودان في المستودع أصلًا، فلا تشغّله إلا لو انحذفا. الـ hooks تستدعي `/usr/local/bin/graphify`، فإذا ثبّتّه في مكان ثاني عدّل المسار في `.claude/settings.json`.
+
+**الاستخدام**
+
+```bash
+graphify query "كيف يشتغل الدخول بالجوال؟"      # أسئلة عن المشروع
+graphify explain "useStore"                      # شرح عنصر وما يرتبط فيه
+graphify path "useStore" "RequestDetails"        # العلاقة بين عنصرين
+graphify section "المرحلة 2"                     # نص قسم من ملف Markdown
+```
+
+**التحديث بعد كل تعديل على الكود** (مجاني، بدون ذكاء اصطناعي):
+
+```bash
+graphify update .
+```
+
+بعدها ارفع التغيير على `graphify-out/` مع الـ commit. تغيّر كبير في `graph.json` شي طبيعي لأنه يُكتب كله من جديد كل مرة. وخريطة المشروع التفاعلية في `graphify-out/graph.html`، تنفتح بالمتصفح.
+
+بعد تعديل ملفات Markdown أو الصور، شغّل `/graphify --update` من داخل Claude Code بدل الأمر أعلاه.
+
 ## النشر
 
 **المرحلة ١:** الموقع ملفات ثابتة (static). تُبنى بالأمر:
