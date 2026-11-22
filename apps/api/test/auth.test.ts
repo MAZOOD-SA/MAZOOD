@@ -189,3 +189,31 @@ describe("حماية البيانات المحفوظة", () => {
     expect(r.headers["x-content-type-options"]).toBe("nosniff");
   });
 });
+
+describe("الصلاحيات في /me وأدوار الإدارة", () => {
+  it("المصنع ياخذ صلاحيات المصنع بس", async () => {
+    const s = await t.signIn();
+    expect(s.me.staffRoles).toEqual([]);
+    expect(s.me.permissions.sort()).toEqual(["factory.profile.edit", "request.create", "request.manage_own", "request.view_own"]);
+  });
+
+  it("الموظف ياخذ صلاحيات دوره، وما يقدر يتصرف كمصنع", async () => {
+    const { grantStaffRole } = await import("../src/staff");
+    const phone = randomPhone();
+    await grantStaffRole(t.db, phone, "verification");
+    const ip = randomIp();
+    await t.call("POST", "/auth/otp/request", { body: { phone }, ip });
+    const v = await t.call("POST", "/auth/otp/verify", { body: { phone, code: t.sms.lastCodeFor(`+966${phone.slice(1)}`) }, ip });
+    expect(v.body.me.role).toBe("staff");
+    expect(v.body.me.staffRoles).toEqual(["verification"]);
+    expect(v.body.me.permissions).toContain("providers.verify");
+    expect(v.body.me.permissions).not.toContain("invoices.view");
+    expect((await t.call("POST", "/requests", { token: v.body.token, body: { category: "materials" } })).status).toBe(403);
+  });
+
+  it("رقم مسجّل كمصنع ما يتحوّل لموظف", async () => {
+    const { grantStaffRole } = await import("../src/staff");
+    const s = await t.signIn();
+    await expect(grantStaffRole(t.db, `0${s.phone.slice(4)}`, "owner")).rejects.toThrow(/مسجّل كمصنع/);
+  });
+});

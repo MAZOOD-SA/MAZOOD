@@ -12,6 +12,7 @@
 // (سياسة CORS)، فموقع خبيث ما يقدر يستغل جلسة المستخدم. وفوقها ملف التعريف SameSite=Strict.
 import type { FastifyRequest } from "fastify";
 import type { Db } from "./db";
+import { permissionsFor, type Permission, type Principal, type StaffRole } from "@mazood/shared";
 import { HttpError } from "./errors";
 import type { UserRole } from "./generated/prisma/enums";
 import { hashSessionToken } from "./security";
@@ -31,7 +32,17 @@ export type AuthUser = {
   factoryId: string | null;
   /** من وين جا رمز الجلسة. */
   via: "bearer" | "cookie";
+  /** أدوار الإدارة (فاضية لغير الموظفين). */
+  staffRoles: StaffRole[];
 };
+
+/** يحوّل المستخدم لـ «صاحب طلب» عشان نحسب صلاحياته من الجدول المشترك. */
+export function principalOf(u: Pick<AuthUser, "role" | "staffRoles">): Principal {
+  if (u.role === "staff") return { kind: "staff", roles: u.staffRoles };
+  // المزوّد يتوثّق في المرحلة ٣. لين ذاك الوقت ما فيه مزوّد موثّق مرتبط بحساب.
+  if (u.role === "provider") return { kind: "provider", verified: false };
+  return { kind: "factory" };
+}
 
 export const SESSION_COOKIE = "mz_session";
 export const CSRF_HEADER = "x-requested-with";
@@ -65,7 +76,7 @@ export async function resolveUser(db: Db, req: FastifyRequest): Promise<AuthUser
   if (!token) return null;
   const session = await db.session.findUnique({
     where: { tokenHash: hashSessionToken(token) },
-    include: { user: { include: { factoryMembers: { select: { factoryId: true }, take: 1 } } } },
+    include: { user: { include: { factoryMembers: { select: { factoryId: true }, take: 1 }, staffRoles: { select: { role: true } } } } },
   });
   const now = Date.now();
   if (!session || session.revokedAt || session.expiresAt.getTime() <= now) return null;
@@ -83,6 +94,7 @@ export async function resolveUser(db: Db, req: FastifyRequest): Promise<AuthUser
     sessionId: session.id,
     factoryId: u.factoryMembers[0]?.factoryId ?? null,
     via: bearer ? "bearer" : "cookie",
+    staffRoles: u.staffRoles.map((s) => s.role),
   };
 }
 
@@ -99,9 +111,23 @@ export function requireRole(req: FastifyRequest, role: UserRole): AuthUser {
   return u;
 }
 
-/** لازم يكون مستخدم مصنع، وكمّل بيانات المصنع. يرجع رقم المصنع اللي تُفلتر عليه كل البيانات. */
-export function requireFactory(req: FastifyRequest): AuthUser & { factoryId: string } {
-  const u = requireRole(req, "factory");
+/**
+ * لازم يملك صلاحية معيّنة من جدول الصلاحيات (packages/shared/src/permissions.ts).
+ * هذي الطريقة المعتمدة لأي مسار جديد، خصوصًا مسارات لوحة الإدارة (المرحلة ٣ وما بعدها).
+ */
+export function requirePermission(req: FastifyRequest, permission: Permission): AuthUser {
+  const u = requireUser(req);
+  if (!permissionsFor(principalOf(u)).has(permission)) throw new HttpError(403, "forbidden");
+  return u;
+}
+
+/**
+ * لازم يكون مستخدم مصنع بالصلاحية المطلوبة، وكمّل بيانات مصنعه.
+ * يرجع رقم المصنع اللي تُفلتر عليه كل البيانات (في الكود، وفي قاعدة البيانات عن طريق scope.ts).
+ */
+export function requireFactory(req: FastifyRequest, permission: Permission = "request.view_own"): AuthUser & { factoryId: string } {
+  const u = requirePermission(req, permission);
+  if (u.role !== "factory") throw new HttpError(403, "forbidden");
   if (!u.factoryId) throw new HttpError(403, "factory_profile_required");
   return u as AuthUser & { factoryId: string };
 }

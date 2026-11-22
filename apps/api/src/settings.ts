@@ -8,7 +8,7 @@ import type { Db } from "./db";
 const cancelPolicySchema = z.object({ freeCancelUntil: z.enum(["provider_starts", "offer_accepted"]) });
 
 /** سياسة الإلغاء الحالية. لو ما انحفظت أو انحفظت غلط، نرجع للمعتمدة مبدئيًا. */
-export async function getCancelPolicy(db: Db): Promise<CancelPolicy> {
+export async function getCancelPolicy(db: Pick<Db, "setting">): Promise<CancelPolicy> {
   const row = await db.setting.findUnique({ where: { key: "cancel_policy" } });
   const parsed = cancelPolicySchema.safeParse(row?.value);
   return parsed.success ? parsed.data : DEFAULT_CANCEL_POLICY;

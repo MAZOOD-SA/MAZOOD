@@ -26,6 +26,15 @@ enum UserStatus {
   suspended
 }
 
+/// أدوار فريق الإدارة (CLAUDE.md). أنواع شغل، والشخص ممكن يمسك أكثر من دور.
+enum StaffRole {
+  owner
+  general_manager
+  verification
+  support
+  finance
+}
+
 enum RequestStatus {
   awaiting_offers
   accepted
@@ -65,6 +74,7 @@ model User {
 
   sessions         Session[]
   factoryMembers   FactoryMember[]
+  staffRoles       StaffMember[]   @relation("StaffUser")
   createdRequests  Request[]       @relation("RequestCreatedBy")
 
   @@map("users")
@@ -106,6 +116,20 @@ model Session {
 
   @@index([userId])
   @@map("sessions")
+}
+
+/// أدوار موظفي الإدارة. صلاحيات كل دور في packages/shared/src/permissions.ts.
+model StaffMember {
+  userId      String    @map("user_id") @db.Uuid
+  role        StaffRole
+  /// مين أعطاه الدور (null: من أداة سطر الأوامر عند تأسيس المنصة).
+  grantedById String?   @map("granted_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user User @relation("StaffUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, role])
+  @@map("staff_members")
 }
 
 // ─── المصانع ───────────────────────────────────────────

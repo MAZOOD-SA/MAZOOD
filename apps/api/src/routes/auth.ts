@@ -6,10 +6,10 @@
 //   - كل رمز: ٥ محاولات إدخال، وبعدها ينتهي ويحتاج رمز جديد.
 //   - كل رمز ينتهي بعد ٥ دقايق، وينفع مرة وحدة بس.
 // والرد ما يكشف أبدًا هل الرقم مسجّل عندنا ولا لا.
-import { localeSchema, otpRequestSchema, otpVerifySchema, type Me, type OtpRequestResponse, type SessionResponse } from "@mazood/shared";
+import { localeSchema, otpRequestSchema, otpVerifySchema, permissionsFor, type Me, type OtpRequestResponse, type SessionResponse } from "@mazood/shared";
 import type { FastifyInstance } from "fastify";
 import { audit } from "../audit";
-import { requireUser, SESSION_COOKIE, SESSION_TTL_MS } from "../auth";
+import { principalOf, requireUser, SESSION_COOKIE, SESSION_TTL_MS } from "../auth";
 import type { Config } from "../config";
 import type { AppContext } from "../context";
 import { HttpError, parse } from "../errors";
@@ -143,8 +143,9 @@ export async function authRoutes(app: FastifyInstance, ctx: AppContext) {
 export async function loadMe({ db }: AppContext, userId: string): Promise<Me> {
   const user = await db.user.findUniqueOrThrow({
     where: { id: userId },
-    include: { factoryMembers: { include: { factory: true }, take: 1 } },
+    include: { factoryMembers: { include: { factory: true }, take: 1 }, staffRoles: { select: { role: true } } },
   });
+  const staffRoles = user.staffRoles.map((s) => s.role);
   const factory = user.factoryMembers[0]?.factory;
   return {
     id: user.id,
@@ -152,6 +153,8 @@ export async function loadMe({ db }: AppContext, userId: string): Promise<Me> {
     role: user.role,
     locale: user.locale === "en" ? "en" : "ar",
     factory: factory ? factoryDto(factory) : null,
+    staffRoles,
+    permissions: [...permissionsFor(principalOf({ role: user.role, staffRoles }))],
   };
 }
 

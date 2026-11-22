@@ -12,7 +12,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "typecheck": "tsc --noEmit",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "staff:grant": "tsx --env-file-if-exists=.env scripts/grant-staff.ts"
   },
   "dependencies": {
     "@fastify/cookie": "11.1.5",

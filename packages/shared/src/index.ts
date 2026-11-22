@@ -5,3 +5,4 @@ export * from "./money";
 export * from "./phone";
 export * from "./requests";
 export * from "./schemas";
+export * from "./permissions";

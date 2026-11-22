@@ -1,6 +1,7 @@
 // شكل البيانات اللي يرجعها الخادم للتطبيق. أي تغيير هنا لازم يتغيّر في الطرفين،
 // وTypeScript ينبّه لو واحد منهم ما تحدّث.
 import type { CategoryId, Localized } from "./categories";
+import type { Permission, StaffRole } from "./permissions";
 import type { CancelPolicy, CancelRequestStatus, FactoryAction, RequestStatus, When } from "./requests";
 
 export type ApiError = {
@@ -28,6 +29,10 @@ export type Me = {
   role: "factory" | "provider" | "staff";
   locale: "ar" | "en";
   factory: FactoryDto | null;
+  /** أدوار الإدارة (للموظفين بس). */
+  staffRoles: StaffRole[];
+  /** كل صلاحياته، محسوبة في الخادم من packages/shared/src/permissions.ts. الواجهة تعرض الأزرار حسبها. */
+  permissions: Permission[];
 };
 
 /**

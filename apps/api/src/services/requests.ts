@@ -4,7 +4,9 @@
 // قاعدتين أمان في كل دالة هنا:
 //   1. **كل استعلام مفلتر برقم المصنع.** المصنع ما يشوف ولا يلمس طلب مصنع ثاني. لو حاول،
 //      يرجع «غير موجود» (٤٠٤) مو «ممنوع» (٤٠٣)، عشان ما يعرف إن الطلب موجود أصلًا.
-//   2. **كل تغيير حالة مشروط بالحالة القديمة** (updateMany مع where status). لو وصل طلبين
+//   2. **قاعدة البيانات طبقة حماية ثانية (RLS):** مسارات المصنع تشغّل هذي الدوال داخل معاملة
+//      محددة بمصنعه (withFactoryScope في scope.ts)، فحتى لو نسي مبرمج الفلترة، القاعدة ترفض.
+//   3. **كل تغيير حالة مشروط بالحالة القديمة** (updateMany مع where status). لو وصل طلبين
 //      بنفس اللحظة (مثلًا قبول عرضين)، ينجح واحد بس، والثاني يرجع ٤٠٩.
 import {
   allowedFactoryActions,
@@ -19,8 +21,11 @@ import {
 import { audit } from "../audit";
 import type { Db } from "../db";
 import { conflict, notFound } from "../errors";
-import type { Offer, Provider, Request } from "../generated/prisma/client";
+import type { Offer, Prisma, Provider, Request } from "../generated/prisma/client";
 import type { RequestStatus } from "../generated/prisma/enums";
+
+/** اتصال بقاعدة البيانات: عادي، أو معاملة (الدوال تقبل الاثنين). */
+export type Tx = Prisma.TransactionClient;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -95,23 +100,23 @@ function detailsDto(r: RequestWithOffers, policy: CancelPolicy): RequestDetailsD
 const withOffers = { offers: { include: { provider: true } } } as const;
 
 /** يجيب طلب للمصنع هذا بس. أي طلب لمصنع ثاني (أو رقم غلط) = غير موجود. */
-async function loadOwned(db: Db, factoryId: string, requestId: string): Promise<RequestWithOffers> {
+async function loadOwned(db: Tx, factoryId: string, requestId: string): Promise<RequestWithOffers> {
   if (!UUID.test(requestId)) throw notFound();
   const r = await db.request.findFirst({ where: { id: requestId, factoryId }, include: withOffers });
   if (!r) throw notFound();
   return r;
 }
 
-export async function listRequests(db: Db, factoryId: string, policy: CancelPolicy): Promise<RequestDto[]> {
+export async function listRequests(db: Tx, factoryId: string, policy: CancelPolicy): Promise<RequestDto[]> {
   const rows = await db.request.findMany({ where: { factoryId }, include: withOffers, orderBy: { createdAt: "desc" }, take: 200 });
   return rows.map((r) => requestDto(r, policy));
 }
 
-export async function getRequest(db: Db, factoryId: string, requestId: string, policy: CancelPolicy): Promise<RequestDetailsDto> {
+export async function getRequest(db: Tx, factoryId: string, requestId: string, policy: CancelPolicy): Promise<RequestDetailsDto> {
   return detailsDto(await loadOwned(db, factoryId, requestId), policy);
 }
 
-export async function createRequest(db: Db, actor: Actor, input: CreateRequestData, policy: CancelPolicy) {
+export async function createRequest(db: Tx, actor: Actor, input: CreateRequestData, policy: CancelPolicy) {
   const r = await db.request.create({
     data: {
       factoryId: actor.factoryId,
@@ -129,7 +134,7 @@ export async function createRequest(db: Db, actor: Actor, input: CreateRequestDa
 }
 
 /** يعلّم عروض الطلب كمقروءة (لما يفتح المصنع تفاصيل الطلب). */
-export async function markOffersSeen(db: Db, actor: Actor, requestId: string, now: Date): Promise<void> {
+export async function markOffersSeen(db: Tx, actor: Actor, requestId: string, now: Date): Promise<void> {
   const r = await loadOwned(db, actor.factoryId, requestId);
   await db.offer.updateMany({ where: { requestId: r.id, seenAt: null }, data: { seenAt: now } });
 }
@@ -140,7 +145,7 @@ function assertAllowed(action: FactoryAction, r: RequestWithOffers, policy: Canc
 }
 
 /** تغيير حالة مشروط: ينجح بس لو الطلب لسا بنفس الحالة اللي قرأناها. */
-async function transition(db: Pick<Db, "request">, r: Request, data: Parameters<Db["request"]["updateMany"]>[0]["data"]) {
+async function transition(db: Pick<Tx, "request">, r: Request, data: Parameters<Db["request"]["updateMany"]>[0]["data"]) {
   const res = await db.request.updateMany({
     where: { id: r.id, status: r.status, cancelRequestStatus: r.cancelRequestStatus },
     data,
@@ -151,82 +156,70 @@ async function transition(db: Pick<Db, "request">, r: Request, data: Parameters<
 // ─── إجراءات المصنع ───────────────────────────────────────────
 
 /** قبول عرض واحد. باقي العروض ترفض تلقائيًا. */
-export async function acceptOffer(db: Db, actor: Actor, requestId: string, offerId: string, policy: CancelPolicy, now: Date) {
-  const r = await loadOwned(db, actor.factoryId, requestId);
+export async function acceptOffer(tx: Tx, actor: Actor, requestId: string, offerId: string, policy: CancelPolicy, now: Date) {
+  const r = await loadOwned(tx, actor.factoryId, requestId);
   assertAllowed("accept_offer", r, policy);
   const offer = r.offers.find((o) => o.id === offerId && o.status === "pending");
   if (!offer) throw notFound();
 
-  await db.$transaction(async (tx) => {
-    await transition(tx, r, { status: "accepted", acceptedOfferId: offer.id, acceptedAt: now });
-    await tx.offer.update({ where: { id: offer.id }, data: { status: "accepted" } });
-    await tx.offer.updateMany({ where: { requestId: r.id, id: { not: offer.id }, status: "pending" }, data: { status: "declined" } });
-    await audit(tx, {
-      actorUserId: actor.userId,
-      action: "request.offer_accepted",
-      entityType: "request",
-      entityId: r.id,
-      metadata: { offerId: offer.id, providerId: offer.providerId, priceHalalas: offer.priceHalalas },
-      ip: actor.ip,
-    });
+  await transition(tx, r, { status: "accepted", acceptedOfferId: offer.id, acceptedAt: now });
+  await tx.offer.update({ where: { id: offer.id }, data: { status: "accepted" } });
+  await tx.offer.updateMany({ where: { requestId: r.id, id: { not: offer.id }, status: "pending" }, data: { status: "declined" } });
+  await audit(tx, {
+    actorUserId: actor.userId,
+    action: "request.offer_accepted",
+    entityType: "request",
+    entityId: r.id,
+    metadata: { offerId: offer.id, providerId: offer.providerId, priceHalalas: offer.priceHalalas },
+    ip: actor.ip,
   });
-  return getRequest(db, actor.factoryId, requestId, policy);
+  return getRequest(tx, actor.factoryId, requestId, policy);
 }
 
 /** إلغاء مباشر (مجاني): قبل قبول عرض، أو بعده وقبل بدء التنفيذ حسب السياسة. */
-export async function cancelRequest(db: Db, actor: Actor, requestId: string, policy: CancelPolicy, now: Date) {
-  const r = await loadOwned(db, actor.factoryId, requestId);
+export async function cancelRequest(tx: Tx, actor: Actor, requestId: string, policy: CancelPolicy, now: Date) {
+  const r = await loadOwned(tx, actor.factoryId, requestId);
   assertAllowed("cancel", r, policy);
-  await db.$transaction(async (tx) => {
-    await transition(tx, r, { status: "cancelled", cancelledAt: now });
-    await tx.offer.updateMany({ where: { requestId: r.id, status: "pending" }, data: { status: "declined" } });
-    await audit(tx, { actorUserId: actor.userId, action: "request.cancelled", entityType: "request", entityId: r.id, metadata: { fromStatus: r.status }, ip: actor.ip });
-  });
-  return getRequest(db, actor.factoryId, requestId, policy);
+  await transition(tx, r, { status: "cancelled", cancelledAt: now });
+  await tx.offer.updateMany({ where: { requestId: r.id, status: "pending" }, data: { status: "declined" } });
+  await audit(tx, { actorUserId: actor.userId, action: "request.cancelled", entityType: "request", entityId: r.id, metadata: { fromStatus: r.status }, ip: actor.ip });
+  return getRequest(tx, actor.factoryId, requestId, policy);
 }
 
 /** «طلب إلغاء» بعد بدء التنفيذ: يروح للمزوّد يوافق أو يرفض. */
-export async function requestCancellation(db: Db, actor: Actor, requestId: string, policy: CancelPolicy) {
-  const r = await loadOwned(db, actor.factoryId, requestId);
+export async function requestCancellation(tx: Tx, actor: Actor, requestId: string, policy: CancelPolicy) {
+  const r = await loadOwned(tx, actor.factoryId, requestId);
   assertAllowed("request_cancel", r, policy);
-  await db.$transaction(async (tx) => {
-    await transition(tx, r, { cancelRequestStatus: "pending" });
-    await audit(tx, { actorUserId: actor.userId, action: "request.cancel_requested", entityType: "request", entityId: r.id, ip: actor.ip });
-  });
-  return getRequest(db, actor.factoryId, requestId, policy);
+  await transition(tx, r, { cancelRequestStatus: "pending" });
+  await audit(tx, { actorUserId: actor.userId, action: "request.cancel_requested", entityType: "request", entityId: r.id, ip: actor.ip });
+  return getRequest(tx, actor.factoryId, requestId, policy);
 }
 
-export async function withdrawCancellation(db: Db, actor: Actor, requestId: string, policy: CancelPolicy) {
-  const r = await loadOwned(db, actor.factoryId, requestId);
+export async function withdrawCancellation(tx: Tx, actor: Actor, requestId: string, policy: CancelPolicy) {
+  const r = await loadOwned(tx, actor.factoryId, requestId);
   assertAllowed("withdraw_cancel_request", r, policy);
-  await db.$transaction(async (tx) => {
-    await transition(tx, r, { cancelRequestStatus: null });
-    await audit(tx, { actorUserId: actor.userId, action: "request.cancel_request_withdrawn", entityType: "request", entityId: r.id, ip: actor.ip });
-  });
-  return getRequest(db, actor.factoryId, requestId, policy);
+  await transition(tx, r, { cancelRequestStatus: null });
+  await audit(tx, { actorUserId: actor.userId, action: "request.cancel_request_withdrawn", entityType: "request", entityId: r.id, ip: actor.ip });
+  return getRequest(tx, actor.factoryId, requestId, policy);
 }
 
 /** المصنع يأكد إن الشغل خلص. الفاتورة الرسمية تجي في المرحلة ٥. */
-export async function confirmReceipt(db: Db, actor: Actor, requestId: string, policy: CancelPolicy, now: Date) {
-  const r = await loadOwned(db, actor.factoryId, requestId);
+export async function confirmReceipt(tx: Tx, actor: Actor, requestId: string, policy: CancelPolicy, now: Date) {
+  const r = await loadOwned(tx, actor.factoryId, requestId);
   assertAllowed("confirm_receipt", r, policy);
-  await db.$transaction(async (tx) => {
-    // لو فيه طلب إلغاء معلّق، تأكيد الاستلام يلغيه (الشغل خلص فعلًا).
-    await transition(tx, r, { status: "completed", completedAt: now, cancelRequestStatus: null });
-    await audit(tx, { actorUserId: actor.userId, action: "request.completed", entityType: "request", entityId: r.id, ip: actor.ip });
-  });
-  return getRequest(db, actor.factoryId, requestId, policy);
+  // لو فيه طلب إلغاء معلّق، تأكيد الاستلام يلغيه (الشغل خلص فعلًا).
+  await transition(tx, r, { status: "completed", completedAt: now, cancelRequestStatus: null });
+  await audit(tx, { actorUserId: actor.userId, action: "request.completed", entityType: "request", entityId: r.id, ip: actor.ip });
+  return getRequest(tx, actor.factoryId, requestId, policy);
 }
 
 /** المزوّد رفض الإلغاء: المصنع يفتح بلاغ، وفريق مزوّد يتابعه من لوحة الإدارة (المرحلة ٣ و٦). */
-export async function openDispute(db: Db, actor: Actor, requestId: string, policy: CancelPolicy, now: Date) {
-  const r = await loadOwned(db, actor.factoryId, requestId);
+export async function openDispute(tx: Tx, actor: Actor, requestId: string, policy: CancelPolicy, now: Date) {
+  const r = await loadOwned(tx, actor.factoryId, requestId);
   assertAllowed("open_dispute", r, policy);
-  await db.$transaction(async (tx) => {
-    await transition(tx, r, { disputeOpenedAt: now });
-    await audit(tx, { actorUserId: actor.userId, action: "request.dispute_opened", entityType: "request", entityId: r.id, ip: actor.ip });
-  });
-  return getRequest(db, actor.factoryId, requestId, policy);
+  await transition(tx, r, { disputeOpenedAt: now });
+  await audit(tx, { actorUserId: actor.userId, action: "request.dispute_opened", entityType: "request", entityId: r.id, ip: actor.ip });
+  return getRequest(tx, actor.factoryId, requestId, policy);
 }
 
 // ─── إجراءات المزوّد ───────────────────────────────────────────
