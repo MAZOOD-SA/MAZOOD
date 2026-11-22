@@ -1,0 +1,18 @@
+# قاعدة بيانات للتطوير والاختبارات على جهاز المبرمج. **مو للإنتاج.**
+#   docker compose up -d db
+# تنشئ قاعدتين: mazood_dev (للتطوير) وmazood_test (للاختبارات، تنمسح مع كل تشغيل للاختبارات).
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: mazood
+      # كلمة مرور للتطوير على جهازك بس. الإنتاج له كلمة مرور ثانية في إعدادات الاستضافة.
+      POSTGRES_PASSWORD: mazood_dev
+      POSTGRES_DB: mazood_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - mazood-db:/var/lib/postgresql/data
+      - ./scripts/create-test-db.sql:/docker-entrypoint-initdb.d/create-test-db.sql:ro
+volumes:
+  mazood-db:

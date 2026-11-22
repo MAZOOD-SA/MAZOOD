@@ -3,7 +3,7 @@
 كل مكتبة وخط وأيقونة في المشروع، ورخصتها. **كلها تسمح بالاستخدام التجاري.**
 أي مكتبة جديدة تُضاف هنا قبل ما تُدمج. ممنوع أي مكتبة رخصتها ما تسمح بالاستخدام التجاري (مثل GPL للتطبيقات المغلقة، أو «للاستخدام الشخصي فقط»).
 
-**آخر تحديث:** 20 نوفمبر 2026
+**آخر تحديث:** 22 نوفمبر 2026
 
 ## الخط والأيقونات
 
@@ -32,6 +32,23 @@
 | react-native-screens | 4.30.1 | MIT |
 | react-native-svg | 15.16.0 | MIT |
 | @react-native-async-storage/async-storage | 2.2.0 | MIT |
+| @tanstack/react-query | 5.108.2 | MIT |
+| expo-secure-store | 58.0.3 | MIT |
+
+## مكتبات الخادم والقواعد المشتركة
+
+| المكتبة | الإصدار | الرخصة |
+| --- | --- | --- |
+| fastify | 5.12.8 | MIT |
+| @fastify/cors | 11.4.3 | MIT |
+| @fastify/helmet | 13.2.0 | MIT |
+| @fastify/rate-limit | 11.3.0 | MIT |
+| @fastify/static | 10.1.12 | MIT |
+| prisma (أداة الترحيلات، تشتغل وقت التشغيل) | 7.10.1 | Apache-2.0 |
+| @prisma/client | 7.10.1 | Apache-2.0 |
+| @prisma/adapter-pg | 7.10.1 | Apache-2.0 |
+| pg | 8.23.1 | MIT |
+| zod | 4.6.7 | MIT |
 
 ## أدوات التطوير (ما تدخل في المنتج)
 
@@ -39,6 +56,11 @@
 | --- | --- | --- |
 | typescript | 5.9.3 | Apache-2.0 |
 | vitest | 3.2.7 | MIT |
+| tsx | 4.23.15 | MIT |
+| esbuild | 0.28.2 | MIT |
+| @types/node | 22.20.5 | MIT |
+| @types/pg | 8.23.1 | MIT |
+| PostgreSQL (قاعدة البيانات، تشتغل عند الاستضافة) | 16 | PostgreSQL License (مثل MIT) |
 
 ## الهوية
 
