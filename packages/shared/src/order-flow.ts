@@ -130,6 +130,8 @@ export type FactoryActionFlags = {
   reopenedAfterWithdrawal?: boolean;
   /** المصنع طلب الإلغاء بعد البدء، وينتظر رد المزوّد */
   cancellationPending?: boolean;
+  /** المصنع قيّم الطلب المكتمل، فزر «قيّم» يختفي (مرة وحدة) */
+  alreadyRated?: boolean;
 };
 
 /**
@@ -145,6 +147,9 @@ export function factoryActions(status: RequestStatus, flags: FactoryActionFlags 
   }
   if (status === "in_progress" && flags.cancellationPending) {
     return { primary: null, others: ["withdraw_cancel_request", "open_dispute"] };
+  }
+  if (status === "completed" && flags.alreadyRated) {
+    return { primary: base.primary, others: base.others.filter((a) => a !== "rate") };
   }
   return { primary: base.primary, others: [...base.others] };
 }

@@ -6,6 +6,7 @@ import {
   factoryProfileBody,
   parseCancellationPolicy,
   priceForFactory,
+  rateOrderBody,
   uuidSchema,
   type RequestStatus,
 } from "@mazood/shared";
@@ -21,6 +22,8 @@ import { acceptOffer, effectiveStatus, nominateOffer, providerIsActive, withdraw
 import { cancelBeforeStart, disputeForParty, feeFor, latestCancellationRequest, latestWithdrawal } from "../cancellations.ts";
 import { executionDetails } from "../execution.ts";
 import { publicUser } from "./auth.ts";
+import { providerRating, rateOrder, ratingForRequest } from "../ratings.ts";
+import { providerCommitment } from "../commitment.ts";
 
 export const REQUEST_COLUMNS = `id, category, type_id AS "typeId", details, area, location, city_id AS "cityId",
   needed_when AS "when", status, created_at AS "createdAt", expires_at AS "expiresAt"`;
@@ -221,10 +224,12 @@ export async function factoryRequestView(ctx: Ctx, factoryId: string, id: string
         : null;
   // قبل القبول: سياسة الإلغاء الحالية، عشان تظهر في بطاقة العرض (الرسوم واضحة قبل ما يقبل).
   const currentPolicy = details.order ? null : (await getSettings(db)).cancellation;
+  const rating = status === "completed" ? await ratingForRequest(db, id) : null;
   const actions = factoryActions(status, {
     hasLiveOffers: details.offers.some((o) => o.status === "active"),
     reopenedAfterWithdrawal: !!withdrawal,
     cancellationPending: cancellationRequest?.status === "pending",
+    alreadyRated: !!rating,
   });
   return {
     request,
@@ -236,6 +241,7 @@ export async function factoryRequestView(ctx: Ctx, factoryId: string, id: string
     cancellationRequest,
     withdrawal,
     dispute: orderId ? await disputeForParty(db, orderId, "factory") : null,
+    rating,
   };
 }
 
@@ -269,11 +275,18 @@ async function requestDetails(db: Db, requestId: string, now: Date) {
       ORDER BY o.price_halalas ASC, o.created_at ASC`,
     [requestId, now],
   );
+  const { commitment: commitmentSettings } = await getSettings(db);
   const offerViews = [];
   for (const o of offers) {
     offerViews.push({
       id: o.id,
-      provider: { tradeName: o.trade_name, verified: await providerIsActive(db, o.provider_id, now), rating: null },
+      provider: {
+        tradeName: o.trade_name,
+        verified: await providerIsActive(db, o.provider_id, now),
+        rating: await providerRating(db, o.provider_id),
+        // «التزم بـ X من Y طلب» أو «جديد على المنصة»، وnull لو الميزة موقوفة (القرار ٣٣).
+        commitment: await providerCommitment(db, o.provider_id, commitmentSettings, now),
+      },
       price: priceForFactory(Number(o.price_halalas)),
       durationHours: o.duration_hours,
       note: o.note,

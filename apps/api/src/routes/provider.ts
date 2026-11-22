@@ -10,6 +10,9 @@ import { ApiError } from "../errors.ts";
 import { actorOf, parse, todayRiyadh, type Ctx, type Guards } from "../http.ts";
 import { loadDocs, slotView, summarize, type ProviderRow } from "../providers.ts";
 import { sniffMime } from "../storage.ts";
+import { providerCommitment } from "../commitment.ts";
+import { providerRating } from "../ratings.ts";
+import { getSettings } from "../settings.ts";
 
 const uploadFields = z.object({ docType: z.enum(DOC_TYPES), expiresOn: isoDateSchema }).strict();
 
@@ -41,6 +44,9 @@ export function providerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       readyToSubmit: s.readyToSubmit,
       documents: s.slots.map(slotView),
       expiring: s.expiringSoon,
+      // المزوّد يشوف تقييمه ورقم التزامه بنفس الشكل اللي تشوفه المصانع (الخطوة ٩، القرار ٣٣).
+      rating: await providerRating(db, p.id),
+      commitment: await providerCommitment(db, p.id, (await getSettings(db)).commitment, ctx.now()),
     };
   }
 

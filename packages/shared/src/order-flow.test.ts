@@ -108,7 +108,9 @@ describe("ولا مرة طريق مسدود", () => {
 
 describe("أزرار المصنع الفعلية (factoryActions)", () => {
   const FLAG_COMBOS = [false, true].flatMap((hasLiveOffers) =>
-    [false, true].flatMap((reopenedAfterWithdrawal) => [false, true].map((cancellationPending) => ({ hasLiveOffers, reopenedAfterWithdrawal, cancellationPending }))),
+    [false, true].flatMap((reopenedAfterWithdrawal) =>
+      [false, true].flatMap((cancellationPending) => [false, true].map((alreadyRated) => ({ hasLiveOffers, reopenedAfterWithdrawal, cancellationPending, alreadyRated }))),
+    ),
   );
 
   it.each(REQUEST_STATUSES)("في حالة %s، ومع أي وضع للطلب، فيه زر للمصنع", (status) => {
@@ -134,5 +136,10 @@ describe("أزرار المصنع الفعلية (factoryActions)", () => {
 
   it("المنتهي: «أعد نشر الطلب» هو الزر الكهرماني، ومعه الإلغاء", () => {
     expect(factoryActions("expired")).toEqual({ primary: "republish", others: ["cancel"] });
+  });
+
+  it("المكتمل: «قيّم» يظهر مرة وحدة، وبعد التقييم يختفي ويبقى «اطلب مرة ثانية»", () => {
+    expect(factoryActions("completed")).toEqual({ primary: "reorder", others: ["rate"] });
+    expect(factoryActions("completed", { alreadyRated: true })).toEqual({ primary: "reorder", others: [] });
   });
 });

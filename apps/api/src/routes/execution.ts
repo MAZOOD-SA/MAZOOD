@@ -1,12 +1,13 @@
 // مسارات التنفيذ (المرحلة ٤، الخطوة ٧). المنطق كله في execution.ts، وهنا بس قراءة المدخلات والصلاحيات.
 //
 // المزوّد: بدأت، والصور، وتم التنفيذ، وطلب تعديل السعر أو سحبه. على طلباته المنفّذة بس.
-// المصنع: تأكيد الاستلام، والموافقة على تعديل السعر أو رفضه. على طلباته بس.
+// المصنع: تأكيد الاستلام، والتقييم بعد الاكتمال (الخطوة ٩)، والموافقة على تعديل السعر أو رفضه. على طلباته بس.
 // الصور: تنفتح برابط مؤقت موقّع باسم المستخدم، والخادم يتأكد لحظة الفتح إن له حق يشوفها.
-import { ORDER_PHOTO_STAGES, ORDER_PHOTOS_PER_STAGE, parseCancellationPolicy, priceChangeBody, UPLOAD_MAX_BYTES, uuidSchema } from "@mazood/shared";
+import { ORDER_PHOTO_STAGES, ORDER_PHOTOS_PER_STAGE, parseCancellationPolicy, priceChangeBody, rateOrderBody, UPLOAD_MAX_BYTES, uuidSchema } from "@mazood/shared";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { ApiError } from "../errors.ts";
+import { rateOrder } from "../ratings.ts";
 import {
   addOrderPhoto,
   canViewOrder,
@@ -109,6 +110,15 @@ export function executionRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       await confirmReceipt(db, user, factoryId, id, ctx.now());
       return factoryRequestView(ctx, factoryId, id, user.id);
     });
+  });
+
+  // التقييم بالنجوم: مرة وحدة بعد الاكتمال، واختياري. بدون تعليق مكتوب (القرار ٣٣).
+  app.post("/v1/requests/:id/rating", async (req) => {
+    const { user, factoryId } = await g.requireFactory(req);
+    const id = uuidParam(req, "id");
+    const body = parse(rateOrderBody, req.body);
+    await rateOrder(db, user, factoryId, id, body.stars, ctx.now());
+    return factoryRequestView(ctx, factoryId, id, user.id);
   });
 
   app.post("/v1/requests/:id/price-changes/:changeId/:decision", async (req) => {

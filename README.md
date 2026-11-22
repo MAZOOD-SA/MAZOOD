@@ -73,6 +73,7 @@ DEV_OWNER_PHONE=0599000000 pnpm api
 pnpm api:set-setting                                  # يعرض كل الإعدادات الحالية
 pnpm api:set-setting -- offerValidityHours 24         # صلاحية العرض ٢٤ ساعة
 pnpm api:set-setting -- cancellation '{"responseHours":24,"feeHalalas":0}'
+pnpm api:set-setting -- commitment '{"enabled":true,"windowMonths":12,"minOrders":5}'   # رقم «التزم بـ X من Y طلب»
 ```
 
 كل تعديل ينكتب في سجل الإجراءات. (الأمر يشتغل على قاعدة البيانات اللي في `DATABASE_URL` أو `PGLITE_DIR`. القاعدة اللي في الذاكرة تنمسح مع كل تشغيل.) وتعديلها من لوحة الإدارة يجي في المرحلة ٦.

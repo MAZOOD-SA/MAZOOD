@@ -3,6 +3,7 @@
 // القيم هنا هي المقترحة في docs/plans/phase-4.md (القسم ٣)، ونرجع لها لو ما فيه قيمة محفوظة.
 import { z } from "zod";
 import { cancellationPolicySchema, DEFAULT_CANCELLATION_POLICY, upgradeCancellationPolicy } from "./cancellation.ts";
+import { commitmentSettingsSchema, DEFAULT_COMMITMENT_SETTINGS } from "./commitment.ts";
 
 const hours = (max: number) => z.number().int().min(1).max(max);
 
@@ -27,6 +28,8 @@ export const SETTINGS_SCHEMA = z
     cancellation: z.preprocess(upgradeCancellationPolicy, cancellationPolicySchema),
     /** الأحداث اللي توصل برسالة نصية (لها تكلفة). الباقي إشعار وتنبيه داخل التطبيق. سؤال ١٩. */
     smsEvents: z.array(z.enum(["first_offer", "offer_accepted", "cancellation_requested"])).max(3),
+    /** رقم «التزم بـ X من Y طلب» في بطاقة العرض: تشغيل وإيقاف، والمدة بالأشهر، والحد الأدنى (القرار ٣٣). */
+    commitment: commitmentSettingsSchema,
   })
   .strict();
 
@@ -42,4 +45,5 @@ export const SETTING_DEFAULTS: Settings = {
   confirmReminderHours: [24, 48],
   cancellation: DEFAULT_CANCELLATION_POLICY,
   smsEvents: ["first_offer", "offer_accepted", "cancellation_requested"],
+  commitment: DEFAULT_COMMITMENT_SETTINGS,
 };
