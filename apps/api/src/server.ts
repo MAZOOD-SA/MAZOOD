@@ -1,6 +1,7 @@
 // نقطة التشغيل: pnpm --filter @mazood/api dev
 import { normalizeSaudiMobile } from "@mazood/shared";
 import { buildApp } from "./app.ts";
+import { startScheduledJobs } from "./jobs.ts";
 import { loadConfig } from "./config.ts";
 import { migrate } from "./migrate.ts";
 import { openDb } from "./open-db.ts";
@@ -36,3 +37,5 @@ if (!config.databaseUrl) {
   app.log.warn("DATABASE_URL غير مضبوط: نستخدم قاعدة بيانات تجريبية داخل العملية (للتطوير فقط)");
 }
 await app.listen({ port: config.port, host: config.host });
+// المهام الدورية (التأكيد التلقائي، وانتهاء الطلبات): كل دقيقة. شرحها في jobs.ts.
+startScheduledJobs(db, () => new Date(), app.log);

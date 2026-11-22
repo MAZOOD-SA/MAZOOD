@@ -17,6 +17,7 @@ import { adminRoutes } from "./routes/admin.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { factoryRoutes } from "./routes/factory.ts";
 import { offerRoutes } from "./routes/offers.ts";
+import { executionRoutes } from "./routes/execution.ts";
 import { providerRoutes } from "./routes/provider.ts";
 import type { SmsSender } from "./sms.ts";
 import { memoryStorage, type FileStorage } from "./storage.ts";
@@ -122,6 +123,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   factoryRoutes(app, ctx, guards);
   providerRoutes(app, ctx, guards);
   offerRoutes(app, ctx, guards);
+  executionRoutes(app, ctx, guards);
   adminRoutes(app, ctx, guards);
   return app;
 }

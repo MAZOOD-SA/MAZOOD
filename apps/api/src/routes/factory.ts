@@ -9,6 +9,7 @@ import { getSettings } from "../settings.ts";
 import { rejectContactInfo } from "./offers.ts";
 import { actorOf, idempotent, parse, type Ctx, type Guards } from "../http.ts";
 import { acceptOffer, cancelBeforeStart, effectiveStatus, nominateOffer, providerIsActive, withdrawNomination } from "../orders.ts";
+import { executionDetails } from "../execution.ts";
 import { publicUser } from "./auth.ts";
 
 export const REQUEST_COLUMNS = `id, category, type_id AS "typeId", details, area, location, city_id AS "cityId",
@@ -69,10 +70,8 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
 
   // تفاصيل الطلب للمصنع: الطلب، والعروض للمقارنة، والترشيح (لو فيه)، والطلب المنفّذ بعد القبول.
   app.get("/v1/requests/:id", async (req) => {
-    const { factoryId } = await g.requireFactory(req);
-    const id = (req.params as { id: string }).id;
-    const request = withStatus(await ownRequest(db, factoryId, id), ctx.now());
-    return { request, ...(await requestDetails(db, id, ctx.now())) };
+    const { user, factoryId } = await g.requireFactory(req);
+    return factoryRequestView(ctx, factoryId, (req.params as { id: string }).id, user.id);
   });
 
   const params2 = (req: { params: unknown }) => {
@@ -80,10 +79,6 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     if (!uuidSchema.safeParse(p.id).success || !uuidSchema.safeParse(p.offerId).success) throw new ApiError(404, "not_found");
     return p;
   };
-  const detailsResponse = async (factoryId: string, id: string) => ({
-    request: withStatus(await ownRequest(db, factoryId, id), ctx.now()),
-    ...(await requestDetails(db, id, ctx.now())),
-  });
 
   // قبول عرض (للمدير، أو للمصنع اللي فيه مستخدم واحد). عملية وحدة: شوف orders.ts.
   app.post("/v1/requests/:id/offers/:offerId/accept", async (req) => {
@@ -91,7 +86,7 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const { id, offerId } = params2(req);
     return idempotent(ctx, req, `accept:${id}`, async () => {
       await acceptOffer(db, user, factoryId, id, offerId, ctx.now());
-      return detailsResponse(factoryId, id);
+      return factoryRequestView(ctx, factoryId, id, user.id);
     });
   });
 
@@ -100,7 +95,7 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const { user, factoryId } = await g.requireFactory(req);
     const { id, offerId } = params2(req);
     await nominateOffer(db, user, factoryId, id, offerId, ctx.now());
-    return detailsResponse(factoryId, id);
+    return factoryRequestView(ctx, factoryId, id, user.id);
   });
 
   // سحب الترشيح (الموظف) أو رفضه (المدير).
@@ -109,7 +104,7 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const id = (req.params as { id: string }).id;
     await ownRequest(db, factoryId, id);
     await withdrawNomination(db, user, factoryId, id, ctx.now());
-    return detailsResponse(factoryId, id);
+    return factoryRequestView(ctx, factoryId, id, user.id);
   });
 
   // موظفين المصنع: الكل يشوف القائمة، والمدير بس يضيف ويوقف (سؤال ١٦).
@@ -191,6 +186,17 @@ async function loadFactory(db: Db, factoryId: string) {
 }
 
 type RequestRow = Record<string, unknown> & { status: string; expiresAt: Date };
+
+/**
+ * تفاصيل الطلب كاملة للمصنع صاحبه: الطلب، والعروض، والترشيح، والطلب المنفّذ وتفاصيل تنفيذه
+ * (الصور بروابط مؤقتة باسم viewerId، وطلبات تعديل السعر، والخط الزمني).
+ */
+export async function factoryRequestView(ctx: Ctx, factoryId: string, id: string, viewerId: string) {
+  const request = withStatus(await ownRequest(ctx.db, factoryId, id), ctx.now());
+  const details = await requestDetails(ctx.db, id, ctx.now());
+  const execution = details.order ? await executionDetails(ctx.db, ctx.config.authSecret, details.order.id, viewerId, ctx.now()) : null;
+  return { request, ...details, execution };
+}
 
 /** الحالة الفعلية (الطلب المفتوح اللي عدّت مدته = منتهي). */
 function withStatus(r: RequestRow, now: Date) {
