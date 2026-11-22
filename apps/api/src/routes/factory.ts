@@ -8,7 +8,7 @@ import { activeCities, resolveCityId } from "../cities.ts";
 import { getSettings } from "../settings.ts";
 import { rejectContactInfo } from "./offers.ts";
 import { actorOf, idempotent, parse, type Ctx, type Guards } from "../http.ts";
-import { acceptOffer, effectiveStatus, nominateOffer, providerIsActive, withdrawNomination } from "../orders.ts";
+import { acceptOffer, cancelBeforeStart, effectiveStatus, nominateOffer, providerIsActive, withdrawNomination } from "../orders.ts";
 import { publicUser } from "./auth.ts";
 
 export const REQUEST_COLUMNS = `id, category, type_id AS "typeId", details, area, location, city_id AS "cityId",
@@ -155,20 +155,15 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     return { ok: true };
   });
 
-  // الإلغاء مسموح قبل قبول أي عرض بس. بعد القبول له سياسة (سؤال ١٥ في PLAN.md).
+  // الإلغاء المجاني: أي وقت قبل ما يبدأ المزوّد (جدول الانتقالات، سؤال ١٥). يقبل Idempotency-Key.
   app.post("/v1/requests/:id/cancel", async (req) => {
     const { user, factoryId } = await g.requireFactory(req);
     const id = (req.params as { id: string }).id;
     await ownRequest(db, factoryId, id);
-    // الشرط في نفس الأمر (status = awaiting_offers) عشان ما يصير تعارض لو انقبل عرض في نفس اللحظة.
-    const rows = await db.query(
-      `UPDATE requests SET status='cancelled', updated_at=now()
-        WHERE id=$1 AND factory_id=$2 AND status='awaiting_offers' RETURNING ${REQUEST_COLUMNS}`,
-      [id, factoryId],
-    );
-    if (rows.length === 0) throw new ApiError(409, "request_not_cancellable");
-    await audit(db, actorOf(user), "request.cancelled", { type: "request", id });
-    return { request: rows[0] };
+    return idempotent(ctx, req, `cancel:${id}`, async () => {
+      await cancelBeforeStart(db, user, factoryId, id, ctx.now());
+      return { request: withStatus(await ownRequest(db, factoryId, id), ctx.now()) };
+    });
   });
 }
 
