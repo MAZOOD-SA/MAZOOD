@@ -68,6 +68,8 @@ export type AppNotification = {
   createdAt: string;
   read: boolean;
   requestId?: string;
+  /** وين يودّي التنبيه (التنبيهات من الخادم، القرار ٤٩). */
+  href?: string;
 };
 
 /** العميل (منشأة أو فرد). الاسم «Factory» باقي في الكود عشان ما نكسر شي (القرار ٤١). */

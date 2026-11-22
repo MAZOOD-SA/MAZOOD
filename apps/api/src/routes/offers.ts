@@ -6,6 +6,7 @@
 //  - قبل القبول: القسم والنوع والتفاصيل والمدينة والمنطقة والموعد. **ما يطلع اسم المصنع ولا الموقع بالضبط**.
 //  - يشوف **عدد** العروض بس، مو أسعار غيره (سؤال ٤-٢).
 import { CATEGORY_IDS, containsContactInfo, offerBody, uuidSchema, type OfferStatus } from "@mazood/shared";
+import { events } from "../events.ts";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { audit } from "../audit.ts";
@@ -173,6 +174,7 @@ export function offerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       await audit(t, actorOf(user), "offer.submitted", { type: "offer", id: o.id }, { requestId: id });
       return o;
     });
+    await events.offerSent(db, id, now);
     return reply.status(201).send({ offer: offerView(row, now) });
   });
 

@@ -1,6 +1,7 @@
 // تحويل شكل الطلب من الخادم لشكل الواجهة.
 import { categoryById, type CategoryId } from "@/data/categories";
-import type { RequestStatus, ServiceRequest, When } from "@/data/types";
+import type { AppNotification, RequestStatus, ServiceRequest, When } from "@/data/types";
+import { notificationText, type NotificationEvent, type NotificationLink } from "@mazood/shared";
 
 export type ServerRequest = {
   id: string;
@@ -35,6 +36,33 @@ export function fromServerRequest(r: ServerRequest): ServiceRequest {
     status: r.status,
     offerCount: r.offerCount,
     newOfferCount: r.newOfferCount,
+  };
+}
+
+/** تنبيه من الخادم (/v1/notifications). النص من @mazood/shared بنفس بيانات الحدث. */
+export type ServerNotification = { id: string; event: NotificationEvent; data: { title?: string; n?: number; link?: NotificationLink }; readAt: string | null; createdAt: string };
+
+/** الرابط داخل التطبيق لكل شاشة يودّي لها التنبيه. */
+export function notificationHref(link: NotificationLink | undefined): string | undefined {
+  if (!link) return undefined;
+  switch (link.screen) {
+    case "request": return `/request/${link.id}`;
+    case "provider_request": return `/provider/request/${link.id}`;
+    case "provider_job": return `/provider/job/${link.id}`;
+    case "purchase": return `/purchase/${link.id}`;
+    case "seller_purchase": return `/seller/purchase/${link.id}`;
+    case "store": return "/store";
+    case "provider_account": return "/provider/account";
+  }
+}
+
+export function fromServerNotification(n: ServerNotification): AppNotification {
+  return {
+    id: n.id,
+    text: { ar: notificationText(n.event, n.data, "ar"), en: notificationText(n.event, n.data, "en") },
+    createdAt: n.createdAt,
+    read: !!n.readAt,
+    href: notificationHref(n.data.link),
   };
 }
 

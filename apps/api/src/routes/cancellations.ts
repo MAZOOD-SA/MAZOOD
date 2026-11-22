@@ -6,6 +6,7 @@
 // الإدارة:  قائمة البلاغات وتفاصيلها، والملاحظات (منها الداخلية)، والقرار. بصلاحية disputes.manage.
 //
 // النصوص اللي يكتبها المستخدم توصل للطرف الثاني أو لخدمة العملاء: ممنوع فيها أرقام أو روابط (التواصل داخل المنصة).
+import { events, requestOfOrder } from "../events.ts";
 import {
   cancelRequestBody,
   cancelResponseBody,
@@ -62,6 +63,7 @@ export function cancellationRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     rejectContactInfo({ reason: body.reason });
     const view = await idempotent(ctx, req, `cancellation:${id}`, async () => {
       await requestCancellation(db, user, factoryId, id, body.reason, ctx.now());
+      await events.toProvider(db, id, "cancellation_requested", ctx.now());
       return factoryRequestView(ctx, factoryId, id, user.id);
     });
     return reply.status(201).send(view);
@@ -93,6 +95,7 @@ export function cancellationRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     rejectContactInfo({ details: body.details });
     const view = await idempotent(ctx, req, `dispute:${id}`, async () => {
       await factoryOpenDispute(db, user, factoryId, id, body.reason, body.details, ctx.now());
+      await events.disputeOpened(db, id, "factory", ctx.now());
       return factoryRequestView(ctx, factoryId, id, user.id);
     });
     return reply.status(201).send(view);
@@ -128,6 +131,7 @@ export function cancellationRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     rejectContactInfo({ reason: body.reason });
     return idempotent(ctx, req, `provider-withdraw:${orderId}`, async () => {
       await providerWithdraw(db, user, orderId, body.reason, ctx.now());
+      await events.toCustomer(db, await requestOfOrder(db, orderId), "provider_withdrew", ctx.now());
       return { ok: true as const };
     });
   });
@@ -139,6 +143,7 @@ export function cancellationRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     rejectContactInfo({ details: body.details });
     const view = await idempotent(ctx, req, `provider-dispute:${orderId}`, async () => {
       await providerOpenDispute(db, user, orderId, body.reason, body.details, ctx.now());
+      await events.disputeOpened(db, await requestOfOrder(db, orderId), "provider", ctx.now());
       return providerJobView(ctx, user.id, orderId);
     });
     return reply.status(201).send(view);

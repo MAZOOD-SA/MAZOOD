@@ -199,6 +199,12 @@ export const customerAr = {
   errProductRemoved: "الإدارة أخفت المنتج. تواصل مع خدمة العملاء.",
   errMarketBuyerNotAllowed: "الطلب من السوق للمنشآت بس الحين.",
   errSellerBusinessOnly: "البيع في السوق للمنشآت بس.",
+  notifPrefsTitle: "التنبيهات",
+  notifPrefsHint: "التنبيهات داخل التطبيق توصلك دائمًا. اختر وش يوصلك برّاه.",
+  notifSmsOn: "رسائل نصية للمهم",
+  notifSmsOff: "بدون رسائل نصية",
+  notifPushOn: "إشعارات الجوال",
+  notifPushOff: "بدون إشعارات",
 };
 
 export type CustomerKey = keyof typeof customerAr;
@@ -393,4 +399,10 @@ export const customerEn: Record<CustomerKey, string> = {
   errProductRemoved: "An admin removed this product. Contact customer support.",
   errMarketBuyerNotAllowed: "Market orders are for businesses only for now.",
   errSellerBusinessOnly: "Selling in the market is for businesses only.",
+  notifPrefsTitle: "Notifications",
+  notifPrefsHint: "In-app notifications always reach you. Choose what reaches you outside the app.",
+  notifSmsOn: "SMS for important updates",
+  notifSmsOff: "No SMS",
+  notifPushOn: "Push notifications",
+  notifPushOff: "No push notifications",
 };

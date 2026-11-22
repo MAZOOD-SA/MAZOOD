@@ -43,15 +43,20 @@ export async function providerIsActive(db: Db, providerId: string, now: Date): P
  * رقم حقيقي، والموثّق اللي انتهى مستنده ما ينحسب (نفس providerIsActive).
  */
 export async function reachFor(db: Db, category: string, cityId: string, now: Date): Promise<number> {
+  return (await eligibleProviderIds(db, category, cityId, now)).length;
+}
+
+/** المزوّدين الموثّقين فعليًا في القسم والمدينة (يشوفون الطلب، وينبلغون فيه). */
+export async function eligibleProviderIds(db: Db, category: string, cityId: string, now: Date): Promise<string[]> {
   const rows = await db.query<{ id: string }>(
     `SELECT p.id FROM providers p
       WHERE p.status = 'verified' AND $1 = ANY(p.categories)
         AND EXISTS (SELECT 1 FROM provider_cities pc WHERE pc.provider_id = p.id AND pc.city_id = $2)`,
     [category, cityId],
   );
-  let n = 0;
-  for (const r of rows) if (await providerIsActive(db, r.id, now)) n++;
-  return n;
+  const ids: string[] = [];
+  for (const r of rows) if (await providerIsActive(db, r.id, now)) ids.push(r.id);
+  return ids;
 }
 
 type LockedRequest = { id: string; factory_id: string; status: string; expires_at: Date };

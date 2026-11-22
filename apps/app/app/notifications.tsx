@@ -3,6 +3,7 @@ import { radius, spacing } from "@mazood/brand";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
+import { LIVE } from "@/api/client";
 import { Screen } from "@/components/layout";
 import { AppText, Card, Row } from "@/components/ui";
 import { useStore } from "@/data/store";
@@ -12,14 +13,18 @@ import { useTheme } from "@/theme/ThemeProvider";
 export default function Notifications() {
   const { t, tl, relative } = useI18n();
   const { colors } = useTheme();
-  const { state, dispatch } = useStore();
+  const { state, dispatch, authed } = useStore();
   // نحفظ أيها كانت غير مقروءة قبل ما نعلّمها، عشان تبان مميزة في هذي الزيارة.
   const [unreadIds] = useState(() => new Set(state.notifications.filter((n) => !n.read).map((n) => n.id)));
 
   useEffect(() => {
-    const timer = setTimeout(() => dispatch({ type: "markNotificationsRead" }), 1500);
+    const timer = setTimeout(() => {
+      dispatch({ type: "markNotificationsRead" });
+      // في الوضع الحقيقي نبلغ الخادم بعد (في التجريبي ما فيه مسار للتنبيهات، فنتجاهل الخطأ).
+      if (LIVE) authed("/v1/notifications/read", { method: "POST", body: {} }).catch(() => {});
+    }, 1500);
     return () => clearTimeout(timer);
-  }, [dispatch]);
+  }, [dispatch, authed]);
 
   return (
     <Screen title={t("notifications")} back>
@@ -29,7 +34,7 @@ export default function Notifications() {
         state.notifications.map((n) => (
           <Card
             key={n.id}
-            onPress={n.requestId ? () => router.push(`/request/${n.requestId}`) : undefined}
+            onPress={n.href ? () => router.push(n.href as never) : n.requestId ? () => router.push(`/request/${n.requestId}`) : undefined}
             style={{ paddingVertical: spacing["3"], backgroundColor: unreadIds.has(n.id) ? colors.accentSoft : colors.surface }}
           >
             <Row style={{ alignItems: "flex-start" }}>

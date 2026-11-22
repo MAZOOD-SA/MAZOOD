@@ -3,6 +3,7 @@
 //  - المصنع البائع: تفعيل البيع، ورفع السجل للتوثيق، والمنتجات وصورها، والرد على طلبات الشراء.
 //  - المشتري: طلب سعر، وقبول الرد أو رفضه أو طلب تعديله مرة وحدة، وتأكيد الاستلام، والتقييم.
 // كل مسار يحدد العميل من الجلسة (مو من اللي يرسله)، وطلب شراء عميل ثاني يرجّع 404.
+import { events } from "../events.ts";
 import { randomUUID } from "node:crypto";
 import {
   buyerPurchaseActions,
@@ -569,6 +570,7 @@ export function marketRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       );
       await audit(t, actorOf(user), "purchase.quoted", { type: "purchase_request", id: p.id }, { quoteId: q.id });
     });
+    await events.purchaseQuoted(db, p.id, now());
     return { purchaseRequest: await purchaseView(db, await sellerPurchase(factoryId, p.id), "seller", now()) };
   });
 
@@ -617,6 +619,7 @@ export function marketRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       [p.id, p.seller_id, factoryId, user.id, body.quantity, cityId, body.when, body.note || null, now()],
     );
     await audit(db, actorOf(user), "purchase.requested", { type: "purchase_request", id: row.id }, { productId: p.id });
+    await events.purchaseRequested(db, row.id, now());
     // تقدير السعر من السعر المعلن (لو فيه)، عشان المشتري يشوف رقم مبدئي لين يرد المصنع.
     const estimate = unitPriceFor({ pricing: p.pricing, unitPriceHalalas: p.unit_price_halalas === null ? null : Number(p.unit_price_halalas), priceTiers: p.price_tiers }, body.quantity);
     return reply.status(201).send({
@@ -679,6 +682,7 @@ export function marketRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       if (!moved.length) throw new ApiError(409, "invalid_transition");
       await audit(t, actorOf(user), `purchase.${action}`, { type: "purchase_request", id: p.id });
     });
+    if (action === "accept") await events.purchaseAccepted(db, p.id, now());
     return { purchaseRequest: await purchaseView(db, await buyerPurchase(factoryId, p.id), "buyer", now()) };
   }
 

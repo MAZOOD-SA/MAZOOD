@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
 import { ApiClientError, LIVE } from "@/api/client";
 import { errorKey } from "@/api/mapping";
-import { DeleteAccountSection, PreferencesSection, SignOutButton } from "@/components/account";
+import { DeleteAccountSection, NotificationPrefsSection, PreferencesSection, SignOutButton } from "@/components/account";
 import { Field } from "@/components/Field";
 import { IconFileInvoice, IconInfoCircle, IconUsers } from "@/components/icons";
 import { useSellerEnabled } from "@/components/market";
@@ -76,6 +76,7 @@ export default function Account() {
   const side = (
     <>
       <PreferencesSection />
+      <NotificationPrefsSection />
       {!LIVE && <Notice icon={IconInfoCircle} text={t("prototypeNote")} />}
       <SignOutButton />
       <DeleteAccountSection />

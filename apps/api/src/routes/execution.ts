@@ -3,6 +3,7 @@
 // المزوّد: بدأت، والصور، وتم التنفيذ، وطلب تعديل السعر أو سحبه. على طلباته المنفّذة بس.
 // المصنع: تأكيد الاستلام، والتقييم بعد الاكتمال (الخطوة ٩)، والموافقة على تعديل السعر أو رفضه. على طلباته بس.
 // الصور: تنفتح برابط مؤقت موقّع باسم المستخدم، والخادم يتأكد لحظة الفتح إن له حق يشوفها.
+import { events, requestOfOrder } from "../events.ts";
 import { ORDER_PHOTO_STAGES, ORDER_PHOTOS_PER_STAGE, parseCancellationPolicy, priceChangeBody, rateOrderBody, UPLOAD_MAX_BYTES, uuidSchema } from "@mazood/shared";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -50,6 +51,7 @@ export function executionRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const orderId = uuidParam(req, "orderId");
     return idempotent(ctx, req, `start:${orderId}`, async () => {
       await startJob(db, user, orderId, ctx.now());
+      await events.toCustomer(db, await requestOfOrder(db, orderId), "job_started", ctx.now());
       return providerJob(user.id, orderId);
     });
   });
@@ -59,6 +61,7 @@ export function executionRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const orderId = uuidParam(req, "orderId");
     return idempotent(ctx, req, `deliver:${orderId}`, async () => {
       await deliverJob(db, user, orderId, ctx.now());
+      await events.toCustomer(db, await requestOfOrder(db, orderId), "job_delivered", ctx.now());
       return providerJob(user.id, orderId);
     });
   });
@@ -92,6 +95,7 @@ export function executionRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     // السبب يظهر للمصنع: نفس قاعدة النصوص قبل القبول، بدون أرقام أو روابط (التواصل داخل المنصة).
     rejectContactInfo({ reason: body.reason });
     await requestPriceChange(db, user, orderId, body, ctx.now());
+    await events.toCustomer(db, await requestOfOrder(db, orderId), "price_change_requested", ctx.now());
     return reply.status(201).send(await providerJob(user.id, orderId));
   });
 
@@ -108,6 +112,7 @@ export function executionRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const id = uuidParam(req, "id");
     return idempotent(ctx, req, `confirm:${id}`, async () => {
       await confirmReceipt(db, user, factoryId, id, ctx.now());
+      await events.toCustomer(db, id, "rate_provider", ctx.now());
       return factoryRequestView(ctx, factoryId, id, user.id);
     });
   });

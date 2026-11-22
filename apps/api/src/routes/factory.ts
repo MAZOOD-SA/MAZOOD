@@ -10,6 +10,7 @@ import {
   uuidSchema,
   type RequestStatus,
 } from "@mazood/shared";
+import { events } from "../events.ts";
 import type { FastifyInstance } from "fastify";
 import { audit } from "../audit.ts";
 import type { Db } from "../db.ts";
@@ -99,6 +100,7 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       [factoryId, body.category, body.typeId, body.details, body.area, body.location, body.when, cityId, expiresAt, ctx.now()],
     );
     await audit(db, actorOf(user), "request.created", { type: "request", id: String(row.id) }, { category: body.category });
+    await events.requestCreated(db, String(row.id), ctx.now());
     // المكافأة الفورية: كم مزوّد موثّق وصله الطلب (رقم حقيقي، docs/product.md القسم ٢).
     return reply.status(201).send({ request: row, reach: await reachFor(db, body.category, cityId, ctx.now()) });
   });
@@ -134,6 +136,7 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const { id, offerId } = params2(req);
     return idempotent(ctx, req, `accept:${id}`, async () => {
       await acceptOffer(db, user, factoryId, id, offerId, ctx.now());
+      await events.accepted(db, id, ctx.now());
       return factoryRequestView(ctx, factoryId, id, user.id);
     });
   });
@@ -143,6 +146,7 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const { user, factoryId } = await g.requireFactory(req);
     const { id, offerId } = params2(req);
     await nominateOffer(db, user, factoryId, id, offerId, ctx.now());
+    await events.nominated(db, id, ctx.now());
     return factoryRequestView(ctx, factoryId, id, user.id);
   });
 
@@ -208,6 +212,7 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     await ownRequest(db, factoryId, id);
     return idempotent(ctx, req, `cancel:${id}`, async () => {
       await cancelBeforeStart(db, user, factoryId, id, ctx.now());
+      await events.toProvider(db, id, "order_cancelled", ctx.now());
       return { request: withStatus(await ownRequest(db, factoryId, id), ctx.now()) };
     });
   });

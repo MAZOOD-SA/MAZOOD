@@ -7,7 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { api, ApiClientError, apiUpload, IS_WEB, LIVE } from "@/api/client";
 import { clearDraft } from "@/api/draft";
 import type { FactoryProfileBody, StaffRole } from "@mazood/shared";
-import { fromServerRequest, type ServerFactory, type ServerRequest } from "@/api/mapping";
+import { fromServerNotification, fromServerRequest, type ServerFactory, type ServerNotification, type ServerRequest } from "@/api/mapping";
 import { clearToken, loadSnapshot, loadToken, saveSnapshot, saveToken } from "@/api/session";
 import { reducer, type Action, type NewRequestInput, type State } from "./reducer";
 import { seedInvoices, seedNotifications } from "./seed";
@@ -175,6 +175,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshRequests = useCallback(async () => {
+    // التنبيهات من الخادم في الوضع الحقيقي (في التجريبي تبقى الوهمية المحلية).
+    if (LIVE && account) {
+      api<{ notifications: ServerNotification[] }>("/v1/notifications", { token: token.current })
+        .then((r) => dispatch({ type: "setNotifications", notifications: r.notifications.map(fromServerNotification) }))
+        .catch(() => {});
+    }
     if (account?.role !== "factory") return;
     try {
       const r = await api<{ requests: ServerRequest[] }>("/v1/requests", { token: token.current });
@@ -182,7 +188,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch {
       // بدون اتصال: تبقى آخر نسخة، وشريط «لا يوجد اتصال» يوضّح.
     }
-  }, [account?.role]);
+  }, [account]);
 
   const startSession = useCallback<StoreValue["startSession"]>(
     async (tk) => {

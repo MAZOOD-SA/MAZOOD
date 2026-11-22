@@ -13,6 +13,7 @@ import type { Db } from "./db.ts";
 import { ApiError } from "./errors.ts";
 import { CSRF_HEADER, CSRF_VALUE, makeGuards, readSessionToken, type Ctx } from "./http.ts";
 import { sessionUserByToken } from "./auth.ts";
+import { notificationRoutes } from "./routes/notifications.ts";
 import { marketRoutes } from "./routes/market.ts";
 import { marketAdminRoutes } from "./routes/market-admin.ts";
 import { customerAdminRoutes } from "./routes/customers-admin.ts";
@@ -134,6 +135,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   customerAdminRoutes(app, ctx, guards);
   marketRoutes(app, ctx, guards);
   marketAdminRoutes(app, ctx, guards);
+  notificationRoutes(app, ctx, guards);
   accountRoutes(app, ctx, guards);
   return app;
 }

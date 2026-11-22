@@ -41,7 +41,8 @@ export type Action =
   | { type: "acceptOffer"; offerId: string; now: string }
   | { type: "confirmReceipt"; requestId: string; now: string }
   | { type: "cancelRequest"; requestId: string }
-  | { type: "markNotificationsRead" };
+  | { type: "markNotificationsRead" }
+  | { type: "setNotifications"; notifications: AppNotification[] };
 
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -153,6 +154,9 @@ export function reducer(state: State, action: Action): State {
         ),
       };
     }
+
+    case "setNotifications":
+      return { ...state, notifications: action.notifications };
 
     case "markNotificationsRead":
       return { ...state, notifications: state.notifications.map((n) => ({ ...n, read: true })) };

@@ -125,3 +125,48 @@ export function InfoCard({ caption, title, children }: { caption: string; title:
     </Card>
   );
 }
+
+/**
+ * تفضيلات التنبيهات (القرار ٤٩): الرسائل النصية وإشعارات الجوال. التنبيهات داخل التطبيق تظهر دائمًا.
+ * في النسخة التجريبية ما فيه خادم تنبيهات، فالقسم ما يظهر.
+ */
+export function NotificationPrefsSection() {
+  const { t } = useI18n();
+  const { authed } = useStore();
+  const [prefs, setPrefs] = useState<{ sms: boolean; push: boolean; muted: string[] } | null>(null);
+  useEffect(() => {
+    authed<{ prefs: { sms: boolean; push: boolean; muted: string[] } }>("/v1/notifications/prefs")
+      .then((r) => setPrefs(r.prefs))
+      .catch(() => setPrefs(null));
+  }, [authed]);
+  if (!prefs) return null;
+  const save = (next: typeof prefs) => {
+    setPrefs(next);
+    authed("/v1/notifications/prefs", { method: "PUT", body: next }).catch(() => {});
+  };
+  return (
+    <View style={{ gap: spacing["3"] }}>
+      <SectionTitle title={t("notifPrefsTitle")} />
+      <AppText variant="caption" color="inkMuted">
+        {t("notifPrefsHint")}
+      </AppText>
+      <Chips<"on" | "off">
+        value={prefs.sms ? "on" : "off"}
+        onChange={(v) => save({ ...prefs, sms: v === "on" })}
+        options={[
+          { value: "on", label: t("notifSmsOn") },
+          { value: "off", label: t("notifSmsOff") },
+        ]}
+      />
+      <Chips<"on" | "off">
+        value={prefs.push ? "on" : "off"}
+        onChange={(v) => save({ ...prefs, push: v === "on" })}
+        options={[
+          { value: "on", label: t("notifPushOn") },
+          { value: "off", label: t("notifPushOff") },
+        ]}
+      />
+    </View>
+  );
+}
+
