@@ -37,3 +37,6 @@ build/
 .next/
 coverage/
 *.log
+
+# كاش graphify: يُعاد بناؤه تلقائيًا
+graphify-out/cache/
