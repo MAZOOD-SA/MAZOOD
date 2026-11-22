@@ -1,3 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# الحزم المسموح لها تشغّل سكربت أثناء التثبيت (أدوات معروفة فقط):
+# Prisma (أداة قاعدة البيانات) وesbuild (أداة بناء الخادم).
+onlyBuiltDependencies:
+  - "@prisma/engines"
+  - prisma
+  - esbuild

@@ -37,3 +37,7 @@ build/
 .next/
 coverage/
 *.log
+
+# ملفات مولّدة تلقائيًا (تنبني من جديد بأمر pnpm install)
+apps/api/src/generated/
+apps/api/dist/

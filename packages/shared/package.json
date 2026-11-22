@@ -1,0 +1,12 @@
+{
+  "name": "@mazood/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "قواعد مشتركة بين الخادم والتطبيق: الأقسام، والتحقق من المدخلات، وقواعد الطلب والإلغاء، والمبالغ",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "zod": "4.6.7"
+  }
+}
