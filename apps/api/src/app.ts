@@ -52,8 +52,16 @@ export async function buildApp(ctx: AppContext, opts: FastifyServerOptions = {})
   const allowed = origins(config.CORS_ORIGINS);
   if (allowed.length) await app.register(cors, { origin: allowed, methods: ["GET", "POST", "PUT", "PATCH"] });
 
-  // حد عام لكل عنوان IP. المسارات الحساسة (الدخول) لها حدود أشد داخلها.
-  await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
+  // حد عام للطلبات. المسارات الحساسة (الدخول، ورفع الطلبات) لها حدود أشد داخلها.
+  // الحد يُحسب **لكل مستخدم** إذا كان داخل، ولكل عنوان IP قبل الدخول. السبب: موظفين كثير في
+  // مصنع واحد غالبًا يطلعون للإنترنت من نفس العنوان، فلو حسبنا بالعنوان بس، ينحجبون مع بعض.
+  // (hook: preHandler يعني الحد يُحسب بعد ما نعرف مين المستخدم من رمز الجلسة.)
+  await app.register(rateLimit, {
+    max: 300,
+    timeWindow: "1 minute",
+    hook: "preHandler",
+    keyGenerator: (req) => (req.user ? `user:${req.user.id}` : `ip:${req.ip}`),
+  });
 
   app.decorateRequest("user", null);
   app.addHook("onRequest", async (req) => {

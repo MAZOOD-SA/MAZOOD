@@ -3,18 +3,17 @@
 import { spacing } from "@mazood/brand";
 import { withVat } from "@mazood/shared";
 import { router } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
+import { View } from "react-native";
 import { useRequests } from "@/api/requests";
 import { Screen } from "@/components/layout";
-import { AppText, Card, Notice, Row } from "@/components/ui";
+import { SkeletonList } from "@/components/feedback";
+import { AppText, Button, Card, Notice, Row } from "@/components/ui";
 import { requestTitle } from "@/data/categories";
 import { errorMessage } from "@/i18n/errors";
 import { useI18n } from "@/i18n/I18nProvider";
-import { useTheme } from "@/theme/ThemeProvider";
 
 export default function Invoices() {
   const { t, tl, money, date } = useI18n();
-  const { colors } = useTheme();
   const q = useRequests();
   const completed = (q.data ?? []).filter((r) => r.status === "completed" && r.acceptedPriceHalalas !== null);
 
@@ -22,15 +21,18 @@ export default function Invoices() {
     <Screen title={t("invoicesTitle")}>
       <Notice text={t("invoicePreview")} />
       {q.isPending ? (
-        <ActivityIndicator color={colors.inkMuted} />
-      ) : q.isError ? (
+        <SkeletonList count={2} />
+      ) : q.isError && !q.data ? (
         <AppText variant="bodySm" color="danger">
           {errorMessage(q.error, t)}
         </AppText>
       ) : completed.length === 0 ? (
-        <AppText variant="bodySm" color="inkMuted">
-          {t("noInvoices")}
-        </AppText>
+        <View style={{ gap: spacing["3"] }}>
+          <AppText variant="bodySm" color="inkMuted">
+            {t("noInvoices")}
+          </AppText>
+          <Button label={t("viewRequests")} variant="secondary" onPress={() => router.push("/home")} />
+        </View>
       ) : (
         completed.map((r) => (
           <Card key={r.id} onPress={() => router.push(`/invoice/${r.id}`)} style={{ gap: spacing["2"] }}>

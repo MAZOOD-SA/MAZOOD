@@ -8,10 +8,11 @@ import { colors as brandColors, spacing } from "@mazood/brand";
 import type { RequestDto } from "@mazood/shared";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, View } from "react-native";
-import { useRequests } from "@/api/requests";
+import { ScrollView, View } from "react-native";
+import { usePrefetchActive, useRequests } from "@/api/requests";
 import { useSession } from "@/api/session";
 import { CategoryTile, RequestCard } from "@/components/domain";
+import { SkeletonList } from "@/components/feedback";
 import { IconPlus } from "@/components/icons";
 import { CONTENT_MAX_WIDTH, SectionTitle } from "@/components/layout";
 import { LogoMark } from "@/components/Logo";
@@ -43,6 +44,7 @@ export default function Home() {
   const width = { width: "100%" as const, maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" as const };
   const all = requests.data ?? [];
   const list = sortForHome(all.filter((r) => inFilter(r, filter)));
+  usePrefetchActive(requests.data);
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.surface }}>
@@ -89,8 +91,8 @@ export default function Home() {
           />
         )}
         {requests.isPending ? (
-          <ActivityIndicator color={colors.inkMuted} />
-        ) : requests.isError ? (
+          <SkeletonList />
+        ) : requests.isError && !requests.data ? (
           <View style={{ gap: spacing["2"] }}>
             <AppText variant="bodySm" color="danger">
               {errorMessage(requests.error, t)}
@@ -98,9 +100,12 @@ export default function Home() {
             <Button label={t("retry")} variant="secondary" onPress={() => requests.refetch()} />
           </View>
         ) : all.length === 0 ? (
-          <AppText variant="bodySm" color="inkMuted">
-            {t("noRequests")}
-          </AppText>
+          <View style={{ gap: spacing["3"] }}>
+            <AppText variant="bodySm" color="inkMuted">
+              {t("noRequests")}
+            </AppText>
+            <Button label={t("requestOffer")} icon={IconPlus} variant="secondary" onPress={() => router.push("/request/new")} />
+          </View>
         ) : list.length === 0 ? (
           <AppText variant="bodySm" color="inkMuted">
             {t("noRequestsInFilter")}

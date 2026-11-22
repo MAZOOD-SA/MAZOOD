@@ -4,20 +4,19 @@
 import { spacing } from "@mazood/brand";
 import { vatOf } from "@mazood/shared";
 import { useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
+import { View } from "react-native";
 import { useRequest } from "@/api/requests";
 import { useSession } from "@/api/session";
+import { SkeletonList } from "@/components/feedback";
 import { Screen } from "@/components/layout";
 import { LogoMark } from "@/components/Logo";
 import { AppText, Badge, Card, Divider, Notice, Row } from "@/components/ui";
 import { requestTitle } from "@/data/categories";
 import { useI18n } from "@/i18n/I18nProvider";
-import { useTheme } from "@/theme/ThemeProvider";
 
 export default function InvoiceView() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, tl, money, date, code } = useI18n();
-  const { colors } = useTheme();
   const { me } = useSession();
   const q = useRequest(id);
   const r = q.data;
@@ -25,7 +24,7 @@ export default function InvoiceView() {
   if (q.isPending) {
     return (
       <Screen title={t("invoice")} back>
-        <ActivityIndicator color={colors.inkMuted} />
+        <SkeletonList count={1} />
       </Screen>
     );
   }

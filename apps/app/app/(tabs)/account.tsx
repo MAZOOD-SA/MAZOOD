@@ -6,6 +6,7 @@ import { useState } from "react";
 import { View } from "react-native";
 import { ApiRequestError } from "@/api/client";
 import { useSession } from "@/api/session";
+import { useToast } from "@/components/feedback";
 import { Field } from "@/components/Field";
 import { IconInfoCircle, IconLogout } from "@/components/icons";
 import { Screen, SectionTitle } from "@/components/layout";
@@ -24,7 +25,7 @@ export default function Account() {
   const [form, setForm] = useState({ name: "", location: "", commercialRegister: "", vatNumber: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const toast = useToast();
 
   function startEdit() {
     setForm({
@@ -34,7 +35,6 @@ export default function Account() {
       vatNumber: factory?.vatNumber ?? "",
     });
     setErrors({});
-    setSaved(false);
     setEditing(true);
   }
 
@@ -44,7 +44,7 @@ export default function Account() {
     try {
       await saveFactory(form);
       setEditing(false);
-      setSaved(true);
+      toast.show(t("toastSaved"));
     } catch (err) {
       const field = err instanceof ApiRequestError && err.field ? err.field : "form";
       setErrors({ [field]: errorMessage(err, t) });
@@ -90,11 +90,6 @@ export default function Account() {
             <InfoRow label={t("commercialRegister")} value={factory?.commercialRegister ? code(factory.commercialRegister) : t("notProvided")} />
             <InfoRow label={t("vatNumber")} value={factory?.vatNumber ? code(factory.vatNumber) : t("notProvided")} />
             <Button label={t("editFactory")} variant="secondary" onPress={startEdit} />
-            {saved && (
-              <AppText variant="bodySm" color="success">
-                {t("saved")}
-              </AppText>
-            )}
           </>
         )}
       </Card>

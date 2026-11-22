@@ -1,20 +1,22 @@
 // رفع طلب جديد. «إرسال الطلب» هو زر accent الوحيد في الشاشة.
 // التحقق هنا يعطي رسالة سريعة بس. الخادم يتحقق من كل مدخل من جديد قبل الحفظ (packages/shared/src/schemas.ts).
 //
-// «اطلب مرة ثانية» يفتح هذي الشاشة معبّية من طلب سابق (params: from).
+// «اطلب مرة أخرى» يفتح هذي الشاشة معبّأة من طلب سابق (params).
+// والكتابة تنحفظ كمسودة على الجهاز تلقائيًا، فلو طلع المستخدم قبل الإرسال يلقاها لما يرجع.
 import { spacing } from "@mazood/brand";
 import { WHEN_OPTIONS, type When } from "@mazood/shared";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { ApiRequestError } from "@/api/client";
+import { clearDraft, loadDraft, saveDraft } from "@/api/draft";
 import { useCreateRequest } from "@/api/requests";
 import { useSession } from "@/api/session";
 import { CategoryTile } from "@/components/domain";
 import { Field } from "@/components/Field";
 import { IconPaperclip, IconSend } from "@/components/icons";
 import { Screen, SectionTitle } from "@/components/layout";
-import { AppText, Button, Chips } from "@/components/ui";
+import { AppText, Button, Chips, Notice } from "@/components/ui";
 import { CATEGORIES, categoryById, type CategoryId } from "@/data/categories";
 import { errorMessage } from "@/i18n/errors";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -36,6 +38,45 @@ export default function NewRequest() {
   const [when, setWhen] = useState<When>(WHEN_OPTIONS.includes(p.when as When) ? (p.when as When) : "tomorrow");
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [attachNote, setAttachNote] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const fromParams = !!(p.category || p.details);
+  const ready = useRef(fromParams);
+
+  // استرجاع المسودة (إذا الشاشة ما انفتحت من «اطلب مرة أخرى» أو من قسم محدد).
+  useEffect(() => {
+    if (fromParams) return;
+    loadDraft().then((d) => {
+      if (d && (d.details.trim() || d.category)) {
+        const c = CATEGORIES.find((x) => x.id === d.category);
+        if (c) {
+          setCategory(c.id);
+          setTypeId(c.types.some((x) => x.id === d.typeId) ? d.typeId : c.types[0].id);
+        }
+        setDetails(d.details);
+        if (d.location) setLocation(d.location);
+        if (WHEN_OPTIONS.includes(d.when)) setWhen(d.when);
+        setDraftRestored(true);
+      }
+      ready.current = true;
+    });
+  }, [fromParams]);
+
+  // حفظ المسودة بعد ما يوقف المستخدم عن الكتابة بنص ثانية.
+  useEffect(() => {
+    if (!ready.current) return;
+    const timer = setTimeout(() => saveDraft({ category, typeId, details, location, when }), 500);
+    return () => clearTimeout(timer);
+  }, [category, typeId, details, location, when]);
+
+  function discardDraft() {
+    clearDraft();
+    setCategory(null);
+    setTypeId(null);
+    setDetails("");
+    setLocation(me?.factory?.location ?? "");
+    setWhen("tomorrow");
+    setDraftRestored(false);
+  }
 
   const cat = category ? categoryById(category) : null;
 
@@ -56,7 +97,12 @@ export default function NewRequest() {
     create.mutate(
       { category, typeId, details: details.trim(), location: location.trim(), when },
       {
-        onSuccess: (r) => router.replace({ pathname: "/request/[id]", params: { id: r.id, created: "1" } }),
+        onSuccess: (r) => {
+          ready.current = false;
+          clearDraft();
+          // ما نعرض رسالة نجاح منفصلة هنا: شاشة الطلب تعرض «تم استلام طلبك» بنفسها.
+          router.replace({ pathname: "/request/[id]", params: { id: r.id, created: "1" } });
+        },
         onError: (err) => {
           const field = err instanceof ApiRequestError && err.field ? err.field : "form";
           setErrors({ [field]: errorMessage(err, t) });
@@ -80,6 +126,12 @@ export default function NewRequest() {
         </View>
       }
     >
+      {draftRestored && (
+        <View style={{ gap: spacing["2"] }}>
+          <Notice text={t("draftRestored")} />
+          <Button label={t("discardDraft")} variant="ghost" onPress={discardDraft} />
+        </View>
+      )}
       <SectionTitle title={t("chooseCategory")} />
       {cat ? (
         <CategoryTile category={cat} onPress={() => setCategory(null)} />

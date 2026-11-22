@@ -10,10 +10,11 @@ import { spacing } from "@mazood/brand";
 import type { FactoryAction, RequestDetailsDto } from "@mazood/shared";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { View } from "react-native";
 import { ApiRequestError } from "@/api/client";
 import { markOffersSeen, useRequest, useRequestCommand, type RequestCommand } from "@/api/requests";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { SkeletonLine, SkeletonList, useToast } from "@/components/feedback";
 import { OfferCard, RequestStatusBadge } from "@/components/domain";
 import { IconCalendar, IconCircleCheck, IconHourglass, IconInfoCircle, IconMapPin, IconRefresh } from "@/components/icons";
 import { Screen, SectionTitle } from "@/components/layout";
@@ -23,6 +24,16 @@ import { errorMessage } from "@/i18n/errors";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { StringKey } from "@/i18n/strings";
 import { useTheme } from "@/theme/ThemeProvider";
+
+/** رسالة النجاح بعد كل إجراء. */
+const SUCCESS: Record<RequestCommand["kind"], StringKey> = {
+  accept: "toastOfferAccepted",
+  cancel: "toastCancelled",
+  request_cancel: "toastCancelRequested",
+  withdraw_cancel_request: "toastCancelWithdrawn",
+  confirm_receipt: "toastReceiptConfirmed",
+  open_dispute: "toastDisputeOpened",
+};
 
 type Dialog = { cmd: RequestCommand; title: string; body: string; confirm: string; danger?: boolean } | null;
 
@@ -38,6 +49,7 @@ export default function RequestDetails() {
   if (dialog) lastDialog.current = dialog;
   const shown = dialog ?? lastDialog.current;
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   // أول ما تظهر العروض الجديدة نعلّمها مقروءة (عشان النقطة في الرئيسية تختفي).
   const unseen = q.data?.unseenOffers ?? 0;
@@ -52,7 +64,13 @@ export default function RequestDetails() {
   if (q.isPending) {
     return (
       <Screen title={t("requestDetails")} back>
-        <ActivityIndicator color={colors.inkMuted} />
+        <Card style={{ gap: spacing["3"] }}>
+          <SkeletonLine width="35%" height={12} />
+          <SkeletonLine width="55%" height={20} />
+          <SkeletonLine />
+          <SkeletonLine width="70%" />
+        </Card>
+        <SkeletonList count={2} />
       </Screen>
     );
   }
@@ -71,7 +89,11 @@ export default function RequestDetails() {
 
   function run(cmd: RequestCommand) {
     setError(null);
-    command.mutate(cmd, { onError: (err) => setError(errorMessage(err, t)), onSettled: () => setDialog(null) });
+    command.mutate(cmd, {
+      onSuccess: () => toast.show(t(SUCCESS[cmd.kind])),
+      onError: (err) => setError(errorMessage(err, t)),
+      onSettled: () => setDialog(null),
+    });
   }
 
   return (

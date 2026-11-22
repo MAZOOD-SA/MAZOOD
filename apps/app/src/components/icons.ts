@@ -26,4 +26,5 @@ export { default as IconSpray } from "@tabler/icons-react-native/icons/IconSpray
 export { default as IconStar } from "@tabler/icons-react-native/icons/IconStar";
 export { default as IconTool } from "@tabler/icons-react-native/icons/IconTool";
 export { default as IconTruck } from "@tabler/icons-react-native/icons/IconTruck";
+export { default as IconWifiOff } from "@tabler/icons-react-native/icons/IconWifiOff";
 export { default as IconUser } from "@tabler/icons-react-native/icons/IconUser";

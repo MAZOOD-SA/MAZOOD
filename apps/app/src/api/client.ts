@@ -6,6 +6,7 @@
 // **ممنوع** تحط أي مفتاح سري هنا: أي شي في كود التطبيق يقدر أي أحد يقراه.
 import type { ApiError } from "@mazood/shared";
 import { Platform } from "react-native";
+import { setServerReachable } from "./connection";
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === "web" ? "/api/v1" : "http://localhost:3000/api/v1");
 
@@ -47,8 +48,10 @@ export async function api<T>(method: Method, path: string, body?: unknown): Prom
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
+    setServerReachable(false);
     throw new ApiRequestError(0, "network");
   }
+  setServerReachable(true);
   const data = (await res.json().catch(() => null)) as (T & ApiError) | null;
   if (!res.ok) {
     if (res.status === 401 && token) onUnauthorized?.();

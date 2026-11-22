@@ -33,6 +33,8 @@
 | react-native-svg | 15.16.0 | MIT |
 | @react-native-async-storage/async-storage | 2.2.0 | MIT |
 | @tanstack/react-query | 5.108.2 | MIT |
+| @tanstack/react-query-persist-client | 5.108.2 | MIT |
+| @tanstack/query-async-storage-persister | 5.108.2 | MIT |
 | expo-secure-store | 58.0.3 | MIT |
 
 ## مكتبات الخادم والقواعد المشتركة

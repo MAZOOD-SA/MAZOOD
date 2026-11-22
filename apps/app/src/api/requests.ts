@@ -3,6 +3,7 @@
 // عشان المكافأة (وصول العروض) تبان بدون ما يحدّث الصفحة.
 import type { CreateRequestInput, RequestDetailsDto, RequestDto } from "@mazood/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api } from "./client";
 
 const LIST_KEY = ["requests"] as const;
@@ -19,6 +20,22 @@ export function useRequests() {
     queryFn: () => api<RequestDto[]>("GET", "/requests"),
     refetchInterval: (q) => (q.state.data?.some(isWaiting) ? 4_000 : false),
   });
+}
+
+/** يجلب تفاصيل الطلبات الحالية مسبقًا، فتنفتح فورًا لما يضغط عليها المستخدم. */
+export function usePrefetchActive(list: RequestDto[] | undefined) {
+  const qc = useQueryClient();
+  // نجلب مرة وحدة لكل طلب، مو مع كل تحديث للقائمة (القائمة تتحدّث كل ٤ ثواني وقت الانتظار).
+  const ids = (list ?? [])
+    .filter((r) => r.status !== "completed" && r.status !== "cancelled")
+    .slice(0, 8)
+    .map((r) => r.id)
+    .join(",");
+  useEffect(() => {
+    for (const id of ids ? ids.split(",") : []) {
+      qc.prefetchQuery({ queryKey: detailKey(id), queryFn: () => api<RequestDetailsDto>("GET", `/requests/${id}`), staleTime: 30_000 });
+    }
+  }, [ids, qc]);
 }
 
 export function useRequest(id: string) {

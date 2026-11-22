@@ -261,3 +261,19 @@ describe("تأكيد الاستلام", () => {
     expect((await t.call("POST", `/requests/${r.id}/confirm-receipt`, { token: a.token })).status).toBe(409);
   });
 });
+
+describe("حدود المحاولات لكل مستخدم", () => {
+  it("موظفين من نفس شبكة المصنع (نفس العنوان) ما ينحجبون بسبب بعض", async () => {
+    const t2 = await makeTestApp();
+    const a = await t2.factoryUser("مصنع الشبكة المشتركة");
+    const b = await t2.factoryUser("مصنع الشبكة المشتركة ٢");
+    const ip = "10.99.99.99";
+    // المستخدم الأول يستهلك حده كامل (٣٠ طلب بالساعة)...
+    for (let i = 0; i < 30; i++) {
+      expect((await t2.call("POST", "/requests", { token: a.token, body: validRequest, ip })).status).toBe(201);
+    }
+    expect((await t2.call("POST", "/requests", { token: a.token, body: validRequest, ip })).status).toBe(429);
+    // ...والثاني من نفس العنوان يقدر يرفع طلبه عادي.
+    expect((await t2.call("POST", "/requests", { token: b.token, body: validRequest, ip })).status).toBe(201);
+  });
+});

@@ -12,6 +12,7 @@ import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SessionProvider, useSession } from "@/api/session";
+import { OfflineBanner, ToastProvider } from "@/components/feedback";
 import { DemoBanner } from "@/components/layout";
 import { I18nProvider, useI18n } from "@/i18n/I18nProvider";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
@@ -37,7 +38,9 @@ export default function RootLayout() {
       <ThemeProvider>
         <I18nProvider>
           <SessionProvider>
+            <ToastProvider>
             <Shell />
+            </ToastProvider>
           </SessionProvider>
         </I18nProvider>
       </ThemeProvider>
@@ -53,6 +56,7 @@ function Shell() {
     <View style={{ flex: 1, backgroundColor: colors.surface, direction: isRTL ? "rtl" : "ltr" }}>
       <StatusBar style={name === "dark" ? "light" : "dark"} />
       <DemoBanner />
+      <OfflineBanner />
       <View style={{ flex: 1 }}>
         {/* ننتظر نقرأ الجلسة المحفوظة قبل ما تفتح أي شاشة، عشان ما تطلب بيانات بدون رمز الدخول. */}
         {loading ? (

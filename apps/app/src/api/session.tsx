@@ -1,9 +1,11 @@
 // جلسة المستخدم: مين داخل، وبيانات مصنعه، والدخول والخروج.
 import type { ConfigDto, FactoryProfileInput, Me, OtpRequestResponse, SessionResponse } from "@mazood/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { api, setApiToken, setUnauthorizedHandler } from "./client";
-import { loadToken, saveToken } from "./tokenStore";
+import { clearLocalCache, persistOptions, queryClient } from "./cache";
+import { api, ApiRequestError, setApiToken, setUnauthorizedHandler } from "./client";
+import { clearDraft } from "./draft";
+import { loadCachedMe, loadToken, saveCachedMe, saveToken } from "./tokenStore";
 
 type SessionValue = {
   /** true لين نقرأ الجلسة المحفوظة على الجهاز أول مرة. */
@@ -18,10 +20,6 @@ type SessionValue = {
 
 const SessionContext = createContext<SessionValue | null>(null);
 
-export const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, staleTime: 2_000 } },
-});
-
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState<Me | null>(null);
@@ -30,7 +28,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(async () => {
     setApiToken(null);
     setMe(null);
-    queryClient.clear();
+    await clearLocalCache();
+    await clearDraft();
+    await saveCachedMe(null);
     await saveToken(null);
   }, []);
 
@@ -38,15 +38,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setUnauthorizedHandler(() => void clear());
     api<ConfigDto>("GET", "/config").then(setConfig, () => {});
     (async () => {
-      const saved = await loadToken();
-      if (saved) {
-        setApiToken(saved);
-        try {
-          setMe(await api<Me>("GET", "/me"));
-        } catch {
-          // الجلسة انتهت أو الخادم ما رد: نرجع لشاشة الدخول.
-          await clear();
-        }
+      const [saved, cached] = await Promise.all([loadToken(), loadCachedMe()]);
+      if (!saved) return setLoading(false);
+      setApiToken(saved);
+      // فتح فوري: نعرض الحساب المحفوظ على الجهاز، ونتحقق من الخادم في الخلفية.
+      if (cached) {
+        setMe(cached);
+        setLoading(false);
+      }
+      try {
+        const fresh = await api<Me>("GET", "/me");
+        setMe(fresh);
+        await saveCachedMe(fresh);
+      } catch (err) {
+        // الجلسة انتهت (٤٠١): client.ts ينادي clear() ويرجّع لشاشة الدخول.
+        // ما فيه اتصال: نكمل بالنسخة المحفوظة، والشريط يقول للمستخدم إنه بدون اتصال.
+        if (err instanceof ApiRequestError && err.status !== 0 && err.status !== 401) await clear();
       }
       setLoading(false);
     })();
@@ -61,13 +68,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       requestCode: (phone) => api<OtpRequestResponse>("POST", "/auth/otp/request", { phone }),
       verifyCode: async (phone, code) => {
         const s = await api<SessionResponse>("POST", "/auth/otp/verify", { phone, code });
+        // جهاز مشترك: لو دخل مستخدم ثاني، ما يشوف أي بيانات محفوظة من اللي قبله.
+        await clearLocalCache();
         setApiToken(s.token);
         await saveToken(s.token);
+        await saveCachedMe(s.me);
         setMe(s.me);
         return s.me;
       },
       saveFactory: async (input) => {
         const updated = await api<Me>("PUT", "/factory", input);
+        await saveCachedMe(updated);
         setMe(updated);
         return updated;
       },
@@ -80,9 +91,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
       <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
 

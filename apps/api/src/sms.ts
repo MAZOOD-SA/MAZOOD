@@ -19,6 +19,6 @@ export class ConsoleSmsSender implements SmsSender {
 /** نص الرسالة. يبدأ بالرمز عشان يطلع في التنبيه، وينتهي بتحذير من مشاركته. */
 export function otpMessage(code: string, locale: "ar" | "en"): string {
   return locale === "ar"
-    ? `${code} رمز الدخول إلى مزوّد. لا تشاركه مع أي أحد.`
+    ? `${code} رمز الدخول إلى مزوّد. لا تشاركه مع أحد.`
     : `${code} is your Mazood sign-in code. Don't share it with anyone.`;
 }

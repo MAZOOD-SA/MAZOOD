@@ -48,9 +48,9 @@ export function onRequestCreated(ctx: AppContext, request: { id: string; categor
     });
     await providerSubmitOffer(ctx.db, b.id, request.id, {
       priceHalalas: riyals(Math.round(base * 1.15)),
-      summaryAr: `${type.ar}، نبدأ اليوم`,
+      summaryAr: `${type.ar}، البدء اليوم`,
       summaryEn: `${type.en}, we can start today`,
-      noteAr: "عندنا فريق جاهز في المدينة الصناعية.",
+      noteAr: "لدينا فريق جاهز في المدينة الصناعية.",
       noteEn: "Our team is ready in the industrial city.",
     });
   });
