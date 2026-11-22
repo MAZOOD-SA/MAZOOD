@@ -5,11 +5,12 @@ import { audit } from "../audit.ts";
 import type { Db } from "../db.ts";
 import { ApiError } from "../errors.ts";
 import { activeCities, resolveCityId } from "../cities.ts";
+import { getSettings } from "../settings.ts";
 import { actorOf, parse, type Ctx, type Guards } from "../http.ts";
 import { publicUser } from "./auth.ts";
 
 export const REQUEST_COLUMNS = `id, category, type_id AS "typeId", details, area, location, city_id AS "cityId",
-  needed_when AS "when", status, created_at AS "createdAt"`;
+  needed_when AS "when", status, created_at AS "createdAt", expires_at AS "expiresAt"`;
 
 export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
   const { db } = ctx;
@@ -42,10 +43,13 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     // المدينة: المطلوبة، أو مدينة المصنع، أو المدينة الوحيدة الفعّالة.
     const [f] = await db.query<{ city_id: string | null }>("SELECT city_id FROM factories WHERE id=$1", [factoryId]);
     const cityId = await resolveCityId(db, body.cityId ?? f.city_id);
+    // الطلب يبقى مفتوح للعروض مدة محددة (إعداد requestOpenDays)، وبعدها «انتهى بدون عروض».
+    const { requestOpenDays } = await getSettings(db);
+    const expiresAt = new Date(ctx.now().getTime() + requestOpenDays * 86400_000);
     const [row] = await db.query(
-      `INSERT INTO requests (factory_id, category, type_id, details, area, location, needed_when, city_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING ${REQUEST_COLUMNS}`,
-      [factoryId, body.category, body.typeId, body.details, body.area, body.location, body.when, cityId],
+      `INSERT INTO requests (factory_id, category, type_id, details, area, location, needed_when, city_id, expires_at, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$10) RETURNING ${REQUEST_COLUMNS}`,
+      [factoryId, body.category, body.typeId, body.details, body.area, body.location, body.when, cityId, expiresAt, ctx.now()],
     );
     await audit(db, actorOf(user), "request.created", { type: "request", id: String(row.id) }, { category: body.category });
     return reply.status(201).send({ request: row });
