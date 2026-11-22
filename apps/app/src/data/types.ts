@@ -70,9 +70,14 @@ export type AppNotification = {
   requestId?: string;
 };
 
+/** العميل (منشأة أو فرد). الاسم «Factory» باقي في الكود عشان ما نكسر شي (القرار ٤١). */
 export type Factory = {
+  kind: "business" | "individual" | null;
   name: Localized;
   city: Localized;
   commercialRegister: string;
   vatNumber: string;
+  idType: "national_id" | "iqama" | null;
+  idNumberMasked: string | null;
+  identityStatus: "not_required" | "pending" | "verified";
 };

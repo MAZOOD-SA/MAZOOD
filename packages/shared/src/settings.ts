@@ -30,6 +30,11 @@ export const SETTINGS_SCHEMA = z
     smsEvents: z.array(z.enum(["first_offer", "offer_accepted", "cancellation_requested"])).max(3),
     /** رقم «التزم بـ X من Y طلب» في بطاقة العرض: تشغيل وإيقاف، والمدة بالأشهر، والحد الأدنى (القرار ٣٣). */
     commitment: commitmentSettingsSchema,
+    /**
+     * الفرد ما يرفع طلب إلا بعد ما تتأكد هويته (نفاذ، القرار ٤٢). مقفول الحين لأن ربط نفاذ يحتاج
+     * سجل الشركة وموافقة «علم»، وقبله الفحص بصيغة الرقم بس. لما يجهز الربط: يتفعّل بأمر واحد.
+     */
+    individualRequiresVerifiedIdentity: z.boolean(),
   })
   .strict();
 
@@ -46,4 +51,5 @@ export const SETTING_DEFAULTS: Settings = {
   cancellation: DEFAULT_CANCELLATION_POLICY,
   smsEvents: ["first_offer", "offer_accepted", "cancellation_requested"],
   commitment: DEFAULT_COMMITMENT_SETTINGS,
+  individualRequiresVerifiedIdentity: false,
 };

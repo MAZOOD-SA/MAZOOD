@@ -42,7 +42,8 @@ export function OpenRequestCard({ request, selected, onPress }: { request: OpenR
             {type ? tl(type.name) : tl(cat.name)}
           </AppText>
           <AppText variant="caption" color="inkMuted">
-            {request.area ?? tl(cat.name)} · {t(request.when === "today" ? "whenToday" : request.when === "tomorrow" ? "whenTomorrow" : "whenThisWeek")}
+            {t(request.customerKind === "individual" ? "customerIndividual" : "customerBusiness")} · {request.area ?? tl(cat.name)} ·{" "}
+            {t(request.when === "today" ? "whenToday" : request.when === "tomorrow" ? "whenTomorrow" : "whenThisWeek")}
           </AppText>
         </View>
         {request.myOffer ? <Badge label={t("offerSent")} tone="ok" /> : <Badge label={relative(request.createdAt)} tone="muted" />}

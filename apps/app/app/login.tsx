@@ -6,7 +6,7 @@ import { useState } from "react";
 import { View } from "react-native";
 import { api, ApiClientError, IS_WEB, LIVE } from "@/api/client";
 import { DEMO_PHONES } from "@/demo/server";
-import { IconBuildingFactory2, IconTruck } from "@/components/icons";
+import { IconBuildingFactory2, IconTruck, IconUser } from "@/components/icons";
 import { useStore } from "@/data/store";
 import { homeRouteFor } from "@/lib/home-route";
 import { errorKey } from "@/api/mapping";
@@ -51,7 +51,7 @@ export default function Login() {
   }
 
   // النسخة التجريبية: دخول بضغطة كمصنع أو كمزوّد موثّق، عشان المالك وشريكه يجرّبون الدورة كاملة.
-  async function tryAs(role: "factory" | "provider") {
+  async function tryAs(role: "factory" | "provider" | "individual") {
     setBusy(true);
     const res = await api<{ token?: string }>("/v1/auth/otp/verify", {
       method: "POST",
@@ -100,6 +100,7 @@ export default function Login() {
           </AppText>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing["2"] }}>
             <Button label={t("demoAsFactory")} icon={IconBuildingFactory2} variant="secondary" onPress={() => tryAs("factory")} disabled={busy} />
+            <Button label={t("demoAsIndividual")} icon={IconUser} variant="secondary" onPress={() => tryAs("individual")} disabled={busy} />
             <Button label={t("demoAsProvider")} icon={IconTruck} variant="secondary" onPress={() => tryAs("provider")} disabled={busy} />
           </View>
         </Card>

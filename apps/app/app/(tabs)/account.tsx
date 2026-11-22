@@ -1,4 +1,4 @@
-// حسابي (للمصنع): بيانات المصنع، وموظفين المصنع (المدير يضيف ويوقف)، واللغة، والمظهر، وطلب حذف الحساب، والخروج.
+// حسابي (للعميل): بيانات الحساب (منشأة أو فرد)، وموظفين المنشأة (المدير يضيف ويوقف، والفرد ما عنده موظفين)، واللغة، والمظهر، وطلب حذف الحساب، والخروج.
 import { spacing } from "@mazood/brand";
 import { normalizeSaudiMobile } from "@mazood/shared";
 import { router } from "expo-router";
@@ -25,22 +25,39 @@ export default function Account() {
     <>
       <Card style={{ gap: spacing["2"] }}>
         <AppText variant="caption" color="inkMuted">
-          {t("factory")}
+          {FACTORY.kind === "individual" ? t("customerIndividual") : FACTORY.kind === "business" ? t("customerBusiness") : t("factory")}
         </AppText>
         <AppText variant="h2">{profileComplete ? tl(FACTORY.name) : t("profileMissingName")}</AppText>
         <AppText variant="bodySm" color="inkMuted" style={{ writingDirection: "ltr", textAlign: locale === "ar" ? "right" : "left" }}>
           {digits(phone)}
         </AppText>
         <Divider />
-        <InfoRow label={t("commercialRegister")} value={code(FACTORY.commercialRegister)} />
-        <InfoRow label={t("vatNumber")} value={code(FACTORY.vatNumber)} />
+        {FACTORY.kind === "individual" ? (
+          <>
+            <InfoRow label={t("idMasked")} value={code(FACTORY.idNumberMasked ?? "")} />
+            <Badge
+              label={t(FACTORY.identityStatus === "verified" ? "identityVerified" : "identityPending")}
+              tone={FACTORY.identityStatus === "verified" ? "ok" : "muted"}
+            />
+            {FACTORY.identityStatus === "pending" && (
+              <AppText variant="caption" color="inkMuted">
+                {t("identityPendingHint")}
+              </AppText>
+            )}
+          </>
+        ) : (
+          <>
+            <InfoRow label={t("commercialRegister")} value={code(FACTORY.commercialRegister)} />
+            <InfoRow label={t("vatNumber")} value={code(FACTORY.vatNumber)} />
+          </>
+        )}
       </Card>
       <Button
         label={profileComplete ? t("editProfile") : t("completeProfile")}
         variant={profileComplete ? "secondary" : "primary"}
         onPress={() => router.push("/factory-profile")}
       />
-      <Members manager={factoryRole !== "member"} />
+      {FACTORY.kind === "business" && <Members manager={factoryRole !== "member"} />}
     </>
   );
 

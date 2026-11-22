@@ -40,11 +40,17 @@ export function fromServerRequest(r: ServerRequest): ServiceRequest {
 
 export type ServerFactory = {
   id: string;
+  /** منشأة أو فرد (القرار ٤١). فاضي = ما اختار للحين. */
+  kind: "business" | "individual" | null;
   name: string | null;
   cityId: string | null;
   city: { ar: string; en: string } | null;
   commercialRegister: string | null;
   vatNumber: string | null;
+  idType?: "national_id" | "iqama" | null;
+  /** آخر ٤ أرقام من الهوية بس (******1234). الرقم الكامل ما يطلع من الخادم. */
+  idNumberMasked?: string | null;
+  identity?: { status: "not_required" | "pending" | "verified"; verifiedAt: string | null };
   profileComplete: boolean;
 };
 
@@ -56,7 +62,8 @@ export type ErrorKey =
   | "errContactInfo" | "errOfferExists" | "errOffersFull" | "errOfferNotActive" | "errOfferLocked" | "errValidityTooLong"
   | "errPriceChangePending" | "errCancellationPending" | "errAlreadyRated" | "errInvalidTransition" | "errDeletionPending"
   | "errDemoUnsupported" | "errPhotosLimit" | "errPhotoNotAllowed" | "errPhoneInUse" | "errProviderNotVerified" | "errNotFound"
-  | "errPriceUnchanged" | "errManagerApproval" | "errProviderUnavailable";
+  | "errPriceUnchanged" | "errManagerApproval" | "errProviderUnavailable"
+  | "errProfileIncomplete" | "errIdentityUnverified" | "errKindLocked" | "errIndividualNoMembers";
 
 export function errorKey(code: string): ErrorKey {
   switch (code) {
@@ -132,6 +139,14 @@ export function errorKey(code: string): ErrorKey {
       return "errManagerApproval";
     case "provider_unavailable":
       return "errProviderUnavailable";
+    case "profile_incomplete":
+      return "errProfileIncomplete";
+    case "identity_unverified":
+      return "errIdentityUnverified";
+    case "kind_locked":
+      return "errKindLocked";
+    case "individual_no_members":
+      return "errIndividualNoMembers";
     case "network":
       return "networkError";
     case "request_not_cancellable":

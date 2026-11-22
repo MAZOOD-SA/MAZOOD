@@ -121,6 +121,8 @@ export type OpenRequest = {
   when: When;
   createdAt: string;
   expiresAt: string;
+  /** منشأة أو فرد (بدون الاسم قبل القبول، القرار ٤١). */
+  customerKind?: "business" | "individual";
   offerCount: number;
   myOffer: { id: string } | null;
 };
@@ -154,7 +156,7 @@ export type JobSummary = {
   acceptedAt: string;
   startedAt: string | null;
   deliveredAt: string | null;
-  factory: { name: string | null; contactPhone: string };
+  factory: { name: string | null; kind?: "business" | "individual"; contactPhone: string };
 };
 
 /** الطلب المنفّذ للمزوّد (GET /v1/provider/jobs/:orderId). */

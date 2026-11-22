@@ -9,7 +9,7 @@ import { Grid, SectionTitle, useContentFrame } from "@/components/layout";
 import { useAutoRefresh } from "@/components/flow";
 import { useLayout } from "@/lib/layout";
 import { LogoMark } from "@/components/Logo";
-import { AppText, Button } from "@/components/ui";
+import { AppText, Button, Card } from "@/components/ui";
 import { CATEGORIES } from "@/data/categories";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -66,6 +66,15 @@ export default function Home() {
       </View>
 
       <View style={[width, { paddingVertical: spacing["4"], gap: spacing["3"] }]}>
+        {!profileComplete && (
+          // ولا مرة طريق مسدود: قبل أول طلب، العميل يشوف وش ناقصه وزر يوديه له.
+          <Card onPress={() => router.push("/factory-profile")} style={{ gap: spacing["1"] }}>
+            <AppText weight={700}>{t("completeProfileFirst")}</AppText>
+            <AppText variant="bodySm" color="inkMuted">
+              {t("completeProfileFirstHint")}
+            </AppText>
+          </Card>
+        )}
         <SectionTitle title={t("categories")} />
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing["2"] }}>
           {CATEGORIES.map((c) => (

@@ -6,6 +6,10 @@ import type { AppNotification, Factory, Invoice, Offer, Provider, ServiceRequest
 const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
 
 export const FACTORY: Factory = {
+  kind: "business",
+  idType: null,
+  idNumberMasked: null,
+  identityStatus: "not_required",
   name: { ar: "مصنع الجودة للبلاستيك", en: "Al Jawdah Plastics Factory" },
   city: { ar: "سدير", en: "Sudair" },
   commercialRegister: "0000000000",

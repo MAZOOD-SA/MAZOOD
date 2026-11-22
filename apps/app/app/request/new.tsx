@@ -23,7 +23,11 @@ const DEFAULT_AREA = { ar: "المرحلة الثانية", en: "Phase 2" };
 
 export default function NewRequest() {
   const { t, tl } = useI18n();
-  const { createRequest } = useStore();
+  const { createRequest, profileComplete, factory } = useStore();
+  // الفرد في بيته: «المنطقة» تصير «الحي»، وما نعبّي له عنوان افتراضي (القرار ٤١).
+  const individual = factory.kind === "individual";
+  const defaultArea = individual ? "" : tl(DEFAULT_AREA);
+  const defaultLocation = individual ? "" : tl(DEFAULT_LOCATION);
   // «اطلب مرة ثانية»: الطلب الجديد يجي معبّى بنفس تفاصيل الطلب القديم (docs/product.md، القسم ٢).
   const params = useLocalSearchParams<{ category?: string; typeId?: string; details?: string; area?: string; location?: string; when?: string }>();
   const initial = CATEGORIES.some((c) => c.id === params.category) ? (params.category as CategoryId) : null;
@@ -32,13 +36,20 @@ export default function NewRequest() {
   const [category, setCategory] = useState<CategoryId | null>(initial);
   const [typeId, setTypeId] = useState<string | null>(initialType);
   const [details, setDetails] = useState(params.details ?? "");
-  const [area, setArea] = useState(params.area ?? tl(DEFAULT_AREA));
-  const [location, setLocation] = useState(params.location ?? tl(DEFAULT_LOCATION));
+  const [area, setArea] = useState(params.area ?? defaultArea);
+  const [location, setLocation] = useState(params.location ?? defaultLocation);
   const [when, setWhen] = useState<When>(params.when === "today" || params.when === "this_week" ? params.when : "tomorrow");
   const [errors, setErrors] = useState<{ category?: string; details?: string; area?: string }>({});
   const [attachNote, setAttachNote] = useState(false);
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // لو وصلت بيانات الحساب بعد فتح الشاشة (تحديث الصفحة) والعميل فرد: نشيل عنوان المنشأة الافتراضي.
+  useEffect(() => {
+    if (!individual) return;
+    setArea((a) => (a === tl(DEFAULT_AREA) ? "" : a));
+    setLocation((l) => (l === tl(DEFAULT_LOCATION) ? "" : l));
+  }, [individual, tl]);
 
   const cat = category ? categoryById(category) : null;
 
@@ -75,8 +86,8 @@ export default function NewRequest() {
     setCategory(null);
     setTypeId(null);
     setDetails("");
-    setArea(tl(DEFAULT_AREA));
-    setLocation(tl(DEFAULT_LOCATION));
+    setArea(defaultArea);
+    setLocation(defaultLocation);
     setWhen("tomorrow");
   }
 
@@ -116,6 +127,19 @@ export default function NewRequest() {
     }
     // المكافأة الفورية: تفاصيل الطلب تفتح وفيها «وصل طلبك لـ X مزوّد موثّق» (الرقم يعدّ لين يوقف).
     router.replace({ pathname: "/request/[id]", params: { id: created.id, created: "1", reach: String(created.reach) } });
+  }
+
+  // قبل أول طلب لازم تكتمل بيانات الحساب (الخادم يرفض بـ profile_incomplete). نوجّهه بزر واضح بدل نموذج ما ينرسل.
+  if (!profileComplete) {
+    return (
+      <Screen title={t("newRequestTitle")} back contentStyle={{ gap: spacing["3"] }}>
+        <AppText variant="h2" weight={700}>
+          {t("completeProfileFirst")}
+        </AppText>
+        <AppText color="inkMuted">{t("completeProfileFirstHint")}</AppText>
+        <Button label={t("completeProfile")} variant="primary" size="lg" full onPress={() => router.push("/factory-profile")} />
+      </Screen>
+    );
   }
 
   return (
@@ -174,7 +198,7 @@ export default function NewRequest() {
       {(containsContactInfo(details) || containsContactInfo(area)) && <Notice icon={IconAlertTriangle} text={t("noContactInRequest")} />}
 
       <Field
-        label={t("areaLabel")}
+        label={t(individual ? "areaLabelIndividual" : "areaLabel")}
         value={area}
         onChangeText={(v) => {
           setArea(v);
@@ -184,7 +208,7 @@ export default function NewRequest() {
         error={errors.area}
       />
       <AppText variant="caption" color="inkMuted">
-        {t("areaHint")}
+        {t(individual ? "areaHintIndividual" : "areaHint")}
       </AppText>
       <Field label={t("locationLabel")} value={location} onChangeText={setLocation} maxLength={200} />
       <AppText variant="caption" color="inkMuted">
