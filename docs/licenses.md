@@ -56,6 +56,18 @@
 | vitest | 3.2.7 | MIT |
 | graphifyy (خريطة الكود، أداة Python تُثبّت على جهاز المبرمج، ما تدخل في المنصة) | 0.9.115 | Apache-2.0 |
 
+## مهارات Claude Code (`.claude/skills/`، ما تدخل في المنتج)
+
+تعليمات يقرأها Claude Code وقت الشغل. التفاصيل، ووش انشال منها، وكيف تتحدّث: `.claude/skills/README.md`.
+
+| المهارة | المصدر | النسخة | الرخصة |
+| --- | --- | --- | --- |
+| impeccable | github.com/pbakaus/impeccable | 4.10.0 (`b49177d`) | Apache-2.0 (ومراجع iOS وAndroid مأخوذة من عمل برخصة MIT، مذكور في `NOTICE.md`) |
+| animate-expo، gestures، review-animations، improve-animations، find-animation-opportunities، remove-animations، emil-design-eng، break-ui | github.com/emilkowalski/skills | `64eb3de` | MIT |
+| brand-identity | github.com/fatihaydost/brand-identity-skill | `af7ba40` | MIT (وخط Instrument Sans في نماذجه برخصة OFL-1.1، مذكور في `THIRD_PARTY_NOTICES.md`) |
+
+**ملاحظة على `brand-identity`:** فيه مكتبة ألوان مقاسة من مواقع شركات حقيقية، وهي للمقارنة بس. الرخصة ما تعطينا أي حق في أسماء هذي الشركات أو شعاراتها أو ألوانها (`TRADEMARKS.md`). وأي خط يقترحه لازم تنفحص رخصته وتنسجل هنا قبل ما نستخدمه.
+
 ## الهوية
 
 ملفات `brand/` (الشعار والألوان) ملك لمزوّد.
