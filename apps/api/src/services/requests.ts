@@ -77,6 +77,7 @@ function requestDto(r: RequestWithOffers, policy: CancelPolicy): RequestDto {
     cancelledAt: r.cancelledAt?.toISOString() ?? null,
     pendingOffers: s.pendingOffers,
     unseenOffers: r.offers.filter((o) => o.status === "pending" && o.seenAt === null).length,
+    acceptedPriceHalalas: r.offers.find((o) => o.id === r.acceptedOfferId)?.priceHalalas ?? null,
     actions: allowedFactoryActions(s, policy),
   };
 }

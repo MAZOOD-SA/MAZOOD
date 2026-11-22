@@ -80,6 +80,8 @@ export type RequestDto = {
   cancelledAt: string | null;
   pendingOffers: number;
   unseenOffers: number;
+  /** سعر العرض المقبول قبل الضريبة بالهللة، أو null إذا ما انقبل عرض. */
+  acceptedPriceHalalas: number | null;
   /** الإجراءات المتاحة للمصنع الحين، محسوبة في الخادم من requests.ts. */
   actions: FactoryAction[];
 };

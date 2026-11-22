@@ -1,10 +1,11 @@
-// هيكل الشاشات: الغلاف، والعنوان مع زر الرجوع، والشريط التجريبي.
+// هيكل الشاشات: الغلاف، والعنوان مع زر الرجوع، وشريط وضع التجربة.
 import { radius, spacing } from "@mazood/brand";
 import { IconArrowLeft, IconArrowRight } from "@/components/icons";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
 import { Pressable, ScrollView, View, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSession } from "@/api/session";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useTheme } from "@/theme/ThemeProvider";
 import { AppText } from "./ui";
@@ -86,15 +87,20 @@ export function ScreenHeader({ title, back }: { title: string; back?: boolean })
   );
 }
 
-/** شريط رفيع أعلى كل الشاشات يوضّح إن هذي نسخة تجريبية ببيانات وهمية. */
-export function PrototypeBanner() {
+/**
+ * شريط رفيع أعلى كل الشاشات، يظهر بس إذا الخادم في وضع التجربة (عروض ومزوّدين وهميين).
+ * على المنصة الحقيقية ما يظهر، لأن وضع التجربة ممنوع هناك.
+ */
+export function DemoBanner() {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { config } = useSession();
   const insets = useSafeAreaInsets();
+  if (!config?.demoMode) return <View style={{ paddingTop: insets.top }} />;
   return (
     <View style={{ backgroundColor: colors.accentSoft, paddingTop: insets.top + 4, paddingBottom: 4, alignItems: "center" }}>
       <AppText variant="caption" color="onAccentSoft" weight={600}>
-        {t("prototypeBanner")}
+        {t("demoBanner")}
       </AppText>
     </View>
   );

@@ -76,14 +76,16 @@ export async function buildApp(ctx: AppContext, opts: FastifyServerOptions = {})
 
   // تقديم الموقع من نفس العنوان، إذا كان مبني (pnpm build:web).
   const webDir = config.WEB_DIST_DIR ? resolve(config.WEB_DIST_DIR) : null;
-  if (webDir && existsSync(webDir)) {
-    await app.register(fastifyStatic, { root: webDir, wildcard: false });
-    // أي عنوان ثاني (مثل /home أو /request/123) يرجع صفحة الموقع، والموقع يعرض الشاشة الصح.
-    app.setNotFoundHandler((req, reply) => {
-      if (req.url.startsWith(API_PREFIX) || req.method !== "GET") return reply.status(404).send({ error: "not_found" });
-      return reply.sendFile("index.html");
-    });
-  }
+  const serveWeb = !!webDir && existsSync(webDir);
+  if (serveWeb) await app.register(fastifyStatic, { root: webDir });
+
+  app.setNotFoundHandler((req, reply) => {
+    // عناوين الشاشات (مثل /home أو /request/123) ترجع صفحة الموقع، والموقع يعرض الشاشة الصح.
+    // أما ملف ناقص (فيه امتداد مثل .js) فيرجع ٤٠٤ عادي.
+    const path = req.url.split("?")[0];
+    if (serveWeb && req.method === "GET" && !path.startsWith(API_PREFIX) && !/\.[a-z0-9]+$/i.test(path)) return reply.sendFile("index.html");
+    return reply.status(404).send({ error: "not_found" });
+  });
 
   return app;
 }

@@ -17,6 +17,7 @@ export { default as IconLogout } from "@tabler/icons-react-native/icons/IconLogo
 export { default as IconMapPin } from "@tabler/icons-react-native/icons/IconMapPin";
 export { default as IconPaperclip } from "@tabler/icons-react-native/icons/IconPaperclip";
 export { default as IconPlus } from "@tabler/icons-react-native/icons/IconPlus";
+export { default as IconRefresh } from "@tabler/icons-react-native/icons/IconRefresh";
 export { default as IconRosetteDiscountCheck } from "@tabler/icons-react-native/icons/IconRosetteDiscountCheck";
 export { default as IconSend } from "@tabler/icons-react-native/icons/IconSend";
 export { default as IconShieldCheck } from "@tabler/icons-react-native/icons/IconShieldCheck";

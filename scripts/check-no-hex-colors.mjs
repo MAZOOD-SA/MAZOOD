@@ -7,7 +7,7 @@ import { join, relative, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const SCAN = ["apps", "packages"];
-const SKIP_DIRS = new Set(["node_modules", ".expo", "dist", "build", "ios", "android", "web-build", "coverage"]);
+const SKIP_DIRS = new Set(["node_modules", "generated", ".expo", "dist", "build", "ios", "android", "web-build", "coverage"]);
 // أدوات الهوية نفسها (تقرأ الألوان من brand/ وتحوّلها) مسموح لها.
 const ALLOWED_FILES = new Set(["packages/brand/src/tokens.generated.ts"]);
 const ALLOWED_DIRS = ["packages/brand/scripts/"];

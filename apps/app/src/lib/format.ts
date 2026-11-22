@@ -58,12 +58,8 @@ export function formatDate(iso: string, locale: Locale): string {
   }).format(new Date(iso));
 }
 
-/** يتحقق من رقم جوال سعودي: 5XXXXXXXX (٩ أرقام)، ويقبل 05 أو +966 أو أرقام مشرقية. */
-export function normalizeSaudiMobile(input: string): string | null {
-  const latin = input.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/[\s-]/g, "");
-  const m = latin.match(/^(?:\+?966|0)?(5\d{8})$/);
-  return m ? `+966${m[1]}` : null;
-}
+/** «055 123 4567» → «+966551234567». القاعدة نفسها اللي يستخدمها الخادم (packages/shared). */
+export { normalizeSaudiMobile } from "@mazood/shared";
 
 /**
  * يعرض رمز مثل «MZ-2026-000128» بأرقام لغة الواجهة وبالترتيب الصحيح.

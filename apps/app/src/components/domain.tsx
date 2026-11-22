@@ -3,9 +3,8 @@ import { radius, spacing } from "@mazood/brand";
 import { IconStar } from "@/components/icons";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
-import type { Category } from "@/data/categories";
-import { PROVIDERS } from "@/data/seed";
-import type { Offer, ServiceRequest } from "@/data/types";
+import type { OfferDto, RequestDto } from "@mazood/shared";
+import { requestTitle, type Category } from "@/data/categories";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatNumber } from "@/lib/format";
 import { withVat } from "@/lib/money";
@@ -53,14 +52,17 @@ export function CategoryTile({ category, onPress, compact }: { category: Categor
 }
 
 /** شارة حالة الطلب. «بانتظار العروض» تصير «٣ عروض» أول ما توصل عروض. */
-export function RequestStatusBadge({ request, pendingOffers }: { request: ServiceRequest; pendingOffers: number }) {
+export function RequestStatusBadge({ request }: { request: Pick<RequestDto, "status" | "pendingOffers" | "cancelRequestStatus"> }) {
   const { t, num } = useI18n();
+  if (request.cancelRequestStatus === "pending") return <Badge label={t("statusCancelPending")} tone="muted" />;
   switch (request.status) {
-    case "awaiting_offers":
-      if (pendingOffers === 0) return <Badge label={t("statusAwaiting")} tone="muted" />;
-      if (pendingOffers === 1) return <Badge label={t("oneOffer")} tone="new" />;
-      if (pendingOffers === 2) return <Badge label={t("twoOffers")} tone="new" />;
-      return <Badge label={t("offersCount", { n: num(pendingOffers) })} tone="new" />;
+    case "awaiting_offers": {
+      const n = request.pendingOffers;
+      if (n === 0) return <Badge label={t("statusAwaiting")} tone="muted" />;
+      return <Badge label={n === 1 ? t("oneOffer") : n === 2 ? t("twoOffers") : t("offersCount", { n: num(n) })} tone="new" />;
+    }
+    case "accepted":
+      return <Badge label={t("statusAccepted")} tone="muted" />;
     case "in_progress":
       return <Badge label={t("statusInProgress")} tone="muted" />;
     case "completed":
@@ -70,32 +72,36 @@ export function RequestStatusBadge({ request, pendingOffers }: { request: Servic
   }
 }
 
-export function RequestCard({ request, pendingOffers, onPress }: { request: ServiceRequest; pendingOffers: number; onPress: () => void }) {
-  const { tl, relative } = useI18n();
+export function RequestCard({ request, onPress }: { request: RequestDto; onPress: () => void }) {
+  const { t, tl, relative, num } = useI18n();
+  const { colors } = useTheme();
+  const unseen = request.status === "awaiting_offers" ? request.unseenOffers : 0;
   return (
     <Card onPress={onPress} style={{ paddingVertical: spacing["3"], paddingHorizontal: 14 }}>
       <Row style={{ justifyContent: "space-between" }}>
+        {/* نقطة كهرمانية = عروض جديدة ما انفتحت (بدل شاشة التنبيهات المنفصلة). */}
+        {unseen > 0 && <View style={{ width: 8, height: 8, borderRadius: radius.full, backgroundColor: colors.accent }} />}
         <View style={{ flex: 1 }}>
           <AppText variant="bodySm" weight={600}>
-            {tl(request.title)}
+            {tl(requestTitle(request))}
           </AppText>
-          <AppText variant="caption" color="inkMuted">
+          <AppText variant="caption" color="inkMuted" numberOfLines={1}>
+            {unseen > 0 ? `${t("newOffers", { n: num(unseen) })} · ` : ""}
             {relative(request.createdAt)}
           </AppText>
         </View>
-        <RequestStatusBadge request={request} pendingOffers={pendingOffers} />
+        <RequestStatusBadge request={request} />
       </Row>
     </Card>
   );
 }
 
 /** بطاقة العرض كما في brand/reference.html. */
-export function OfferCard({ offer, onAccept, accepted }: { offer: Offer; onAccept?: () => void; accepted?: boolean }) {
+export function OfferCard({ offer, onAccept, accepted }: { offer: OfferDto; onAccept?: () => void; accepted?: boolean }) {
   const { t, tl, money, num, locale } = useI18n();
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
-  const provider = PROVIDERS.find((p) => p.id === offer.providerId);
-  if (!provider) return null;
+  const provider = offer.provider;
   const hasNote = offer.note.ar.length > 0;
   return (
     <Card style={{ gap: spacing["3"] }}>

@@ -1,37 +1,48 @@
-// عرض الفاتورة الموحّدة. هذا **نموذج شكلي فقط**: الفاتورة الإلكترونية الحقيقية حسب
-// متطلبات هيئة الزكاة والضريبة والجمارك (XML، ختم، رمز QR، اعتماد من الهيئة) تُبنى في المرحلة ٥.
+// ملخص مبلغ طلب مكتمل. هذا **مو فاتورة ضريبية**: الفاتورة الإلكترونية الحقيقية حسب متطلبات
+// هيئة الزكاة والضريبة والجمارك (رقم تسلسلي، XML، ختم، رمز QR، ربط مع الهيئة) تُبنى في المرحلة ٥،
+// بعد ما ينحسم «مين البائع في الفاتورة» (سؤال ٢ في PLAN.md).
 import { spacing } from "@mazood/brand";
-import { IconDownload } from "@/components/icons";
+import { vatOf } from "@mazood/shared";
 import { useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
+import { useRequest } from "@/api/requests";
+import { useSession } from "@/api/session";
 import { Screen } from "@/components/layout";
 import { LogoMark } from "@/components/Logo";
-import { AppText, Badge, Button, Card, Divider, Notice, Row } from "@/components/ui";
-import { invoiceTotals } from "@/data/invoices";
-import { FACTORY } from "@/data/seed";
-import { useStore } from "@/data/store";
+import { AppText, Badge, Card, Divider, Notice, Row } from "@/components/ui";
+import { requestTitle } from "@/data/categories";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useTheme } from "@/theme/ThemeProvider";
 
 export default function InvoiceView() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, tl, money, date, code } = useI18n();
-  const { state } = useStore();
-  const [downloadNote, setDownloadNote] = useState(false);
-  const inv = state.invoices.find((i) => i.id === id);
+  const { colors } = useTheme();
+  const { me } = useSession();
+  const q = useRequest(id);
+  const r = q.data;
 
-  if (!inv) {
+  if (q.isPending) {
+    return (
+      <Screen title={t("invoice")} back>
+        <ActivityIndicator color={colors.inkMuted} />
+      </Screen>
+    );
+  }
+  if (!r || r.status !== "completed" || !r.acceptedOffer) {
     return (
       <Screen title={t("invoice")} back>
         <AppText color="inkMuted">{t("notFound")}</AppText>
       </Screen>
     );
   }
-  const { subtotal, vat, total } = invoiceTotals(inv);
+  const subtotal = r.acceptedOffer.priceHalalas;
+  const vat = vatOf(subtotal);
+  const factory = me?.factory;
 
   return (
     <Screen title={t("invoice")} back>
-      <Notice text={t("invoiceSample")} />
+      <Notice text={t("invoicePreview")} />
       <Card style={{ gap: spacing["3"] }}>
         <Row style={{ justifyContent: "space-between" }}>
           <Row>
@@ -40,18 +51,16 @@ export default function InvoiceView() {
               {t("appName")}
             </AppText>
           </Row>
-          <Badge label={inv.status === "paid" ? t("paid") : t("due")} tone={inv.status === "paid" ? "ok" : "new"} />
+          <Badge label={t("statusCompleted")} tone="ok" />
         </Row>
-        <Line label={t("invoiceNumber")} value={code(inv.number)} />
-        <Line label={t("issuedAt")} value={date(inv.issuedAt)} />
+        <Line label={t("requestRef")} value={code(r.id.slice(0, 8).toUpperCase())} />
+        {r.completedAt && <Line label={t("completedAt")} value={date(r.completedAt)} />}
         <Divider />
-        <Line label={t("seller")} value={t("appName")} />
-        <Line label={t("buyer")} value={tl(FACTORY.name)} />
-        <Line label={t("vatNumber")} value={code(FACTORY.vatNumber)} />
+        <Line label={t("seller")} value={tl(r.acceptedOffer.provider.name)} />
+        <Line label={t("buyer")} value={factory?.name ?? ""} />
+        <Line label={t("vatNumber")} value={factory?.vatNumber ? code(factory.vatNumber) : t("notProvided")} />
         <Divider />
-        {inv.lines.map((l, i) => (
-          <Line key={i} label={tl(l.description)} value={money(l.amountHalalas)} />
-        ))}
+        <Line label={tl(requestTitle(r))} value={money(subtotal)} />
         <Divider />
         <Line label={t("subtotal")} value={money(subtotal)} />
         <Line label={t("vat")} value={money(vat)} />
@@ -59,15 +68,9 @@ export default function InvoiceView() {
           <AppText variant="body" weight={600}>
             {t("total")}
           </AppText>
-          <AppText variant="price">{money(total)}</AppText>
+          <AppText variant="price">{money(subtotal + vat)}</AppText>
         </Row>
       </Card>
-      <Button label={t("downloadInvoice")} icon={IconDownload} variant="secondary" onPress={() => setDownloadNote(true)} />
-      {downloadNote && (
-        <AppText variant="bodySm" color="inkMuted">
-          {t("downloadLater")}
-        </AppText>
-      )}
     </Screen>
   );
 }

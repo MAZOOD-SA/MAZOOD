@@ -1,33 +1,40 @@
 // رفع طلب جديد. «إرسال الطلب» هو زر accent الوحيد في الشاشة.
-// التحقق من المدخلات هنا للتجربة فقط. في المرحلة ٢ الخادم يتحقق من كل مدخل قبل الحفظ.
+// التحقق هنا يعطي رسالة سريعة بس. الخادم يتحقق من كل مدخل من جديد قبل الحفظ (packages/shared/src/schemas.ts).
+//
+// «اطلب مرة ثانية» يفتح هذي الشاشة معبّية من طلب سابق (params: from).
 import { spacing } from "@mazood/brand";
-import { IconPaperclip, IconSend } from "@/components/icons";
+import { WHEN_OPTIONS, type When } from "@mazood/shared";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
+import { ApiRequestError } from "@/api/client";
+import { useCreateRequest } from "@/api/requests";
+import { useSession } from "@/api/session";
 import { CategoryTile } from "@/components/domain";
 import { Field } from "@/components/Field";
+import { IconPaperclip, IconSend } from "@/components/icons";
 import { Screen, SectionTitle } from "@/components/layout";
 import { AppText, Button, Chips } from "@/components/ui";
 import { CATEGORIES, categoryById, type CategoryId } from "@/data/categories";
-import { useStore } from "@/data/store";
-import type { When } from "@/data/types";
+import { errorMessage } from "@/i18n/errors";
 import { useI18n } from "@/i18n/I18nProvider";
 
-const DEFAULT_LOCATION = { ar: "مدينة سدير الصناعية · مصنع 14", en: "Sudair Industrial City · Factory 14" };
+type Params = { category?: string; typeId?: string; details?: string; location?: string; when?: string };
 
 export default function NewRequest() {
   const { t, tl } = useI18n();
-  const { createRequest } = useStore();
-  const params = useLocalSearchParams<{ category?: string }>();
-  const initial = CATEGORIES.some((c) => c.id === params.category) ? (params.category as CategoryId) : null;
+  const { me } = useSession();
+  const create = useCreateRequest();
+  const p = useLocalSearchParams<Params>();
+  const initial = CATEGORIES.some((c) => c.id === p.category) ? (p.category as CategoryId) : null;
+  const initialType = initial && categoryById(initial).types.some((x) => x.id === p.typeId) ? p.typeId! : initial ? categoryById(initial).types[0].id : null;
 
   const [category, setCategory] = useState<CategoryId | null>(initial);
-  const [typeId, setTypeId] = useState<string | null>(initial ? categoryById(initial).types[0].id : null);
-  const [details, setDetails] = useState("");
-  const [location, setLocation] = useState(tl(DEFAULT_LOCATION));
-  const [when, setWhen] = useState<When>("tomorrow");
-  const [errors, setErrors] = useState<{ category?: string; details?: string }>({});
+  const [typeId, setTypeId] = useState<string | null>(initialType);
+  const [details, setDetails] = useState(p.details ?? "");
+  const [location, setLocation] = useState(p.location ?? me?.factory?.location ?? "");
+  const [when, setWhen] = useState<When>(WHEN_OPTIONS.includes(p.when as When) ? (p.when as When) : "tomorrow");
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [attachNote, setAttachNote] = useState(false);
 
   const cat = category ? categoryById(category) : null;
@@ -42,34 +49,40 @@ export default function NewRequest() {
     const next: typeof errors = {};
     if (!category || !typeId) next.category = t("categoryRequired");
     if (details.trim().length < 10) next.details = t("detailsTooShort");
+    if (location.trim().length < 2) next.location = t("err_location_invalid");
     setErrors(next);
-    if (next.category || next.details || !category || !typeId) return;
+    if (Object.values(next).some(Boolean) || !category || !typeId) return;
 
-    const type = categoryById(category).types.find((x) => x.id === typeId)!;
-    const id = createRequest({
-      category,
-      typeId,
-      title: type.name,
-      details: details.trim(),
-      location: { ar: location.trim(), en: location.trim() },
-      when,
-    });
-    router.replace({ pathname: "/request/[id]", params: { id, created: "1" } });
+    create.mutate(
+      { category, typeId, details: details.trim(), location: location.trim(), when },
+      {
+        onSuccess: (r) => router.replace({ pathname: "/request/[id]", params: { id: r.id, created: "1" } }),
+        onError: (err) => {
+          const field = err instanceof ApiRequestError && err.field ? err.field : "form";
+          setErrors({ [field]: errorMessage(err, t) });
+        },
+      },
+    );
   }
 
   return (
     <Screen
       title={t("newRequestTitle")}
       back
-      footer={<Button label={t("submitRequest")} icon={IconSend} variant="accent" size="lg" full onPress={submit} />}
+      footer={
+        <View style={{ gap: spacing["2"] }}>
+          {errors.form && (
+            <AppText variant="bodySm" color="danger">
+              {errors.form}
+            </AppText>
+          )}
+          <Button label={t("submitRequest")} icon={IconSend} variant="accent" size="lg" full loading={create.isPending} onPress={submit} />
+        </View>
+      }
     >
       <SectionTitle title={t("chooseCategory")} />
       {cat ? (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: spacing["2"] }}>
-          <View style={{ flex: 1 }}>
-            <CategoryTile category={cat} onPress={() => setCategory(null)} />
-          </View>
-        </View>
+        <CategoryTile category={cat} onPress={() => setCategory(null)} />
       ) : (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing["2"] }}>
           {CATEGORIES.map((c) => (
@@ -105,7 +118,7 @@ export default function NewRequest() {
         error={errors.details}
       />
 
-      <Field label={t("locationLabel")} value={location} onChangeText={setLocation} maxLength={200} />
+      <Field label={t("locationLabel")} value={location} onChangeText={setLocation} maxLength={200} error={errors.location} />
 
       <SectionTitle title={t("whenLabel")} />
       <Chips<When>
