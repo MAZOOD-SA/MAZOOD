@@ -17,7 +17,8 @@
     "api": "pnpm --filter @mazood/api dev",
     "api:migrate": "pnpm --filter @mazood/api migrate",
     "map": "bash scripts/code-map.sh",
-    "api:add-staff": "pnpm --filter @mazood/api add-staff"
+    "api:add-staff": "pnpm --filter @mazood/api add-staff",
+    "api:set-setting": "pnpm --filter @mazood/api set-setting"
   },
   "devDependencies": {
     "vitest": "^3.2.4",
