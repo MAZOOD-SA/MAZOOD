@@ -4,9 +4,9 @@ import type { DocType, ProviderStatus } from "@mazood/shared";
 import { router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { IconHistory, IconLogout, IconUsers } from "@/components/icons";
+import { IconHistory, IconLogout, IconUsers, IconSettings } from "@/components/icons";
 import { dayIso } from "@/components/DocSlotCard";
-import { Screen } from "@/components/layout";
+import { HeaderIconButton, Screen } from "@/components/layout";
 import { AppText, Badge, Button, Card, Chips, Notice, Row } from "@/components/ui";
 import { categoryById, type CategoryId } from "@/data/categories";
 import { DOC_LABELS, PROVIDER_STATUS, STAFF_ROLE_LABELS } from "@/data/labels";
@@ -21,6 +21,7 @@ type Tab = "queue" | "expiring" | "all";
 
 export default function AdminHome() {
   const { t, tl, relative, date, num } = useI18n();
+  const settingsButton = <HeaderIconButton icon={IconSettings} label={t("openSettings")} onPress={() => router.push("/admin/settings")} />;
   const { staffRole, signOut } = useStore();
   const allowed = useCan();
   const canReview = allowed("providers.review");
@@ -38,7 +39,7 @@ export default function AdminHome() {
   const err = queue.error ?? expiring.error ?? all.error;
 
   return (
-    <Screen title={t("adminTitle")}>
+    <Screen title={t("adminTitle")} headerAction={settingsButton}>
       <Row style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
         <AppText color="inkMuted">{staffRole ? tl(STAFF_ROLE_LABELS[staffRole]) : ""}</AppText>
         <Row>

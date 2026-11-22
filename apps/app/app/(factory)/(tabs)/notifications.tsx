@@ -22,7 +22,7 @@ export default function Notifications() {
   }, [dispatch]);
 
   return (
-    <Screen title={t("notifications")} back>
+    <Screen title={t("notifications")}>
       {state.notifications.length === 0 ? (
         <AppText color="inkMuted">{t("noNotifications")}</AppText>
       ) : (

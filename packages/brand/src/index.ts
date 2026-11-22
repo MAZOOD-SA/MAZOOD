@@ -1,7 +1,7 @@
 // نقطة الدخول للهوية. التطبيق يقرأ الألوان والمسافات والخطوط من هنا فقط.
-import { colors, radius, spacing, typography } from "./tokens.generated";
+import { colors, layout, motion, radius, spacing, typography } from "./tokens.generated";
 
-export { colors, radius, spacing, typography };
+export { colors, layout, motion, radius, spacing, typography };
 
 export type ThemeName = keyof typeof colors;
 export type ColorName = keyof (typeof colors)["light"];

@@ -1,24 +1,24 @@
-// حسابي: بيانات المصنع، واللغة، والمظهر، والخروج.
+// حسابي: بيانات المصنع. واللغة والمظهر والخروج في الإعدادات (زر الترس فوق).
 import { spacing } from "@mazood/brand";
-import { IconInfoCircle, IconLogout } from "@/components/icons";
+import { IconSettings } from "@/components/icons";
 import { router } from "expo-router";
 import { View } from "react-native";
-import { Screen, SectionTitle } from "@/components/layout";
-import { AppText, Button, Card, Chips, Divider, Notice } from "@/components/ui";
+import { HeaderIconButton, Screen } from "@/components/layout";
+import { AppText, Button, Card, Divider } from "@/components/ui";
 import { LIVE } from "@/api/client";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
-import type { Locale } from "@/lib/format";
-import { useTheme, type ThemeMode } from "@/theme/ThemeProvider";
 
 export default function Account() {
-  const { t, tl, locale, setLocale, digits, code } = useI18n();
-  const { mode, setMode } = useTheme();
-  const { state, factory: FACTORY, profileComplete, signOut } = useStore();
+  const { t, tl, locale, digits, code } = useI18n();
+  const { state, factory: FACTORY, profileComplete } = useStore();
   const phone = state.phone ? `0${state.phone.slice(4)}` : "";
 
   return (
-    <Screen title={t("accountTitle")}>
+    <Screen
+      title={t("accountTitle")}
+      headerAction={<HeaderIconButton icon={IconSettings} label={t("openSettings")} onPress={() => router.push("/settings")} />}
+    >
       <Card style={{ gap: spacing["2"] }}>
         <AppText variant="caption" color="inkMuted">
           {t("factory")}
@@ -40,38 +40,6 @@ export default function Account() {
         />
       )}
 
-      <SectionTitle title={t("language")} />
-      <Chips<Locale>
-        value={locale}
-        onChange={setLocale}
-        options={[
-          { value: "ar", label: "العربية" },
-          { value: "en", label: "English" },
-        ]}
-      />
-
-      <SectionTitle title={t("appearance")} />
-      <Chips<ThemeMode>
-        value={mode}
-        onChange={setMode}
-        options={[
-          { value: "system", label: t("themeSystem") },
-          { value: "light", label: t("themeLight") },
-          { value: "dark", label: t("themeDark") },
-        ]}
-      />
-
-      {!LIVE && <Notice icon={IconInfoCircle} text={t("prototypeNote")} />}
-
-      <Button
-        label={t("signOut")}
-        variant="secondary"
-        icon={IconLogout}
-        onPress={async () => {
-          await signOut();
-          router.replace("/login");
-        }}
-      />
     </Screen>
   );
 }

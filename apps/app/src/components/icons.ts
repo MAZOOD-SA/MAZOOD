@@ -38,3 +38,13 @@ export { default as IconX } from "@tabler/icons-react-native/icons/IconX";
 export { default as IconBan } from "@tabler/icons-react-native/icons/IconBan";
 export { default as IconRefresh } from "@tabler/icons-react-native/icons/IconRefresh";
 export { default as IconBuildingFactory2 } from "@tabler/icons-react-native/icons/IconBuildingFactory2";
+export { default as IconSettings } from "@tabler/icons-react-native/icons/IconSettings";
+export { default as IconChevronLeft } from "@tabler/icons-react-native/icons/IconChevronLeft";
+export { default as IconChevronRight } from "@tabler/icons-react-native/icons/IconChevronRight";
+export { default as IconLanguage } from "@tabler/icons-react-native/icons/IconLanguage";
+export { default as IconPalette } from "@tabler/icons-react-native/icons/IconPalette";
+// زر طي القائمة الجانبية وفتحها: القائمة على اليمين في العربي وعلى اليسار في الإنجليزي.
+export { default as IconLayoutSidebarRightCollapse } from "@tabler/icons-react-native/icons/IconLayoutSidebarRightCollapse";
+export { default as IconLayoutSidebarRightExpand } from "@tabler/icons-react-native/icons/IconLayoutSidebarRightExpand";
+export { default as IconLayoutSidebarLeftCollapse } from "@tabler/icons-react-native/icons/IconLayoutSidebarLeftCollapse";
+export { default as IconLayoutSidebarLeftExpand } from "@tabler/icons-react-native/icons/IconLayoutSidebarLeftExpand";

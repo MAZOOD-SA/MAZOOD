@@ -53,7 +53,11 @@ export function buildTokens(json) {
       typography[camel(s.name)] = { fontSize: px(s.fontSize), lineHeight: px(s.lineHeight), fontWeight: s.fontWeight };
     }
   }
-  return { colors, spacing, radius, typography };
+  // المقاسات (بالبكسل) والحركة (بالملي ثانية). اختيارية عشان الهوية الجديدة ما تنكسر لو ما فيها.
+  const ms = (v) => Number(String(v).replace("ms", ""));
+  const layout = Object.fromEntries((json.layout?.tokens ?? []).map((t) => [camel(t.name), px(t.value)]));
+  const motion = Object.fromEntries((json.motion?.tokens ?? []).map((t) => [camel(t.name), ms(t.value)]));
+  return { colors, spacing, radius, typography, layout, motion };
 }
 
 function main() {

@@ -1,7 +1,7 @@
 // هيكل الشاشات: الغلاف، والعنوان مع زر الرجوع، والشريط التجريبي.
 import { LIVE } from "@/api/client";
 import { useServerReachable } from "@/api/connection";
-import { radius, spacing } from "@mazood/brand";
+import { layout, radius, spacing } from "@mazood/brand";
 import { IconArrowLeft, IconArrowRight } from "@/components/icons";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
@@ -9,10 +9,11 @@ import { Pressable, ScrollView, View, type StyleProp, type ViewStyle } from "rea
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useTheme } from "@/theme/ThemeProvider";
+import type { IconComponent } from "@/data/categories";
 import { AppText } from "./ui";
 
 /** أقصى عرض للمحتوى على الشاشات الكبيرة (الكمبيوتر)، عشان يبقى مريح للقراءة. */
-export const CONTENT_MAX_WIDTH = 640;
+export const CONTENT_MAX_WIDTH = layout.contentMax;
 
 export function Screen({
   children,
@@ -21,10 +22,13 @@ export function Screen({
   scroll = true,
   contentStyle,
   footer,
+  headerAction,
 }: {
   children: ReactNode;
   title?: string;
   back?: boolean;
+  /** زر صغير في نهاية العنوان (يسار في العربي)، مثل ترس الإعدادات في «حسابي». */
+  headerAction?: ReactNode;
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
   footer?: ReactNode;
@@ -33,7 +37,7 @@ export function Screen({
   const inner: ViewStyle = { width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center", padding: spacing["4"], gap: spacing["4"] };
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
-      {title !== undefined && <ScreenHeader title={title} back={back} />}
+      {title !== undefined && <ScreenHeader title={title} back={back} action={headerAction} />}
       {scroll ? (
         <ScrollView contentContainerStyle={[inner, contentStyle]} keyboardShouldPersistTaps="handled">
           {children}
@@ -50,7 +54,7 @@ export function Screen({
   );
 }
 
-export function ScreenHeader({ title, back }: { title: string; back?: boolean }) {
+export function ScreenHeader({ title, back, action }: { title: string; back?: boolean; action?: ReactNode }) {
   const { colors } = useTheme();
   const { isRTL, t } = useI18n();
   // سهم الرجوع يشير لبداية السطر: يمين في العربي، ويسار في الإنجليزي.
@@ -83,6 +87,7 @@ export function ScreenHeader({ title, back }: { title: string; back?: boolean })
         <AppText variant="h2" style={{ flex: 1 }}>
           {title}
         </AppText>
+        {action}
       </View>
     </View>
   );
@@ -138,5 +143,30 @@ export function SkeletonList({ rows = 3 }: { rows?: number }) {
         <View key={i} style={{ height: 88, borderRadius: radius.md, backgroundColor: colors.surfaceAlt }} />
       ))}
     </View>
+  );
+}
+
+/** زر أيقونة في عنوان الشاشة (مثل ترس الإعدادات). حجمه يكفي للإصبع، وله تأثير مرور الماوس في الموقع. */
+export function HeaderIconButton({ icon: Icon, label, onPress }: { icon: IconComponent; label: string; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={(s) => {
+        const { hovered, pressed } = s as { pressed: boolean; hovered?: boolean };
+        return {
+          width: layout.touchMin,
+          height: layout.touchMin,
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: radius.md,
+          backgroundColor: hovered || pressed ? colors.surfaceAlt : "transparent",
+        };
+      }}
+    >
+      <Icon size={24} color={colors.ink} strokeWidth={1.75} />
+    </Pressable>
   );
 }

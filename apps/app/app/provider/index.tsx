@@ -1,14 +1,14 @@
 // الشاشة الرئيسية للمزوّد في المرحلة ٣: حالة التوثيق ومستنداته.
 // «ولا مرة طريق مسدود»: في كل حالة فيه زر واضح يقول له وش الخطوة الجاية.
 import { spacing } from "@mazood/brand";
-import { IconAlertTriangle, IconLogout, IconSend, IconUpload } from "@/components/icons";
+import { IconAlertTriangle, IconLogout, IconSend, IconUpload, IconSettings } from "@/components/icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
 import { ApiClientError } from "@/api/client";
 import { errorKey } from "@/api/mapping";
 import { DocSlotCard, dayIso, slotState } from "@/components/DocSlotCard";
-import { Screen, SectionTitle } from "@/components/layout";
+import { HeaderIconButton, Screen, SectionTitle } from "@/components/layout";
 import { AppText, Badge, Button, Card, Notice, Row, VerifiedBadge } from "@/components/ui";
 import { categoryById } from "@/data/categories";
 import { DOC_LABELS, PROVIDER_STATUS } from "@/data/labels";
@@ -20,6 +20,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 
 export default function ProviderHome() {
   const { t, tl, digits, date } = useI18n();
+  const settingsButton = <HeaderIconButton icon={IconSettings} label={t("openSettings")} onPress={() => router.push("/provider/settings")} />;
   const { authed, signOut } = useStore();
   const { provider, setProvider, error } = useProvider();
   const [busy, setBusy] = useState(false);
@@ -39,7 +40,7 @@ export default function ProviderHome() {
 
   if (provider === undefined) {
     return (
-      <Screen title={t("providerHomeTitle")}>
+      <Screen title={t("providerHomeTitle")} headerAction={settingsButton}>
         {error ? <Notice text={t(error)} /> : <AppText color="inkMuted">{t("loading")}</AppText>}
       </Screen>
     );
@@ -48,7 +49,7 @@ export default function ProviderHome() {
   // أول مرة: ما سجّل بياناته للحين.
   if (provider === null) {
     return (
-      <Screen title={t("providerHomeTitle")}>
+      <Screen title={t("providerHomeTitle")} headerAction={settingsButton}>
         <AppText variant="h2">{t("providerStartTitle")}</AppText>
         <AppText color="inkMuted">{t("providerStartBody")}</AppText>
         <Button label={t("providerRegister")} variant="accent" size="lg" full onPress={() => router.push("/provider/profile")} />

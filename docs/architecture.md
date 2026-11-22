@@ -150,26 +150,35 @@
 | `index.tsx` | `/` | يحوّل للدخول أو للرئيسية |
 | `login.tsx` | `/login` | الدخول برقم الجوال |
 | `verify.tsx` | `/verify` | رمز التحقق |
-| `(tabs)/home.tsx` | `/home` | الرئيسية |
-| `(tabs)/requests.tsx` | `/requests` | طلباتي |
-| `(tabs)/invoices.tsx` | `/invoices` | الفواتير |
-| `(tabs)/account.tsx` | `/account` | حسابي (اللغة والمظهر والخروج) |
-| `factory-profile.tsx` | `/factory-profile` | بيانات المصنع (الوضع الحقيقي) |
+| `(factory)/(tabs)/home.tsx` | `/home` | الرئيسية |
+| `(factory)/(tabs)/requests.tsx` | `/requests` | طلباتي |
+| `(factory)/(tabs)/notifications.tsx` | `/notifications` | التنبيهات |
+| `(factory)/(tabs)/invoices.tsx` | `/invoices` | الفواتير |
+| `(factory)/(tabs)/account.tsx` | `/account` | حسابي، وترس الإعدادات |
+| `(factory)/settings.tsx` | `/settings` | الإعدادات (اللغة والمظهر والخروج). الشاشة نفسها في `src/screens/SettingsScreen.tsx` |
+| `(factory)/factory-profile.tsx` | `/factory-profile` | بيانات المصنع (الوضع الحقيقي) |
+| `(factory)/request/new.tsx` | `/request/new` | طلب جديد |
+| `(factory)/request/[id].tsx` | `/request/:id` | تفاصيل الطلب والعروض |
+| `(factory)/invoice/[id].tsx` | `/invoice/:id` | عرض الفاتورة |
 | `provider/index.tsx` | `/provider` | المزوّد: حالة التوثيق ومستنداته |
 | `provider/profile.tsx` | `/provider/profile` | تسجيل بيانات المزوّد |
 | `provider/upload.tsx` | `/provider/upload` | رفع مستند |
+| `provider/settings.tsx` | `/provider/settings` | الإعدادات |
 | `admin/index.tsx` | `/admin` | اللوحة: قائمة التوثيق، والمستندات المنتهية، والمزوّدين |
 | `admin/provider/[id].tsx` | `/admin/provider/:id` | مراجعة مزوّد وقائمة التحقق |
 | `admin/staff.tsx` | `/admin/staff` | الموظفين |
 | `admin/audit.tsx` | `/admin/audit` | سجل الإجراءات |
+| `admin/settings.tsx` | `/admin/settings` | الإعدادات |
 
-كل مجموعة (`provider/`, `admin/`, `(tabs)/`) لها `_layout.tsx` يحوّل المستخدم لشاشاته حسب نوع حسابه (`src/lib/home-route.ts`).
-| `request/new.tsx` | `/request/new` | طلب جديد |
-| `request/[id].tsx` | `/request/:id` | تفاصيل الطلب والعروض |
-| `invoice/[id].tsx` | `/invoice/:id` | عرض الفاتورة |
-| `notifications.tsx` | `/notifications` | التنبيهات |
+كل مجموعة (`(factory)/`, `provider/`, `admin/`) لها `_layout.tsx` يحوّل المستخدم لشاشاته حسب نوع حسابه (`src/lib/home-route.ts`)، ويحط القائمة الجانبية في التابلت والكمبيوتر.
 
-المجلد `(tabs)` بين قوسين يعني: الشاشات فيه تظهر مع شريط التبويبات السفلي، والاسم ما يدخل في الرابط.
+المجلدات بين قوسين ما يدخل اسمها في الرابط. `(factory)` يجمع شاشات المصنع عشان القائمة الجانبية تبقى ثابتة وأنت تتنقّل بينها، و`(tabs)` داخله هي التبويبات تحت في الجوال.
+
+### التنقّل والمقاسات (القرار ٣٦)
+
+- `src/lib/useLayout.ts`: المقاس الحالي (جوال، أو تابلت، أو كمبيوتر). الحدود من `layout` في `brand/tokens.json`. أي شاشة تحتاج ترتيب مختلف حسب المقاس تاخذه من هنا.
+- `src/lib/nav.ts`: عناصر التنقّل لكل نوع مستخدم، و`activeKey()` اللي يحدد العنصر المختار (حتى في الشاشات الفرعية مثل تفاصيل الطلب).
+- `src/components/nav.tsx`: `NavShell` (يحط القائمة جنب المحتوى) والقائمة الجانبية نفسها (الطي والحركة والعدد على التنبيهات).
 
 ## كيف تتواصل الأجزاء
 

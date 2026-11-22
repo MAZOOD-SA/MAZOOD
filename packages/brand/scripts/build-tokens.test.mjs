@@ -59,6 +59,18 @@ describe("brand tokens", () => {
     });
   }
 
+  it("المقاسات والحركة في tokens.json وtokens.css متطابقة", () => {
+    const vars = cssVars(":root {");
+    for (const group of ["layout", "motion"]) {
+      for (const t of json[group].tokens) {
+        expect(vars[t.name], `--${t.name} ناقص في tokens.css`).toBe(t.value);
+      }
+    }
+    const built = buildTokens(json);
+    expect(built.layout.breakpointTablet).toBeLessThan(built.layout.breakpointDesktop);
+    expect(built.layout.sidebarCollapsed).toBeLessThan(built.layout.sidebarExpanded);
+  });
+
   it("الزر الرئيسي في الداكن مو كهرماني مليان (زر accent واحد بكل شاشة)", () => {
     const dark = buildTokens(json).colors.dark;
     expect(dark.btnPrimaryBg).not.toBe(dark.accent);
