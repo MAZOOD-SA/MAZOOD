@@ -1,5 +1,6 @@
 // بناء تطبيق الـ API. كل الصلاحيات تُفحص هنا في الخادم، والواجهة ما تُصدَّق أبدًا.
 // المسارات مقسّمة في routes/: الدخول، والمصنع، والمزوّد، ولوحة الإدارة.
+import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
@@ -10,7 +11,8 @@ import type { Config } from "./config.ts";
 import { createCryptoBox } from "./crypto-box.ts";
 import type { Db } from "./db.ts";
 import { ApiError } from "./errors.ts";
-import { makeGuards, type Ctx } from "./http.ts";
+import { CSRF_HEADER, CSRF_VALUE, makeGuards, readSessionToken, type Ctx } from "./http.ts";
+import { sessionUserByToken } from "./auth.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { factoryRoutes } from "./routes/factory.ts";
@@ -28,6 +30,8 @@ export type AppDeps = {
   strictRateLimits?: boolean;
 };
 
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const { config } = deps;
   const ctx: Ctx = {
@@ -41,19 +45,48 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   };
 
   const app = Fastify({
-    logger: config.env === "test" ? false : { level: "info", redact: ["req.headers.authorization"] },
+    logger: config.env === "test" ? false : { level: "info", redact: ["req.headers.authorization", "req.headers.cookie"] },
     trustProxy: config.trustProxy,
     bodyLimit: 100 * 1024,
   });
 
-  // CORS: بس الأصول المسموحة. في التطوير بدون قائمة نسمح بأي أصل (ما فيه كوكيز، والدخول بتوكن).
+  // CORS: بس الأصول المسموحة. credentials عشان الموقع يرسل كوكي الجلسة.
+  // في التطوير بدون قائمة: بس localhost (الموقع على منفذ 8081 والخادم على 3001). في الإنتاج القائمة إجبارية (config.ts).
   await app.register(cors, {
-    origin: config.corsOrigins.length ? config.corsOrigins : config.env !== "production",
+    origin: config.corsOrigins.length ? config.corsOrigins : /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["authorization", "content-type"],
+    allowedHeaders: ["authorization", "content-type", CSRF_HEADER],
   });
-  // حد عام لكل IP. مسارات الدخول لها حد أضيق (routes/auth.ts).
-  await app.register(rateLimit, { global: true, max: ctx.strictRateLimits ? 120 : 100_000, timeWindow: "1 minute" });
+  await app.register(cookie);
+
+  // نعرف مين المستخدم من أول الطلب (رمز Bearer من التطبيق، أو كوكي من الموقع)، عشان حد الطلبات
+  // ينحسب لكل مستخدم. والمسارات تتحقق من الصلاحيات بعدها (http.ts).
+  //
+  // حماية CSRF: أي طلب يغيّر شي ويعتمد على الكوكي لازم يحمل الرأس X-Requested-With: mazood.
+  // المتصفح ما يسمح لموقع ثاني يرسل رأس خاص لخادمنا بدون موافقة CORS، والكوكي نفسه SameSite=Strict.
+  // رمز Bearer ما يحتاجه: المتصفح ما يرسله تلقائيًا، فما ينسرق بهذي الطريقة.
+  app.addHook("onRequest", async (req) => {
+    const found = readSessionToken(req);
+    if (!found) return;
+    const user = await sessionUserByToken(ctx.db, found.token, ctx.now());
+    if (!user) return;
+    if (found.via === "cookie" && !SAFE_METHODS.has(req.method) && req.headers[CSRF_HEADER] !== CSRF_VALUE) {
+      throw new ApiError(403, "csrf");
+    }
+    req.user = user;
+    req.token = found.token;
+  });
+
+  // حد عام: **لكل مستخدم** إذا كان داخل، ولكل IP قبل الدخول. موظفين المصنع غالبًا يطلعون للإنترنت
+  // من نفس العنوان، فلو حسبنا بالعنوان بس انحجبوا مع بعض. مسارات الدخول لها حد أضيق (routes/auth.ts).
+  await app.register(rateLimit, {
+    global: true,
+    max: ctx.strictRateLimits ? 120 : 100_000,
+    timeWindow: "1 minute",
+    hook: "preHandler",
+    keyGenerator: (req) => (req.user ? `user:${req.user.id}` : `ip:${req.ip}`),
+  });
   await app.register(multipart, { limits: { fileSize: UPLOAD_MAX_BYTES, files: 1 } });
 
   app.addHook("onSend", async (_req, reply) => {

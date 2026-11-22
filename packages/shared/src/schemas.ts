@@ -16,9 +16,18 @@ export const phoneSchema = z
 export const otpCodeSchema = z.string().regex(/^\d{6}$/, "code_invalid");
 
 export const requestOtpBody = z.object({ phone: phoneSchema }).strict();
-/** as: نوع الحساب لو الرقم جديد (مصنع أو مزوّد). الحسابات الموجودة يبقى نوعها كما هو. */
+/**
+ * as: نوع الحساب لو الرقم جديد (مصنع أو مزوّد). الحسابات الموجودة يبقى نوعها كما هو.
+ * channel: "web" للموقع: الجلسة تنحط في كوكي محمي (HttpOnly) وما يرجع الرمز في الرد.
+ * بدونه (التطبيق): الرمز يرجع في الرد وينحفظ في خزنة الجوال المشفّرة.
+ */
 export const verifyOtpBody = z
-  .object({ phone: phoneSchema, code: otpCodeSchema, as: z.enum(["factory", "provider"]).optional() })
+  .object({
+    phone: phoneSchema,
+    code: otpCodeSchema,
+    as: z.enum(["factory", "provider"]).optional(),
+    channel: z.enum(["web", "app"]).optional(),
+  })
   .strict();
 
 /** نص حر: نشيل الأحرف التحكمية (ما عدا السطر الجديد) ونقص المسافات. */

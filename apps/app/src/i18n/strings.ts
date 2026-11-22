@@ -127,6 +127,9 @@ const ar = {
 
   // المرحلة ٢: الخادم الحقيقي
   testBanner: "نسخة اختبار",
+  offlineBanner: "لا يوجد اتصال. تشوف آخر بيانات محفوظة.",
+  draftRestored: "رجّعنا مسودتك المحفوظة.",
+  draftDiscard: "ابدأ من جديد",
   welcome: "أهلًا بك في مزوّد",
   otpCooldown: "أرسلنا لك رمزًا قبل شوي. انتظر دقيقة قبل طلب رمز جديد.",
   otpRateLimited: "محاولات كثيرة. حاول مرة ثانية بعد شوي.",
@@ -367,6 +370,9 @@ const en: Record<StringKey, string> = {
   prototypeNote: "This is a prototype (phase 1) to show the look and navigation. There is no server or real data, and changes reset when you reload.",
 
   testBanner: "Test version",
+  offlineBanner: "No connection. Showing the last saved data.",
+  draftRestored: "We restored your saved draft.",
+  draftDiscard: "Start over",
   welcome: "Welcome to Mazood",
   otpCooldown: "We just sent you a code. Wait a minute before asking for a new one.",
   otpRateLimited: "Too many attempts. Try again in a moment.",

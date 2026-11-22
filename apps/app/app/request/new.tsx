@@ -5,12 +5,13 @@ import { IconPaperclip, IconSend } from "@/components/icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { ApiClientError } from "@/api/client";
 import { errorKey } from "@/api/mapping";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { clearDraft, loadDraft, saveDraft } from "@/api/draft";
 import { View } from "react-native";
 import { CategoryTile } from "@/components/domain";
 import { Field } from "@/components/Field";
 import { Screen, SectionTitle } from "@/components/layout";
-import { AppText, Button, Chips } from "@/components/ui";
+import { AppText, Button, Chips, Notice } from "@/components/ui";
 import { CATEGORIES, categoryById, type CategoryId } from "@/data/categories";
 import { useStore } from "@/data/store";
 import type { When } from "@/data/types";
@@ -35,6 +36,42 @@ export default function NewRequest() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const cat = category ? categoryById(category) : null;
+
+  // المسودة: نرجّعها لو المستخدم طلع قبل الإرسال (إلا لو فتح الشاشة من قسم معيّن)، ونحفظها مع كل تعديل.
+  const [restored, setRestored] = useState(false);
+  const draftLoaded = useRef(false);
+  useEffect(() => {
+    if (initial) {
+      draftLoaded.current = true;
+      return;
+    }
+    loadDraft().then((d) => {
+      draftLoaded.current = true;
+      if (!d) return;
+      const c = CATEGORIES.some((x) => x.id === d.category) ? (d.category as CategoryId) : null;
+      setCategory(c);
+      setTypeId(c && categoryById(c).types.some((x) => x.id === d.typeId) ? d.typeId : c ? categoryById(c).types[0].id : null);
+      setDetails(d.details);
+      if (d.location) setLocation(d.location);
+      setWhen(d.when);
+      setRestored(true);
+    });
+  }, [initial]);
+  useEffect(() => {
+    if (!draftLoaded.current) return;
+    const id = setTimeout(() => saveDraft({ category, typeId, details, location, when }), 400);
+    return () => clearTimeout(id);
+  }, [category, typeId, details, location, when]);
+
+  function discardDraft() {
+    clearDraft();
+    setRestored(false);
+    setCategory(null);
+    setTypeId(null);
+    setDetails("");
+    setLocation(tl(DEFAULT_LOCATION));
+    setWhen("tomorrow");
+  }
 
   function pickCategory(id: CategoryId) {
     setCategory(id);
@@ -77,6 +114,12 @@ export default function NewRequest() {
       back
       footer={<Button label={t("submitRequest")} icon={IconSend} variant="accent" size="lg" full onPress={submit} disabled={busy} />}
     >
+      {restored && (
+        <View style={{ gap: spacing["2"] }}>
+          <Notice text={t("draftRestored")} />
+          <Button label={t("draftDiscard")} variant="ghost" onPress={discardDraft} />
+        </View>
+      )}
       <SectionTitle title={t("chooseCategory")} />
       {cat ? (
         <View style={{ flexDirection: "row", alignItems: "center", gap: spacing["2"] }}>

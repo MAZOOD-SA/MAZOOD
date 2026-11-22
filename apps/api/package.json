@@ -11,6 +11,7 @@
     "add-staff": "node --env-file-if-exists=.env --experimental-strip-types src/staff-cli.ts"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.5",
     "@fastify/cors": "^11.0.1",
     "@fastify/multipart": "^9.4.0",
     "@fastify/rate-limit": "^10.3.0",
