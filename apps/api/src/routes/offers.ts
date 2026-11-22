@@ -206,6 +206,9 @@ export function offerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       const o = await ownOfferForUpdate(t, (req.params as { id: string }).id, p.id);
       if (o.status !== "active") throw new ApiError(409, "offer_not_active");
       if (!["awaiting_offers", "pending_approval"].includes(o.request_status)) throw new ApiError(409, "offer_locked");
+      // العرض المرشّح ينتظر موافقة مدير المصنع: ما ينسحب في هذي اللحظة.
+      const nominated = await t.query("SELECT 1 FROM approvals_internal WHERE offer_id=$1 AND decision IS NULL", [o.id]);
+      if (nominated.length) throw new ApiError(409, "offer_locked");
       const [u] = await t.query<OfferRow>("UPDATE offers SET status='withdrawn', updated_at=$2 WHERE id=$1 RETURNING *", [o.id, now]);
       await audit(t, actorOf(user), "offer.withdrawn", { type: "offer", id: o.id }, { requestId: o.request_id });
       return u;
@@ -229,6 +232,33 @@ export function offerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       offers: rows.map((o) => ({
         ...offerView(o, now),
         request: { id: o.request_id, category: o.r_category, typeId: o.r_type_id, area: o.r_area, when: o.r_when, status: o.r_status },
+      })),
+    };
+  });
+  // «شغلي»: الطلبات اللي انقبل فيها عرض المزوّد. هنا بس يشوف اسم المصنع والموقع بالضبط ورقم التواصل
+  // (رقم الشخص اللي قبل العرض)، لأن العرض انقبل (سؤال ٤-٤).
+  app.get("/v1/provider/jobs", async (req) => {
+    const user = await g.requireProviderUser(req);
+    const [p] = await db.query<{ id: string }>("SELECT id FROM providers WHERE user_id=$1", [user.id]);
+    if (!p) return { jobs: [] };
+    const rows = await db.query<Record<string, unknown> & { price_halalas: string; factory_name: string | null; factory_phone: string }>(
+      `SELECT o.id AS "orderId", o.request_id AS "requestId", r.status, r.category, r.type_id AS "typeId", r.details, r.area,
+              r.location, r.needed_when AS "when", o.price_halalas, o.accepted_at AS "acceptedAt", o.started_at AS "startedAt",
+              o.delivered_at AS "deliveredAt", o.cancellation_policy AS "cancellationPolicy",
+              f.name AS factory_name, u.phone AS factory_phone
+         FROM orders o
+         JOIN requests r ON r.id = o.request_id
+         JOIN factories f ON f.id = o.factory_id
+         JOIN users u ON u.id = o.accepted_by
+        WHERE o.provider_id = $1 AND o.state <> 'withdrawn'
+        ORDER BY o.accepted_at DESC LIMIT 200`,
+      [p.id],
+    );
+    return {
+      jobs: rows.map(({ price_halalas, factory_name, factory_phone, ...j }) => ({
+        ...j,
+        priceHalalas: Number(price_halalas),
+        factory: { name: factory_name, contactPhone: factory_phone },
       })),
     };
   });

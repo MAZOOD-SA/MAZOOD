@@ -77,3 +77,8 @@ export const factoryProfileBody = z
 export type FactoryProfileBody = z.infer<typeof factoryProfileBody>;
 
 export const uuidSchema = z.string().uuid();
+
+/** أدوار موظفين المصنع (سؤال ١٦): المدير يقبل مباشرة ويدير الموظفين، والموظف يرفع الطلبات ويرشّح عرض. */
+export const FACTORY_ROLES = ["manager", "member"] as const;
+export type FactoryRole = (typeof FACTORY_ROLES)[number];
+export const addFactoryMemberBody = z.object({ phone: phoneSchema, role: z.enum(FACTORY_ROLES) }).strict();

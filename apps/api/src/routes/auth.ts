@@ -5,7 +5,7 @@ import { parse, SESSION_COOKIE, sessionCookieOptions, type Ctx, type Guards } fr
 import { SESSION_TTL_MS } from "../auth.ts";
 
 export function publicUser(u: SessionUser) {
-  return { id: u.id, phone: u.phone, role: u.role, staffRole: u.staffRole, hasFactory: !!u.factoryId, hasProvider: !!u.providerId };
+  return { id: u.id, phone: u.phone, role: u.role, staffRole: u.staffRole, factoryRole: u.factoryRole, hasFactory: !!u.factoryId, hasProvider: !!u.providerId };
 }
 
 export function authRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {

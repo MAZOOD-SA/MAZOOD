@@ -70,8 +70,8 @@ export function makeGuards(_ctx: Ctx) {
     authenticate,
     async requireFactory(req: FastifyRequest) {
       const user = await authenticate(req);
-      if (user.role !== "factory" || !user.factoryId) throw new ApiError(403, "forbidden");
-      return { user, factoryId: user.factoryId };
+      if (user.role !== "factory" || !user.factoryId || !user.factoryRole) throw new ApiError(403, "forbidden");
+      return { user, factoryId: user.factoryId, factoryRole: user.factoryRole };
     },
     async requireProviderUser(req: FastifyRequest) {
       const user = await authenticate(req);
@@ -99,4 +99,36 @@ export function todayRiyadh(now: Date): string {
 
 export function addDays(isoDate: string, days: number): string {
   return new Date(Date.parse(`${isoDate}T00:00:00Z`) + days * 86400_000).toISOString().slice(0, 10);
+}
+
+/**
+ * الحماية من التكرار: لو الطلب فيه رأس Idempotency-Key وسبق نجح بنفس المفتاح لنفس المستخدم،
+ * نرجّع نفس الرد بدل ما نعيد العملية (الزر انضغط مرتين، أو رجع الاتصال وأعاد الجوال الإرسال).
+ * الطلبات بدون المفتاح تشتغل عادي.
+ */
+export async function idempotent<T>(ctx: Ctx, req: FastifyRequest, route: string, fn: () => Promise<T>): Promise<T> {
+  const raw = req.headers["idempotency-key"];
+  const key = typeof raw === "string" ? raw : undefined;
+  if (!key || !req.user) return fn();
+  if (!/^[A-Za-z0-9_-]{8,100}$/.test(key)) throw new ApiError(400, "idempotency_key_invalid");
+  const seen = async () =>
+    (await ctx.db.query<{ response: T; route: string }>("SELECT response, route FROM idempotency_keys WHERE user_id=$1 AND key=$2", [req.user!.id, key]))[0];
+  const before = await seen();
+  if (before) {
+    if (before.route !== route) throw new ApiError(409, "idempotency_key_reused");
+    return before.response;
+  }
+  try {
+    const result = await fn();
+    await ctx.db.query(
+      "INSERT INTO idempotency_keys (user_id, key, route, status, response) VALUES ($1,$2,$3,200,$4) ON CONFLICT DO NOTHING",
+      [req.user.id, key, route, JSON.stringify(result)],
+    );
+    return result;
+  } catch (e) {
+    // طلبين بنفس المفتاح بنفس اللحظة: الثاني يفشل (الحالة تغيّرت)، فنرجّع له رد الأول.
+    const after = await seen();
+    if (after && after.route === route) return after.response;
+    throw e;
+  }
 }

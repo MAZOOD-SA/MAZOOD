@@ -20,6 +20,8 @@ export type SessionUser = {
   phone: string;
   role: "factory" | "provider" | "staff";
   factoryId: string | null;
+  /** دور المستخدم داخل مصنعه: مدير أو موظف (سؤال ١٦). null لغير المصانع أو الموظف الموقوف. */
+  factoryRole: "manager" | "member" | null;
   providerId: string | null;
   /** دور الموظف داخل الإدارة. null إذا ما كان موظف أو كان موقوف. */
   staffRole: StaffRole | null;
@@ -118,8 +120,10 @@ export async function verifyOtp(
     if (user.role === "factory") {
       const member = await t.query("SELECT 1 FROM factory_members WHERE user_id = $1", [user.id]);
       if (member.length === 0) {
+        // أول دخول لمستخدم جديد: ينفتح له مصنع جديد وهو مديره. (موظفين المصنع اللي يضيفهم المدير
+        // ينضافون مع مكانهم في المصنع من قبل، فما يوصلون هنا.)
         const [f] = await t.query<{ id: string }>("INSERT INTO factories DEFAULT VALUES RETURNING id");
-        await t.query("INSERT INTO factory_members (user_id, factory_id, role) VALUES ($1,$2,'owner')", [user.id, f.id]);
+        await t.query("INSERT INTO factory_members (user_id, factory_id, role) VALUES ($1,$2,'manager')", [user.id, f.id]);
       }
     }
     const { token, hash } = generateSessionToken();
@@ -148,13 +152,15 @@ export async function sessionUserByToken(db: Db, token: string, now: Date = new 
     phone: string;
     role: SessionUser["role"];
     factory_id: string | null;
+    factory_role: SessionUser["factoryRole"];
     provider_id: string | null;
     staff_role: StaffRole | null;
   }>(
-    `SELECT u.id, u.phone, u.role, fm.factory_id, p.id AS provider_id, st.role AS staff_role
+    `SELECT u.id, u.phone, u.role, fm.factory_id, fm.role AS factory_role, p.id AS provider_id, st.role AS staff_role
        FROM sessions s
        JOIN users u ON u.id = s.user_id
-       LEFT JOIN factory_members fm ON fm.user_id = u.id
+       -- موظف المصنع الموقوف: ما له مصنع (والمسارات ترفضه).
+       LEFT JOIN factory_members fm ON fm.user_id = u.id AND fm.active
        LEFT JOIN providers p ON p.user_id = u.id
        LEFT JOIN staff st ON st.user_id = u.id AND st.active
       WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > $2 AND u.status = 'active'`,
@@ -164,7 +170,7 @@ export async function sessionUserByToken(db: Db, token: string, now: Date = new 
   if (!r) return null;
   // موظف موقوف: جلسته ما تشتغل حتى لو ما انتهت.
   if (r.role === "staff" && !r.staff_role) return null;
-  return { id: r.id, phone: r.phone, role: r.role, factoryId: r.factory_id, providerId: r.provider_id, staffRole: r.role === "staff" ? r.staff_role : null };
+  return { id: r.id, phone: r.phone, role: r.role, factoryId: r.factory_id, factoryRole: r.factory_role, providerId: r.provider_id, staffRole: r.role === "staff" ? r.staff_role : null };
 }
 
 export async function revokeSession(db: Db, token: string, user: SessionUser): Promise<void> {

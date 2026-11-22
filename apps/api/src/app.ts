@@ -4,7 +4,7 @@ import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
-import { UPLOAD_MAX_BYTES } from "@mazood/shared";
+import { OrderFlowError, UPLOAD_MAX_BYTES } from "@mazood/shared";
 import Fastify, { type FastifyInstance } from "fastify";
 import { ZodError } from "zod";
 import type { Config } from "./config.ts";
@@ -98,6 +98,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.setErrorHandler((err: unknown, req, reply) => {
     if (err instanceof ApiError) return reply.status(err.status).send({ error: { code: err.code, ...err.extra } });
+    // انتقال حالة مو في جدول الانتقالات (packages/shared/src/order-flow.ts): غالبًا الحالة تغيّرت قبل لحظة.
+    if (err instanceof OrderFlowError) return reply.status(409).send({ error: { code: "invalid_transition", from: err.from } });
     if (err instanceof ZodError) {
       return reply.status(400).send({
         error: { code: "validation", issues: err.issues.map((i) => ({ path: i.path.join("."), message: i.message })) },
