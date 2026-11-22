@@ -19,6 +19,7 @@ import {
   IconHistory,
   IconHome,
   IconListDetails,
+  IconLogout,
   IconShieldCheck,
   IconUser,
   IconUsers,
@@ -41,18 +42,22 @@ export function isActive(pathname: string, item: NavItem): boolean {
 }
 
 /** الغلاف: قائمة جانبية + المحتوى في التابلت والكمبيوتر، والمحتوى بس في الجوال. */
-export function NavShell({ items, footer, children }: { items: NavItem[]; footer?: ReactNode; children: ReactNode }) {
+export function NavShell({ items, action, footer, children }: { items: NavItem[]; action?: ReactNode; footer?: ReactNode; children: ReactNode }) {
   const { sidebar } = useLayout();
   if (!sidebar || items.length === 0) return <>{children}</>;
   return (
     <View style={{ flex: 1, flexDirection: "row" }}>
-      <Sidebar items={items} footer={footer} />
+      <Sidebar items={items} action={action} footer={footer} />
       <View style={{ flex: 1 }}>{children}</View>
     </View>
   );
 }
 
-export function Sidebar({ items, footer }: { items: NavItem[]; footer?: ReactNode }) {
+/**
+ * القائمة الجانبية: الشعار، وإجراء سريع (مثل «طلب جديد» للمصنع)، والروابط مع أرقام اللي ينتظر
+ * (مثل العروض الجديدة)، وبطاقة الحساب تحت مع الخروج.
+ */
+export function Sidebar({ items, action, footer }: { items: NavItem[]; action?: ReactNode; footer?: ReactNode }) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const pathname = usePathname();
@@ -68,6 +73,7 @@ export function Sidebar({ items, footer }: { items: NavItem[]; footer?: ReactNod
             {t("appName")}
           </AppText>
         </View>
+        {action && <View style={{ paddingBottom: spacing["4"] }}>{action}</View>}
         {items.map((item) => (
           <SidebarLink key={item.href} item={item} active={isActive(pathname, item)} />
         ))}
@@ -125,11 +131,12 @@ export function navItemsFor(
   role: "factory" | "provider" | "staff" | null,
   t: (k: StringKey) => string,
   allowed: (p: Permission) => boolean,
+  counts: { newOffers?: number } = {},
 ): NavItem[] {
   if (role === "factory")
     return [
       { href: "/home", label: t("tabHome"), icon: IconHome, also: ["/request/new", "/notifications"] },
-      { href: "/requests", label: t("tabRequests"), icon: IconClipboardList, also: ["/request"] },
+      { href: "/requests", label: t("tabRequests"), icon: IconClipboardList, also: ["/request"], badge: counts.newOffers },
       { href: "/invoices", label: t("tabInvoices"), icon: IconFileInvoice, also: ["/invoice"] },
       { href: "/account", label: t("tabAccount"), icon: IconUser, also: ["/factory-profile"] },
     ];
@@ -146,4 +153,33 @@ export function navItemsFor(
       ...(allowed("audit.view") ? [{ href: "/admin/audit" as const, label: t("auditTitle"), icon: IconHistory }] : []),
     ];
   return [];
+}
+
+/** بطاقة الحساب أسفل القائمة الجانبية: الاسم ونوع الحساب، وزر الخروج. */
+export function AccountCard({ title, subtitle, onSignOut }: { title: string; subtitle: string; onSignOut: () => void }) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing["2"], padding: spacing["3"], borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface }}>
+      <View style={{ width: 36, height: 36, borderRadius: radius.full, backgroundColor: colors.surfaceAlt, alignItems: "center", justifyContent: "center" }}>
+        <IconUser size={18} color={colors.inkMuted} strokeWidth={1.75} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <AppText variant="label" numberOfLines={1}>
+          {title}
+        </AppText>
+        <AppText variant="caption" color="inkMuted" numberOfLines={1}>
+          {subtitle}
+        </AppText>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t("signOut")}
+        onPress={onSignOut}
+        style={(state) => [{ minWidth: layout.touchMin, minHeight: layout.touchMin, alignItems: "center", justifyContent: "center", borderRadius: radius.sm }, focusRing(state, colors)]}
+      >
+        <IconLogout size={20} color={colors.inkMuted} strokeWidth={1.75} />
+      </Pressable>
+    </View>
+  );
 }

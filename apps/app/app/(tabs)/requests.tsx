@@ -9,6 +9,7 @@ import { IconPlus } from "@/components/icons";
 import { useStore } from "@/data/store";
 import type { RequestStatus } from "@/data/types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useLayout } from "@/lib/layout";
 
 type Filter = "all" | "open" | "active" | "done";
 
@@ -24,6 +25,7 @@ export default function Requests() {
   const { state, refreshRequests } = useStore();
   const [filter, setFilter] = useState<Filter>("all");
   useAutoRefresh(refreshRequests);
+  const { sidebar } = useLayout();
   const list = sortRequests(state.requests.filter((r) => filter === "all" || GROUPS[filter].includes(r.status)));
 
   return (
@@ -31,7 +33,8 @@ export default function Requests() {
       title={t("tabRequests")}
       width="page"
       onRefresh={refreshRequests}
-      headerAction={<Button label={t("newRequestShort")} icon={IconPlus} variant="secondary" onPress={() => router.push("/request/new")} />}
+      // في التابلت والكمبيوتر «طلب جديد» موجود في القائمة الجانبية.
+      headerAction={sidebar ? undefined : <Button label={t("newRequestShort")} icon={IconPlus} variant="secondary" onPress={() => router.push("/request/new")} />}
     >
       <Chips<Filter>
         value={filter}

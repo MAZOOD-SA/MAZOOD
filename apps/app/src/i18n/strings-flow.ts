@@ -8,6 +8,8 @@ export const flowAr = {
   tabWork: "شغلي",
   navVerification: "التوثيق",
   newRequestShort: "طلب جديد",
+  providerAccount: "حساب مزوّد",
+  staffAccount: "فريق الإدارة",
 
   // حالات الطلب
   statusPendingApproval: "بانتظار موافقة المدير",
@@ -250,6 +252,8 @@ export const flowEn: Record<FlowKey, string> = {
   tabWork: "My work",
   navVerification: "Verification",
   newRequestShort: "New request",
+  providerAccount: "Provider account",
+  staffAccount: "Admin team",
 
   statusPendingApproval: "Awaiting manager approval",
   statusAccepted: "Accepted, not started",

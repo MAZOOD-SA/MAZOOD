@@ -5,14 +5,16 @@ import { IBMPlexSansArabic_500Medium } from "@expo-google-fonts/ibm-plex-sans-ar
 import { IBMPlexSansArabic_600SemiBold } from "@expo-google-fonts/ibm-plex-sans-arabic/600SemiBold";
 import { IBMPlexSansArabic_700Bold } from "@expo-google-fonts/ibm-plex-sans-arabic/700Bold";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { OfflineBanner, PrototypeBanner } from "@/components/layout";
-import { NavShell, navItemsFor } from "@/components/nav";
+import { AccountCard, NavShell, navItemsFor } from "@/components/nav";
+import { Button } from "@/components/ui";
+import { IconPlus } from "@/components/icons";
 import { can } from "@mazood/shared";
 import { StoreProvider, useStore } from "@/data/store";
 import { I18nProvider, useI18n } from "@/i18n/I18nProvider";
@@ -49,17 +51,36 @@ export default function RootLayout() {
 
 function Shell() {
   const { colors, name } = useTheme();
-  const { isRTL, t } = useI18n();
-  const { state, role, staffRole } = useStore();
+  const { isRTL, t, tl, digits } = useI18n();
+  const { state, role, staffRole, factory, profileComplete, signOut } = useStore();
   // القائمة الجانبية (تابلت وكمبيوتر) للمستخدم الداخل، على كل الشاشات بما فيها التفاصيل.
-  const items = state.signedIn ? navItemsFor(role, t, (p) => can(staffRole, p)) : [];
+  // جنب «طلباتي»: عدد العروض اللي ما انفتحت، عشان المصنع يعرف من أي شاشة إن فيه جديد.
+  const newOffers = state.requests.reduce((n, r) => n + (r.newOfferCount ?? 0), 0);
+  const items = state.signedIn ? navItemsFor(role, t, (p) => can(staffRole, p), { newOffers }) : [];
+  const phone = state.phone ? digits(`0${state.phone.slice(4)}`) : "";
+  const accountTitle = role === "factory" && profileComplete ? tl(factory.name) : phone;
+  const roleLabel = role === "factory" ? t("factory") : role === "provider" ? t("providerAccount") : t("staffAccount");
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface, direction: isRTL ? "rtl" : "ltr" }}>
       <StatusBar style={name === "dark" ? "light" : "dark"} />
       <PrototypeBanner />
       <OfflineBanner />
       <View style={{ flex: 1 }}>
-        <NavShell items={items}>
+        <NavShell
+          items={items}
+          // «طلب جديد» زر عادي (مو كهرماني)، لأن الكهرماني واحد بس في الشاشة وهو «اطلب عرض» في الرئيسية.
+          action={role === "factory" ? <Button label={t("newRequestShort")} icon={IconPlus} variant="secondary" full onPress={() => router.push("/request/new")} /> : undefined}
+          footer={
+            <AccountCard
+              title={accountTitle}
+              subtitle={roleLabel}
+              onSignOut={async () => {
+                await signOut();
+                router.replace("/login");
+              }}
+            />
+          }
+        >
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }} />
         </NavShell>
       </View>
