@@ -4,7 +4,7 @@ import { buildApp } from "./app.ts";
 import { loadConfig } from "./config.ts";
 import { createPgliteDb, type Db } from "./db.ts";
 import { migrate } from "./migrate.ts";
-import { normalizeSaudiMobile } from "@mazood/shared";
+import { normalizeSaudiMobile, requiredDocsFor } from "@mazood/shared";
 import type { SmsSender } from "./sms.ts";
 
 export type TestCtx = {
@@ -16,6 +16,10 @@ export type TestCtx = {
   signIn(phone: string, as?: "factory" | "provider"): Promise<{ token: string; userId: string }>;
   /** يضيف موظف مباشرة في القاعدة ويدخّله. */
   staff(phone: string, role: string): Promise<{ token: string; userId: string }>;
+  /** مزوّد موثّق جاهز (مستنداته مقبولة مباشرة في القاعدة، بدون المرور على شاشة التوثيق). */
+  verifiedProvider(phone: string, categories?: string[]): Promise<{ token: string; userId: string; providerId: string }>;
+  /** مصنع داخل ومكمّل بياناته. */
+  factory(phone: string, name?: string): Promise<{ token: string; userId: string; factoryId: string }>;
   close(): Promise<void>;
 };
 
@@ -58,7 +62,40 @@ export async function createTestCtx(opts: { strictRateLimits?: boolean } = {}): 
     return signIn(phone);
   }
 
-  return { app, db, clock, codes, signIn, staff, close: async () => { await app.close(); await db.close(); } };
+  async function verifiedProvider(phone: string, categories: string[] = ["transport"]) {
+    const s = await signIn(phone, "provider");
+    const r = await app.inject({
+      method: "PUT",
+      url: "/v1/provider/profile",
+      headers: auth(s.token),
+      payload: { ...providerProfile, tradeName: `مزوّد ${phone.slice(-4)}`, categories },
+    });
+    if (r.statusCode !== 200) throw new Error(`provider profile failed: ${r.body}`);
+    const providerId = r.json().provider.id as string;
+    for (const docType of requiredDocsFor(categories)) {
+      await db.query(
+        `INSERT INTO provider_documents (provider_id, doc_type, storage_key, mime_type, size_bytes, expires_on, status, reviewed_at)
+         VALUES ($1,$2,gen_random_uuid()::text,'application/pdf',10,'2030-01-01','approved',now())`,
+        [providerId, docType],
+      );
+    }
+    await db.query("UPDATE providers SET status='verified', verified_at=now() WHERE id=$1", [providerId]);
+    return { ...s, providerId };
+  }
+
+  async function factory(phone: string, name = `مصنع ${phone.slice(-4)}`) {
+    const s = await signIn(phone);
+    const r = await app.inject({
+      method: "PUT",
+      url: "/v1/factory",
+      headers: auth(s.token),
+      payload: { name, commercialRegister: "1010000000", vatNumber: "300000000000003" },
+    });
+    if (r.statusCode !== 200) throw new Error(`factory profile failed: ${r.body}`);
+    return { ...s, factoryId: r.json().factory.id as string };
+  }
+
+  return { app, db, clock, codes, signIn, staff, verifiedProvider, factory, close: async () => { await app.close(); await db.close(); } };
 }
 
 export const auth = (token: string) => ({ authorization: `Bearer ${token}` });
