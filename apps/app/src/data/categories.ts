@@ -15,7 +15,7 @@ import type { Localized } from "@/i18n/I18nProvider";
 
 export type CategoryId = "transport" | "maintenance" | "materials" | "security" | "cleaning" | "customs" | "pest_control";
 
-export type IconComponent = ComponentType<{ size?: number; color?: ColorValue; strokeWidth?: number }>;
+export type IconComponent = ComponentType<{ size?: number; color?: ColorValue; strokeWidth?: number; fill?: ColorValue }>;
 
 export type Category = {
   id: CategoryId;

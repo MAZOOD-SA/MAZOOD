@@ -1,7 +1,7 @@
 // رفع طلب جديد. «إرسال الطلب» هو زر accent الوحيد في الشاشة.
 // التحقق من المدخلات هنا للتجربة فقط. في المرحلة ٢ الخادم يتحقق من كل مدخل قبل الحفظ.
 import { spacing } from "@mazood/brand";
-import { IconPaperclip, IconSend } from "@/components/icons";
+import { IconAlertTriangle, IconPaperclip, IconSend } from "@/components/icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { ApiClientError } from "@/api/client";
 import { errorKey } from "@/api/mapping";
@@ -16,6 +16,7 @@ import { CATEGORIES, categoryById, type CategoryId } from "@/data/categories";
 import { useStore } from "@/data/store";
 import type { When } from "@/data/types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { containsContactInfo } from "@mazood/shared";
 
 const DEFAULT_LOCATION = { ar: "مدينة سدير الصناعية · مصنع 14", en: "Sudair Industrial City · Factory 14" };
 const DEFAULT_AREA = { ar: "المرحلة الثانية", en: "Phase 2" };
@@ -23,15 +24,17 @@ const DEFAULT_AREA = { ar: "المرحلة الثانية", en: "Phase 2" };
 export default function NewRequest() {
   const { t, tl } = useI18n();
   const { createRequest } = useStore();
-  const params = useLocalSearchParams<{ category?: string }>();
+  // «اطلب مرة ثانية»: الطلب الجديد يجي معبّى بنفس تفاصيل الطلب القديم (docs/product.md، القسم ٢).
+  const params = useLocalSearchParams<{ category?: string; typeId?: string; details?: string; area?: string; location?: string; when?: string }>();
   const initial = CATEGORIES.some((c) => c.id === params.category) ? (params.category as CategoryId) : null;
+  const initialType = initial && categoryById(initial).types.some((x) => x.id === params.typeId) ? params.typeId! : initial ? categoryById(initial).types[0].id : null;
 
   const [category, setCategory] = useState<CategoryId | null>(initial);
-  const [typeId, setTypeId] = useState<string | null>(initial ? categoryById(initial).types[0].id : null);
-  const [details, setDetails] = useState("");
-  const [area, setArea] = useState(tl(DEFAULT_AREA));
-  const [location, setLocation] = useState(tl(DEFAULT_LOCATION));
-  const [when, setWhen] = useState<When>("tomorrow");
+  const [typeId, setTypeId] = useState<string | null>(initialType);
+  const [details, setDetails] = useState(params.details ?? "");
+  const [area, setArea] = useState(params.area ?? tl(DEFAULT_AREA));
+  const [location, setLocation] = useState(params.location ?? tl(DEFAULT_LOCATION));
+  const [when, setWhen] = useState<When>(params.when === "today" || params.when === "this_week" ? params.when : "tomorrow");
   const [errors, setErrors] = useState<{ category?: string; details?: string; area?: string }>({});
   const [attachNote, setAttachNote] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -95,9 +98,9 @@ export default function NewRequest() {
     const type = categoryById(category).types.find((x) => x.id === typeId)!;
     setBusy(true);
     setSubmitError(null);
-    let id: string;
+    let created: { id: string; reach: number };
     try {
-      id = await createRequest({
+      created = await createRequest({
         category,
         typeId,
         title: type.name,
@@ -111,7 +114,8 @@ export default function NewRequest() {
       setBusy(false);
       return;
     }
-    router.replace({ pathname: "/request/[id]", params: { id, created: "1" } });
+    // المكافأة الفورية: تفاصيل الطلب تفتح وفيها «وصل طلبك لـ X مزوّد موثّق» (الرقم يعدّ لين يوقف).
+    router.replace({ pathname: "/request/[id]", params: { id: created.id, created: "1", reach: String(created.reach) } });
   }
 
   return (
@@ -167,6 +171,7 @@ export default function NewRequest() {
         maxLength={1000}
         error={errors.details}
       />
+      {(containsContactInfo(details) || containsContactInfo(area)) && <Notice icon={IconAlertTriangle} text={t("noContactInRequest")} />}
 
       <Field
         label={t("areaLabel")}

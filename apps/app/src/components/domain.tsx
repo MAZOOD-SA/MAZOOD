@@ -1,16 +1,13 @@
-// مكوّنات خاصة بمزوّد: مربع القسم، وبطاقة الطلب، وبطاقة العرض، وشارة الحالة.
+// مكوّنات خاصة بمزوّد: مربع القسم، وبطاقة الطلب، وشارة الحالة.
 import { radius, spacing } from "@mazood/brand";
-import { IconStar } from "@/components/icons";
-import { useState } from "react";
+import type { RequestStatus } from "@mazood/shared";
 import { Pressable, View } from "react-native";
-import type { Category } from "@/data/categories";
-import { PROVIDERS } from "@/data/seed";
-import type { Offer, ServiceRequest } from "@/data/types";
+import { categoryById, type Category } from "@/data/categories";
+import type { ServiceRequest } from "@/data/types";
 import { useI18n } from "@/i18n/I18nProvider";
-import { formatNumber } from "@/lib/format";
-import { withVat } from "@/lib/money";
+import type { StringKey } from "@/i18n/strings";
 import { useTheme } from "@/theme/ThemeProvider";
-import { AppText, Badge, Button, Card, Divider, Row, VerifiedBadge } from "./ui";
+import { AppText, Badge, Card, Row, type BadgeTone } from "./ui";
 
 export function CategoryTile({ category, onPress, compact }: { category: Category; onPress: () => void; compact?: boolean }) {
   const { colors } = useTheme();
@@ -52,90 +49,78 @@ export function CategoryTile({ category, onPress, compact }: { category: Categor
   );
 }
 
-/** شارة حالة الطلب. «بانتظار العروض» تصير «٣ عروض» أول ما توصل عروض. */
-export function RequestStatusBadge({ request, pendingOffers }: { request: ServiceRequest; pendingOffers: number }) {
-  const { t, num } = useI18n();
-  switch (request.status) {
+/** نص حالة الطلب (للمصنع، أو للمزوّد في «شغلي»). */
+export function statusKey(status: RequestStatus, viewer: "factory" | "provider" = "factory"): StringKey {
+  switch (status) {
     case "awaiting_offers":
-      if (pendingOffers === 0) return <Badge label={t("statusAwaiting")} tone="muted" />;
-      if (pendingOffers === 1) return <Badge label={t("oneOffer")} tone="new" />;
-      if (pendingOffers === 2) return <Badge label={t("twoOffers")} tone="new" />;
-      return <Badge label={t("offersCount", { n: num(pendingOffers) })} tone="new" />;
+      return "statusAwaiting";
+    case "pending_approval":
+      return "statusPendingApproval";
+    case "accepted":
+      return viewer === "provider" ? "statusAcceptedProvider" : "statusAccepted";
     case "in_progress":
-      return <Badge label={t("statusInProgress")} tone="muted" />;
+      return "statusInProgress";
+    case "delivered":
+      return viewer === "provider" ? "statusDeliveredProvider" : "statusDelivered";
     case "completed":
-      return <Badge label={t("statusCompleted")} tone="ok" />;
+      return "statusCompleted";
+    case "expired":
+      return "statusExpired";
     case "cancelled":
-      return <Badge label={t("statusCancelled")} tone="bad" />;
+      return "statusCancelled";
+    case "disputed":
+      return "statusDisputed";
   }
 }
 
-export function RequestCard({ request, pendingOffers, onPress }: { request: ServiceRequest; pendingOffers: number; onPress: () => void }) {
-  const { tl, relative } = useI18n();
+const STATUS_TONE: Record<RequestStatus, BadgeTone> = {
+  awaiting_offers: "muted",
+  pending_approval: "new",
+  accepted: "muted",
+  in_progress: "muted",
+  delivered: "new",
+  completed: "ok",
+  expired: "muted",
+  cancelled: "bad",
+  disputed: "bad",
+};
+
+/** شارة حالة الطلب. «بانتظار العروض» تصير «٣ عروض» أول ما توصل عروض. */
+export function RequestStatusBadge({ status, offerCount = 0, viewer = "factory" }: { status: RequestStatus; offerCount?: number; viewer?: "factory" | "provider" }) {
+  const { t, num } = useI18n();
+  if (status === "awaiting_offers" && offerCount > 0) {
+    const label = offerCount === 1 ? t("oneOffer") : offerCount === 2 ? t("twoOffers") : t("offersCount", { n: num(offerCount) });
+    return <Badge label={label} tone="new" />;
+  }
+  return <Badge label={t(statusKey(status, viewer))} tone={STATUS_TONE[status]} />;
+}
+
+/** بطاقة الطلب في الرئيسية و«طلباتي». الطلب اللي فيه عروض ما انفتحت يبان عليه رقمها. */
+export function RequestCard({ request, onPress }: { request: ServiceRequest; onPress: () => void }) {
+  const { t, tl, relative, num } = useI18n();
+  const { colors } = useTheme();
+  const cat = categoryById(request.category);
+  const Icon = cat.icon;
+  const fresh = request.newOfferCount ?? 0;
   return (
-    <Card onPress={onPress} style={{ paddingVertical: spacing["3"], paddingHorizontal: 14 }}>
-      <Row style={{ justifyContent: "space-between" }}>
-        <View style={{ flex: 1 }}>
-          <AppText variant="bodySm" weight={600}>
+    <Card onPress={onPress} style={{ paddingVertical: spacing["3"], paddingHorizontal: spacing["4"], borderColor: fresh ? colors.accent : colors.line }}>
+      <Row gap="3" style={{ justifyContent: "space-between" }}>
+        <Icon size={22} color={colors.inkMuted} strokeWidth={1.75} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <AppText variant="bodySm" weight={600} numberOfLines={1}>
             {tl(request.title)}
           </AppText>
-          <AppText variant="caption" color="inkMuted">
-            {relative(request.createdAt)}
+          <AppText variant="caption" color="inkMuted" numberOfLines={1}>
+            {fresh ? t("newOffersCount", { n: num(fresh) }) : `${tl(cat.name)} · ${relative(request.createdAt)}`}
           </AppText>
         </View>
-        <RequestStatusBadge request={request} pendingOffers={pendingOffers} />
+        <RequestStatusBadge status={request.status} offerCount={request.offerCount ?? 0} />
       </Row>
     </Card>
   );
 }
 
-/** بطاقة العرض كما في brand/reference.html. */
-export function OfferCard({ offer, onAccept, accepted }: { offer: Offer; onAccept?: () => void; accepted?: boolean }) {
-  const { t, tl, money, num, locale } = useI18n();
-  const { colors } = useTheme();
-  const [open, setOpen] = useState(false);
-  const provider = PROVIDERS.find((p) => p.id === offer.providerId);
-  if (!provider) return null;
-  const hasNote = offer.note.ar.length > 0;
-  return (
-    <Card style={{ gap: spacing["3"] }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: spacing["2"] }}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Row style={{ flexWrap: "wrap" }}>
-            <AppText variant="body" weight={600}>
-              {tl(provider.name)}
-            </AppText>
-            {provider.verified && <VerifiedBadge />}
-          </Row>
-          <Row gap="1">
-            <IconStar size={14} color={colors.inkMuted} strokeWidth={2} />
-            <AppText variant="caption" color="inkMuted" style={{ fontSize: 13 }}>
-              {formatNumber(provider.ratingTenths / 10, locale, 1)} · {t("completedOrders", { n: num(provider.completedOrders) })}
-            </AppText>
-          </Row>
-        </View>
-        <View style={{ alignItems: "flex-end" }}>
-          <AppText variant="price">{money(withVat(offer.priceHalalas))}</AppText>
-          <AppText variant="caption" color="inkMuted">
-            {t("includesVat")}
-          </AppText>
-        </View>
-      </View>
-      <Divider />
-      <AppText variant="bodySm" color="inkMuted">
-        {tl(offer.summary)}
-      </AppText>
-      {open && hasNote && (
-        <AppText variant="bodySm" color="ink">
-          {tl(offer.note)}
-        </AppText>
-      )}
-      {(onAccept || hasNote) && !accepted && (
-        <Row>
-          {onAccept && <Button label={t("acceptOffer")} variant="primary" onPress={onAccept} />}
-          {hasNote && <Button label={open ? t("hideDetails") : t("details")} variant="ghost" onPress={() => setOpen(!open)} />}
-        </Row>
-      )}
-    </Card>
-  );
+/** ترتيب الطلبات: اللي فيها عروض جديدة فوق، وبعدها الأحدث. */
+export function sortRequests(list: ServiceRequest[]): ServiceRequest[] {
+  return [...list].sort((a, b) => (b.newOfferCount ?? 0) - (a.newOfferCount ?? 0) || Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }

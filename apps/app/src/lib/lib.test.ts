@@ -61,3 +61,49 @@ describe("عرض الرموز", () => {
     expect(codeForDisplay("MZ-2026-000128", "en")).toBe("MZ-2026-000128");
   });
 });
+
+describe("المدد والأوقات القادمة", () => {
+  it("المدة بالساعات والأيام بالعربي والإنجليزي", async () => {
+    const { formatDuration } = await import("./format");
+    expect(formatDuration(2, "ar")).toBe("ساعتين");
+    expect(formatDuration(6, "ar")).toBe("٦ ساعات");
+    expect(formatDuration(48, "ar")).toBe("يومين");
+    expect(formatDuration(24, "en")).toBe("1 day");
+    expect(formatDuration(5, "en")).toBe("5 hours");
+  });
+  it("الوقت القادم", async () => {
+    const { formatUntil } = await import("./format");
+    const now = new Date("2026-11-22T10:00:00Z");
+    expect(formatUntil("2026-11-22T15:00:00Z", "en", now)).toBe("in 5 hours");
+    expect(formatUntil("2026-11-22T09:00:00Z", "ar", now)).toBe("انتهى");
+  });
+});
+
+describe("المقاسات (useLayout)", () => {
+  it("جوال أقل من ٧٦٨، وتابلت لين ١١٩٩، وكمبيوتر من ١٢٠٠", async () => {
+    const { layoutFor } = await import("./layout-size");
+    expect(layoutFor(390)).toMatchObject({ size: "phone", sidebar: false, split: false });
+    expect(layoutFor(767).size).toBe("phone");
+    expect(layoutFor(768)).toMatchObject({ size: "tablet", sidebar: true, split: false });
+    expect(layoutFor(1199).size).toBe("tablet");
+    expect(layoutFor(1200)).toMatchObject({ size: "desktop", sidebar: true, split: true });
+  });
+  it("عدد البطاقات في الصف ما يتعدى المسموح", async () => {
+    const { layoutFor } = await import("./layout-size");
+    expect(layoutFor(390).columns(3)).toBe(1);
+    expect(layoutFor(900).columns(3)).toBe(2);
+    expect(layoutFor(1440).columns(3)).toBe(3);
+    expect(layoutFor(1440).columns(2)).toBe(2);
+  });
+});
+
+describe("سعر العرض بالريال", () => {
+  it("يقبل الأرقام العربية والفواصل، ويرفض الكسور الطويلة", async () => {
+    const { parseRiyals } = await import("./money");
+    expect(parseRiyals("٢٬٤٥٠")).toBe(245_000);
+    expect(parseRiyals("2450.5")).toBe(245_050);
+    expect(parseRiyals("0")).toBeNull();
+    expect(parseRiyals("12.345")).toBeNull();
+    expect(parseRiyals("abc")).toBeNull();
+  });
+});

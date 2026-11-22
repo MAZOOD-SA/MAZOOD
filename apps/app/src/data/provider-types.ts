@@ -1,5 +1,5 @@
 // شكل بيانات المزوّد كما يرجعها الخادم.
-import type { DocType, ProviderStatus } from "@mazood/shared";
+import type { CommitmentView, DocType, ProviderStatus } from "@mazood/shared";
 
 export type DocView = {
   id: string;
@@ -35,4 +35,7 @@ export type ProviderView = {
   readyToSubmit: boolean;
   documents: DocSlotView[];
   expiring: { docType: DocType; expiresOn: string; expired: boolean }[];
+  /** نفس اللي تشوفه المصانع في بطاقة العرض (القرار ٣٣). */
+  rating?: { average: number; count: number } | null;
+  commitment?: CommitmentView;
 };

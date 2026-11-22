@@ -1,9 +1,11 @@
-// التبويبات السفلية للمصنع: الرئيسية، وطلباتي، والفواتير، وحسابي (كما في brand/reference.html).
+// تنقّل المصنع: الرئيسية، وطلباتي، والفواتير، وحسابي (كما في brand/reference.html).
+// في الجوال تبويبات تحت، وفي التابلت والكمبيوتر القائمة الجانبية (NavShell في app/_layout.tsx) والتبويبات تختفي.
 import { fontFamilyByWeight } from "@mazood/brand";
 import { IconClipboardList, IconFileInvoice, IconHome, IconUser } from "@/components/icons";
 import { Redirect, Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useStore } from "@/data/store";
+import { useLayout } from "@/lib/layout";
 import { homeRouteFor } from "@/lib/home-route";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -13,6 +15,7 @@ export default function TabsLayout() {
   const { t } = useI18n();
   const { state, ready, role } = useStore();
   const insets = useSafeAreaInsets();
+  const { sidebar } = useLayout();
 
   // الشاشات هذي للمستخدم الداخل بس.
   if (!ready) return null;
@@ -22,6 +25,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      tabBar={sidebar ? () => null : undefined}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.ink,

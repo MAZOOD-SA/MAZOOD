@@ -1,33 +1,49 @@
-// طلباتي: كل طلبات المصنع، مع تصفية حسب الحالة.
+// طلباتي: كل طلبات المصنع، مع تصفية حسب المرحلة. اللي فيها عروض جديدة تطلع فوق.
 import { router } from "expo-router";
 import { useState } from "react";
-import { RequestCard } from "@/components/domain";
-import { Screen } from "@/components/layout";
-import { AppText, Chips } from "@/components/ui";
-import { pendingOffersFor } from "@/data/reducer";
+import { RequestCard, sortRequests } from "@/components/domain";
+import { useAutoRefresh } from "@/components/flow";
+import { Grid, Screen } from "@/components/layout";
+import { AppText, Button, Chips } from "@/components/ui";
+import { IconPlus } from "@/components/icons";
 import { useStore } from "@/data/store";
 import type { RequestStatus } from "@/data/types";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useLayout } from "@/lib/layout";
 
-type Filter = "all" | RequestStatus;
+type Filter = "all" | "open" | "active" | "done";
+
+/** المجموعات: مفتوح للعروض، وجاري (بعد القبول)، ومنتهي (مكتمل أو ملغي أو انتهت مدته). */
+const GROUPS: Record<Exclude<Filter, "all">, RequestStatus[]> = {
+  open: ["awaiting_offers", "pending_approval"],
+  active: ["accepted", "in_progress", "delivered", "disputed"],
+  done: ["completed", "cancelled", "expired"],
+};
 
 export default function Requests() {
-  const { t, locale } = useI18n();
-  const { state } = useStore();
+  const { t } = useI18n();
+  const { state, refreshRequests } = useStore();
   const [filter, setFilter] = useState<Filter>("all");
-  const list = state.requests.filter((r) => filter === "all" || r.status === filter);
+  useAutoRefresh(refreshRequests);
+  const { sidebar } = useLayout();
+  const list = sortRequests(state.requests.filter((r) => filter === "all" || GROUPS[filter].includes(r.status)));
 
   return (
-    <Screen title={t("tabRequests")}>
+    <Screen
+      title={t("tabRequests")}
+      width="page"
+      onRefresh={refreshRequests}
+      // في التابلت والكمبيوتر «طلب جديد» موجود في القائمة الجانبية.
+      headerAction={sidebar ? undefined : <Button label={t("newRequestShort")} icon={IconPlus} variant="secondary" onPress={() => router.push("/request/new")} />}
+    >
       <Chips<Filter>
         value={filter}
         onChange={setFilter}
         options={[
-          { value: "all", label: locale === "ar" ? "الكل" : "All" },
-          { value: "awaiting_offers", label: t("statusAwaiting") },
-          { value: "in_progress", label: t("statusInProgress") },
-          { value: "completed", label: t("statusCompleted") },
-          { value: "cancelled", label: t("statusCancelled") },
+          { value: "all", label: t("filterAll") },
+          { value: "open", label: t("filterOpen") },
+          { value: "active", label: t("filterActive") },
+          { value: "done", label: t("filterDone") },
         ]}
       />
       {list.length === 0 ? (
@@ -35,9 +51,11 @@ export default function Requests() {
           {t("noRequests")}
         </AppText>
       ) : (
-        list.map((r) => (
-          <RequestCard key={r.id} request={r} pendingOffers={pendingOffersFor(state, r.id).length} onPress={() => router.push(`/request/${r.id}`)} />
-        ))
+        <Grid minItemWidth={320} max={2}>
+          {list.map((r) => (
+            <RequestCard key={r.id} request={r} onPress={() => router.push(`/request/${r.id}`)} />
+          ))}
+        </Grid>
       )}
     </Screen>
   );

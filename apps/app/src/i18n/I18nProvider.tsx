@@ -1,7 +1,7 @@
 // اللغة واتجاه الواجهة. العربي هو الأساس ومن اليمين لليسار، والإنجليزي من اليسار لليمين.
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { I18nManager, Platform } from "react-native";
-import { codeForDisplay, formatDate, formatMoney, formatNumber, formatRelative, localizeDigits, type Locale } from "@/lib/format";
+import { codeForDisplay, formatDate, formatMoney, formatNumber, formatRelative, localizeDigits, type Locale, formatDuration, formatUntil } from "@/lib/format";
 import { loadPref, savePref } from "@/lib/prefs";
 import { strings, type StringKey } from "./strings";
 
@@ -22,6 +22,10 @@ type I18nValue = {
   num: (n: number) => string;
   relative: (iso: string) => string;
   date: (iso: string) => string;
+  /** مدة بالساعات: «٦ ساعات»، «يومين». */
+  duration: (hours: number) => string;
+  /** وقت قادم: «خلال ٥ ساعات». */
+  until: (iso: string) => string;
 };
 
 const I18nContext = createContext<I18nValue | null>(null);
@@ -70,6 +74,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       num: (n) => formatNumber(n, locale),
       relative: (iso) => formatRelative(iso, locale),
       date: (iso) => formatDate(iso, locale),
+      duration: (h) => formatDuration(h, locale),
+      until: (iso) => formatUntil(iso, locale),
     };
   }, [locale, isRTL]);
 

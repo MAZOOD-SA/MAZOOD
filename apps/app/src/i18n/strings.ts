@@ -1,6 +1,8 @@
 // كل نصوص الواجهة بالعربي والإنجليزي.
 // النبرة حسب brand/BRAND.md: مختصرة ومحددة ومحترمة، والأزرار تبدأ بفعل، وبدون إيموجي.
 // لاحقًا (المرحلة 6) تنتقل النصوص القابلة للتعديل إلى لوحة الإدارة.
+// نصوص شاشات المرحلة ٤ (العروض والتنفيذ) في strings-flow.ts وتندمج هنا.
+import { flowAr, flowEn } from "./strings-flow";
 
 const ar = {
   appName: "مزوّد",
@@ -254,6 +256,7 @@ const ar = {
   staffDeactivated: "تم إيقاف الحساب، وانسحبت صلاحياته.",
   deactivate: "أوقف الحساب",
   inactive: "موقوف",
+  ...flowAr,
 };
 
 export type StringKey = keyof typeof ar;
@@ -499,6 +502,7 @@ const en: Record<StringKey, string> = {
   staffDeactivated: "Account deactivated and access removed.",
   deactivate: "Deactivate",
   inactive: "Inactive",
+  ...flowEn,
 };
 
 export const strings = { ar, en };

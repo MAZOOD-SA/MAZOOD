@@ -25,3 +25,11 @@ export function assertHalalas(n: number): void {
     throw new Error(`مبلغ غير صالح بالهللة: ${n}`);
   }
 }
+
+/** «٢٬٤٥٠» أو «2450.50» → هللات (رقم صحيح). null لو المبلغ مو صالح. */
+export function parseRiyals(input: string): number | null {
+  const latin = input.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/[٬,\s]/g, "").replace("٫", ".");
+  if (!/^\d+(\.\d{1,2})?$/.test(latin)) return null;
+  const halalas = Math.round(Number(latin) * 100);
+  return halalas > 0 ? halalas : null;
+}

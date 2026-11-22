@@ -16,9 +16,9 @@ import type { Db } from "../db.ts";
 import { ApiError } from "../errors.ts";
 import { activeCities, resolveCityId } from "../cities.ts";
 import { getSettings } from "../settings.ts";
-import { rejectContactInfo } from "./offers.ts";
+import { liveOffer, rejectContactInfo } from "./offers.ts";
 import { actorOf, idempotent, parse, type Ctx, type Guards } from "../http.ts";
-import { acceptOffer, effectiveStatus, nominateOffer, providerIsActive, withdrawNomination } from "../orders.ts";
+import { acceptOffer, effectiveStatus, nominateOffer, providerIsActive, reachFor, withdrawNomination } from "../orders.ts";
 import { cancelBeforeStart, disputeForParty, feeFor, latestCancellationRequest, latestWithdrawal } from "../cancellations.ts";
 import { executionDetails } from "../execution.ts";
 import { publicUser } from "./auth.ts";
@@ -70,14 +70,20 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       [factoryId, body.category, body.typeId, body.details, body.area, body.location, body.when, cityId, expiresAt, ctx.now()],
     );
     await audit(db, actorOf(user), "request.created", { type: "request", id: String(row.id) }, { category: body.category });
-    return reply.status(201).send({ request: row });
+    // المكافأة الفورية: كم مزوّد موثّق وصله الطلب (رقم حقيقي، docs/product.md القسم ٢).
+    return reply.status(201).send({ request: row, reach: await reachFor(db, body.category, cityId, ctx.now()) });
   });
 
   app.get("/v1/requests", async (req) => {
     const { factoryId } = await g.requireFactory(req);
-    const rows = await db.query<RequestRow>(`SELECT ${REQUEST_COLUMNS} FROM requests WHERE factory_id = $1 ORDER BY created_at DESC LIMIT 200`, [
-      factoryId,
-    ]);
+    // مع كل طلب: عدد العروض الصالحة، وكم واحد منها ما انفتح للحين (الرئيسية ترفع الطلبات اللي فيها عروض جديدة فوق).
+    const rows = await db.query<RequestRow>(
+      `SELECT ${REQUEST_COLUMNS},
+              (SELECT count(*)::int FROM offers o WHERE o.request_id = requests.id AND ${liveOffer("$2")}) AS "offerCount",
+              (SELECT count(*)::int FROM offers o WHERE o.request_id = requests.id AND ${liveOffer("$2")} AND o.first_seen_at IS NULL) AS "newOfferCount"
+         FROM requests WHERE factory_id = $1 ORDER BY created_at DESC LIMIT 200`,
+      [factoryId, ctx.now()],
+    );
     return { requests: rows.map((r) => withStatus(r, ctx.now())) };
   });
 
@@ -233,6 +239,8 @@ export async function factoryRequestView(ctx: Ctx, factoryId: string, id: string
   });
   return {
     request,
+    // كم مزوّد موثّق وصله الطلب. يظهر للمصنع وهو ينتظر العروض.
+    reach: await reachFor(db, String((request as Record<string, unknown>).category), String((request as Record<string, unknown>).cityId), now),
     ...details,
     execution,
     actions,

@@ -1,6 +1,6 @@
 // المكوّنات الأساسية المطابقة لـ brand/reference.html: النص، والأزرار، والشارات، والبطاقات.
 // كل الألوان من useTheme() وكل المسافات والزوايا من @mazood/brand. ممنوع أي لون مباشر.
-import { fontFamilyByWeight, radius, spacing, typography, type ColorName, type TypographyName } from "@mazood/brand";
+import { fontFamilyByWeight, layout, radius, spacing, typography, type ColorName, type Palette, type TypographyName } from "@mazood/brand";
 import { IconRosetteDiscountCheck } from "@/components/icons";
 import type { ReactNode } from "react";
 import {
@@ -42,6 +42,18 @@ export function AppText({ variant = "body", color = "ink", weight, align, style,
   );
 }
 
+// ───────── المرور بالماوس والكيبورد (الموقع) ─────────
+// في الموقع Pressable يعطينا hovered وfocused. في الجوال ما تجي، فما يتغيّر شي.
+
+type InteractionState = { pressed: boolean; hovered?: boolean; focused?: boolean };
+
+/** إطار واضح حول العنصر المختار بالكيبورد (Tab)، ومؤشر اليد على اللي ينضغط. */
+export function focusRing(state: InteractionState, colors: Palette): ViewStyle {
+  const web = { cursor: "pointer" } as ViewStyle;
+  if (!state.focused) return web;
+  return { ...web, outlineColor: colors.ink, outlineStyle: "solid", outlineWidth: 2, outlineOffset: 2 } as ViewStyle;
+}
+
 // ───────── الأزرار ─────────
 // accent (كهرماني): زر واحد بس في كل شاشة، للإجراء الأهم.
 // primary: كحلي في الفاتح، وبإطار كهرماني في الداكن.
@@ -74,22 +86,26 @@ export function Button({ label, variant = "primary", icon: Icon, full, size = "m
       accessibilityRole="button"
       accessibilityLabel={label}
       disabled={disabled || loading}
+      // في الموقع: data-accent على الزر الكهرماني، عشان فحص الصور يتأكد إنه واحد بس في كل شاشة.
+      {...(variant === "accent" ? ({ dataSet: { accent: "true" } } as object) : {})}
       {...rest}
-      style={({ pressed }) => [
+      style={(state) => [
         {
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
           gap: spacing["2"],
+          minHeight: layout.touchMin,
           backgroundColor: l.bg,
           borderColor: l.border,
           borderWidth: 1,
           borderRadius: radius.md,
           paddingVertical: size === "lg" ? 12 : 10,
           paddingHorizontal: 18,
-          opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
+          opacity: disabled ? 0.5 : state.pressed ? 0.85 : (state as InteractionState).hovered ? 0.92 : 1,
           alignSelf: full ? "stretch" : "flex-start",
         },
+        focusRing(state, colors),
         style,
       ]}
     >
@@ -158,7 +174,16 @@ export function Card({ children, style, onPress }: { children: ReactNode; style?
   };
   if (onPress) {
     return (
-      <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [base, { opacity: pressed ? 0.85 : 1 }, style]}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        style={(state) => [
+          base,
+          { opacity: state.pressed ? 0.85 : 1, borderColor: (state as InteractionState).hovered ? colors.lineStrong : colors.line },
+          focusRing(state, colors),
+          style,
+        ]}
+      >
         {children}
       </Pressable>
     );
@@ -211,14 +236,16 @@ export function Chips<T extends string>({
             accessibilityRole="radio"
             accessibilityState={{ selected }}
             onPress={() => onChange(o.value)}
-            style={{
+            style={(state) => [{
+              minHeight: layout.touchMin,
+              justifyContent: "center",
               borderWidth: 1,
               borderColor: selected ? colors.ink : colors.lineStrong,
               backgroundColor: selected ? colors.surfaceAlt : colors.surface,
               borderRadius: radius.md,
               paddingVertical: spacing["2"],
               paddingHorizontal: spacing["3"],
-            }}
+            }, focusRing(state, colors)]}
           >
             <AppText variant="label" weight={selected ? 600 : 400}>
               {o.label}

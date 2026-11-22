@@ -1,4 +1,5 @@
-// الاتصال بالخادم. إذا ما فيه EXPO_PUBLIC_API_URL يشتغل التطبيق بالوضع التجريبي (بيانات وهمية، بدون خادم).
+// الاتصال بالخادم. إذا ما فيه EXPO_PUBLIC_API_URL يشتغل التطبيق بالوضع التجريبي: نفس الطلبات
+// تروح لخادم تجريبي داخل المتصفح (src/demo/server.ts) ببيانات وهمية، فكل الشاشات تشتغل بدون خادم.
 // ممنوع نحط هنا أي مفتاح سري: كل متغير يبدأ بـ EXPO_PUBLIC_ يوصل لكل من يفتح التطبيق.
 //
 // الجلسة:
@@ -6,6 +7,10 @@
 //  - الموقع: الخادم يحط الجلسة في كوكي محمي (HttpOnly) ما يقدر كود الصفحة يقراه. نرسله بـ
 //    credentials: "include"، ومعه الرأس X-Requested-With اللي يحمي من الطلبات المزوّرة (CSRF).
 import { setServerReachable } from "./connection";
+import { demoApi, demoUpload } from "@/demo/server";
+import { ApiClientError } from "./errors";
+
+export { ApiClientError };
 
 export const API_URL: string | null = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "") || null;
 /** true: نتكلم مع الخادم الحقيقي. false: النموذج التجريبي. */
@@ -16,21 +21,10 @@ export const IS_WEB = typeof window !== "undefined" && typeof window.document !=
 const BASE_HEADERS = { "x-requested-with": "mazood" };
 const CREDENTIALS: RequestCredentials = IS_WEB ? "include" : "omit";
 
-export class ApiClientError extends Error {
-  code: string;
-  status: number;
-  retryAfterSeconds?: number;
-  constructor(status: number, code: string, retryAfterSeconds?: number) {
-    super(code);
-    this.status = status;
-    this.code = code;
-    this.retryAfterSeconds = retryAfterSeconds;
-  }
-}
-
 /** رفع ملف (multipart). ما نحدد content-type: المتصفح أو الجوال يحطه مع الحدود (boundary). */
 export async function apiUpload<T = unknown>(path: string, form: FormData, token: string | null): Promise<T> {
-  if (!API_URL) throw new ApiClientError(0, "not_live");
+  // الوضع التجريبي: الخادم التجريبي داخل المتصفح (src/demo/server.ts) بنفس شكل الردود.
+  if (!API_URL) return demoUpload<T>(path, form, token);
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
@@ -49,11 +43,16 @@ export async function apiUpload<T = unknown>(path: string, form: FormData, token
   return json as T;
 }
 
+/** رابط ملف من الخادم (صور التنفيذ): مسار نسبي على الخادم، أو رابط كامل في الوضع التجريبي. */
+export function fileUrl(path: string): string {
+  return /^(https?:|blob:|data:)/.test(path) ? path : `${API_URL ?? ""}${path}`;
+}
+
 export async function api<T = unknown>(
   path: string,
   opts: { method?: "GET" | "POST" | "PUT"; body?: unknown; token?: string | null } = {},
 ): Promise<T> {
-  if (!API_URL) throw new ApiClientError(0, "not_live");
+  if (!API_URL) return demoApi<T>(opts.method ?? "GET", path, opts.body, opts.token ?? null);
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
