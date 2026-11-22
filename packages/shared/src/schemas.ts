@@ -92,3 +92,8 @@ export const uuidSchema = z.string().uuid();
 export const FACTORY_ROLES = ["manager", "member"] as const;
 export type FactoryRole = (typeof FACTORY_ROLES)[number];
 export const addFactoryMemberBody = z.object({ phone: phoneSchema, role: z.enum(FACTORY_ROLES) }).strict();
+
+/** طلب حذف الحساب: السبب اختياري. */
+export const accountDeletionBody = z
+  .object({ reason: z.string().trim().max(500).optional() })
+  .strict();

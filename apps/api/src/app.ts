@@ -14,6 +14,7 @@ import { ApiError } from "./errors.ts";
 import { CSRF_HEADER, CSRF_VALUE, makeGuards, readSessionToken, type Ctx } from "./http.ts";
 import { sessionUserByToken } from "./auth.ts";
 import { adminRoutes } from "./routes/admin.ts";
+import { accountRoutes } from "./routes/account.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { cancellationRoutes } from "./routes/cancellations.ts";
 import { factoryRoutes } from "./routes/factory.ts";
@@ -127,5 +128,6 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   executionRoutes(app, ctx, guards);
   cancellationRoutes(app, ctx, guards);
   adminRoutes(app, ctx, guards);
+  accountRoutes(app, ctx, guards);
   return app;
 }
