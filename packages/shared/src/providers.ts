@@ -2,7 +2,7 @@
 // ⚠️ قائمة المستندات لكل قسم «مقترحة» وتنتظر اعتماد المالك (سؤال ٨ في PLAN.md).
 // تعديلها هنا يغيّرها في الخادم والواجهة معًا.
 import { z } from "zod";
-import { CATEGORY_IDS, type CategoryId } from "./categories.ts";
+import { CATEGORY_IDS, CITY_ID_PATTERN, type CategoryId } from "./categories.ts";
 
 export const DOC_TYPES = [
   "id_document", // الهوية الوطنية أو الإقامة
@@ -92,7 +92,9 @@ export const providerProfileBody = z
     idType: z.enum(["national_id", "iqama"]),
     idNumber: z.string().regex(/^\d{10}$/, "id_invalid"),
     commercialRegister: z.string().regex(/^\d{10}$/, "cr_invalid"),
-    categories: z.array(z.enum(CATEGORY_IDS as [string, ...string[]])).min(1, "categories_required").max(6),
+    categories: z.array(z.enum(CATEGORY_IDS as [string, ...string[]])).min(1, "categories_required").max(CATEGORY_IDS.length),
+    /** المدن اللي يخدمها. بدونها = كل المدن الفعّالة (الحين سدير بس، فالواجهة ما تبيّن الخانة). */
+    cityIds: z.array(z.string().regex(CITY_ID_PATTERN)).min(1).max(50).optional(),
   })
   .strict()
   .refine((v) => v.idNumber[0] === (v.idType === "national_id" ? "1" : "2"), { path: ["idNumber"], message: "id_type_mismatch" });

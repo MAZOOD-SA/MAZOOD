@@ -5,7 +5,7 @@ import type { When } from "@/data/types";
 
 const KEY = "mazood.draft.request";
 
-export type RequestDraft = { category: string | null; typeId: string | null; details: string; location: string; when: When };
+export type RequestDraft = { category: string | null; typeId: string | null; details: string; area?: string; location: string; when: When };
 
 export async function loadDraft(): Promise<RequestDraft | null> {
   try {

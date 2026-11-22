@@ -116,13 +116,13 @@ describe("حساب المصنع", () => {
   it("يحفظ بيانات الشركة ويتحقق من السجل والرقم الضريبي", async () => {
     const bad = await ctx.app.inject({
       method: "PUT", url: "/v1/factory", headers: auth(a.token),
-      payload: { name: "مصنع", city: "سدير", commercialRegister: "123", vatNumber: "123" },
+      payload: { name: "مصنع", commercialRegister: "123", vatNumber: "123" },
     });
     expect(bad.statusCode).toBe(400);
     // أرقام تجريبية شكلًا فقط، مو بيانات شركة حقيقية.
     const ok = await ctx.app.inject({
       method: "PUT", url: "/v1/factory", headers: auth(a.token),
-      payload: { name: "مصنع تجريبي", city: "سدير", commercialRegister: "1010000000", vatNumber: "300000000000003" },
+      payload: { name: "مصنع تجريبي", commercialRegister: "1010000000", vatNumber: "300000000000003" },
     });
     expect(ok.statusCode).toBe(200);
     expect(ok.json().factory.profileComplete).toBe(true);

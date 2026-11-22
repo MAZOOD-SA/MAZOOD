@@ -18,6 +18,7 @@ import type { When } from "@/data/types";
 import { useI18n } from "@/i18n/I18nProvider";
 
 const DEFAULT_LOCATION = { ar: "مدينة سدير الصناعية · مصنع 14", en: "Sudair Industrial City · Factory 14" };
+const DEFAULT_AREA = { ar: "المرحلة الثانية", en: "Phase 2" };
 
 export default function NewRequest() {
   const { t, tl } = useI18n();
@@ -28,9 +29,10 @@ export default function NewRequest() {
   const [category, setCategory] = useState<CategoryId | null>(initial);
   const [typeId, setTypeId] = useState<string | null>(initial ? categoryById(initial).types[0].id : null);
   const [details, setDetails] = useState("");
+  const [area, setArea] = useState(tl(DEFAULT_AREA));
   const [location, setLocation] = useState(tl(DEFAULT_LOCATION));
   const [when, setWhen] = useState<When>("tomorrow");
-  const [errors, setErrors] = useState<{ category?: string; details?: string }>({});
+  const [errors, setErrors] = useState<{ category?: string; details?: string; area?: string }>({});
   const [attachNote, setAttachNote] = useState(false);
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -52,6 +54,7 @@ export default function NewRequest() {
       setCategory(c);
       setTypeId(c && categoryById(c).types.some((x) => x.id === d.typeId) ? d.typeId : c ? categoryById(c).types[0].id : null);
       setDetails(d.details);
+      if (d.area) setArea(d.area);
       if (d.location) setLocation(d.location);
       setWhen(d.when);
       setRestored(true);
@@ -59,9 +62,9 @@ export default function NewRequest() {
   }, [initial]);
   useEffect(() => {
     if (!draftLoaded.current) return;
-    const id = setTimeout(() => saveDraft({ category, typeId, details, location, when }), 400);
+    const id = setTimeout(() => saveDraft({ category, typeId, details, area, location, when }), 400);
     return () => clearTimeout(id);
-  }, [category, typeId, details, location, when]);
+  }, [category, typeId, details, area, location, when]);
 
   function discardDraft() {
     clearDraft();
@@ -69,6 +72,7 @@ export default function NewRequest() {
     setCategory(null);
     setTypeId(null);
     setDetails("");
+    setArea(tl(DEFAULT_AREA));
     setLocation(tl(DEFAULT_LOCATION));
     setWhen("tomorrow");
   }
@@ -84,8 +88,9 @@ export default function NewRequest() {
     const next: typeof errors = {};
     if (!category || !typeId) next.category = t("categoryRequired");
     if (details.trim().length < 10) next.details = t("detailsTooShort");
+    if (area.trim().length < 2) next.area = t("areaRequired");
     setErrors(next);
-    if (next.category || next.details || !category || !typeId) return;
+    if (next.category || next.details || next.area || !category || !typeId) return;
 
     const type = categoryById(category).types.find((x) => x.id === typeId)!;
     setBusy(true);
@@ -97,6 +102,7 @@ export default function NewRequest() {
         typeId,
         title: type.name,
         details: details.trim(),
+        area: area.trim(),
         location: { ar: location.trim(), en: location.trim() },
         when,
       });
@@ -162,7 +168,23 @@ export default function NewRequest() {
         error={errors.details}
       />
 
+      <Field
+        label={t("areaLabel")}
+        value={area}
+        onChangeText={(v) => {
+          setArea(v);
+          if (errors.area) setErrors((e) => ({ ...e, area: undefined }));
+        }}
+        maxLength={120}
+        error={errors.area}
+      />
+      <AppText variant="caption" color="inkMuted">
+        {t("areaHint")}
+      </AppText>
       <Field label={t("locationLabel")} value={location} onChangeText={setLocation} maxLength={200} />
+      <AppText variant="caption" color="inkMuted">
+        {t("locationHint")}
+      </AppText>
 
       <SectionTitle title={t("whenLabel")} />
       <Chips<When>

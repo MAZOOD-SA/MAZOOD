@@ -4,13 +4,18 @@ import type { FastifyInstance } from "fastify";
 import { audit } from "../audit.ts";
 import type { Db } from "../db.ts";
 import { ApiError } from "../errors.ts";
+import { activeCities, resolveCityId } from "../cities.ts";
 import { actorOf, parse, type Ctx, type Guards } from "../http.ts";
 import { publicUser } from "./auth.ts";
 
-const REQUEST_COLUMNS = `id, category, type_id AS "typeId", details, location, needed_when AS "when", status, created_at AS "createdAt"`;
+export const REQUEST_COLUMNS = `id, category, type_id AS "typeId", details, area, location, city_id AS "cityId",
+  needed_when AS "when", status, created_at AS "createdAt"`;
 
 export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
   const { db } = ctx;
+
+  // المدن الفعّالة (عامة: ما فيها بيانات شخصية). الواجهة تبيّن اختيار المدينة لو صارت أكثر من وحدة.
+  app.get("/v1/cities", async () => ({ cities: await activeCities(db) }));
 
   app.get("/v1/me", async (req) => {
     const user = await g.authenticate(req);
@@ -21,9 +26,10 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
   app.put("/v1/factory", async (req) => {
     const { user, factoryId } = await g.requireFactory(req);
     const body = parse(factoryProfileBody, req.body);
+    const cityId = await resolveCityId(db, body.cityId);
     await db.query(
-      `UPDATE factories SET name=$2, city=$3, commercial_register=$4, vat_number=$5, updated_at=now() WHERE id=$1`,
-      [factoryId, body.name, body.city, body.commercialRegister, body.vatNumber],
+      `UPDATE factories SET name=$2, city_id=$3, commercial_register=$4, vat_number=$5, updated_at=now() WHERE id=$1`,
+      [factoryId, body.name, cityId, body.commercialRegister, body.vatNumber],
     );
     // في السجل نكتب أن الحساب تحدّث، بدون أرقام السجل والضريبة.
     await audit(db, actorOf(user), "factory.profile_updated", { type: "factory", id: factoryId });
@@ -33,10 +39,13 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
   app.post("/v1/requests", async (req, reply) => {
     const { user, factoryId } = await g.requireFactory(req);
     const body = parse(createRequestBody, req.body);
+    // المدينة: المطلوبة، أو مدينة المصنع، أو المدينة الوحيدة الفعّالة.
+    const [f] = await db.query<{ city_id: string | null }>("SELECT city_id FROM factories WHERE id=$1", [factoryId]);
+    const cityId = await resolveCityId(db, body.cityId ?? f.city_id);
     const [row] = await db.query(
-      `INSERT INTO requests (factory_id, category, type_id, details, location, needed_when)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING ${REQUEST_COLUMNS}`,
-      [factoryId, body.category, body.typeId, body.details, body.location, body.when],
+      `INSERT INTO requests (factory_id, category, type_id, details, area, location, needed_when, city_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING ${REQUEST_COLUMNS}`,
+      [factoryId, body.category, body.typeId, body.details, body.area, body.location, body.when, cityId],
     );
     await audit(db, actorOf(user), "request.created", { type: "request", id: String(row.id) }, { category: body.category });
     return reply.status(201).send({ request: row });
@@ -76,13 +85,23 @@ async function loadFactory(db: Db, factoryId: string) {
   const [f] = await db.query<{
     id: string;
     name: string | null;
-    city: string | null;
+    cityId: string | null;
+    cityAr: string | null;
+    cityEn: string | null;
     commercialRegister: string | null;
     vatNumber: string | null;
-  }>(`SELECT id, name, city, commercial_register AS "commercialRegister", vat_number AS "vatNumber" FROM factories WHERE id=$1`, [
-    factoryId,
-  ]);
-  return { ...f, profileComplete: !!(f.name && f.city && f.commercialRegister && f.vatNumber) };
+  }>(
+    `SELECT f.id, f.name, f.city_id AS "cityId", c.name_ar AS "cityAr", c.name_en AS "cityEn",
+            f.commercial_register AS "commercialRegister", f.vat_number AS "vatNumber"
+       FROM factories f LEFT JOIN cities c ON c.id = f.city_id WHERE f.id=$1`,
+    [factoryId],
+  );
+  const { cityAr, cityEn, ...rest } = f;
+  return {
+    ...rest,
+    city: f.cityId ? { ar: cityAr!, en: cityEn! } : null,
+    profileComplete: !!(f.name && f.cityId && f.commercialRegister && f.vatNumber),
+  };
 }
 
 /** طلب يخص هذا المصنع بس. لو الطلب لمصنع ثاني نرجّع «غير موجود» (مو «ممنوع») عشان ما نكشف وجوده. */

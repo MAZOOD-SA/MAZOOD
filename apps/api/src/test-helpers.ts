@@ -67,7 +67,8 @@ export const validRequest = {
   category: "transport",
   typeId: "flatbed",
   details: "نقل ماكينة من المصنع إلى الرياض",
-  location: "مدينة سدير الصناعية",
+  area: "المرحلة الثانية",
+  location: "مدينة سدير الصناعية، المرحلة الثانية، مصنع ١٤",
   when: "tomorrow",
 } as const;
 

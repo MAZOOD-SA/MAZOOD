@@ -18,7 +18,7 @@ const SIMULATED_OFFER_DELAY_MS = 5000;
 
 export type Role = "factory" | "provider" | "staff";
 
-export type FactoryProfileInput = { name: string; city: string; commercialRegister: string; vatNumber: string };
+export type FactoryProfileInput = { name: string; cityId?: string; commercialRegister: string; vatNumber: string };
 
 type StoreValue = {
   state: State;
@@ -74,7 +74,7 @@ const EMPTY: Factory = { name: { ar: "", en: "" }, city: { ar: "", en: "" }, com
 function toFactory(f: ServerFactory): Factory {
   return {
     name: { ar: f.name ?? "", en: f.name ?? "" },
-    city: { ar: f.city ?? "", en: f.city ?? "" },
+    city: f.city ?? { ar: "", en: "" },
     commercialRegister: f.commercialRegister ?? "",
     vatNumber: f.vatNumber ?? "",
   };
@@ -152,6 +152,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             category: input.category,
             typeId: input.typeId,
             details: input.details,
+            area: input.area,
             location: input.location.ar,
             when: input.when,
           },

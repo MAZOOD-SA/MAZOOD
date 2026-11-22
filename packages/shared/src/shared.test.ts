@@ -19,7 +19,10 @@ describe("normalizeSaudiMobile", () => {
 });
 
 describe("الأقسام", () => {
-  it("ستة أقسام", () => expect(CATEGORY_IDS).toHaveLength(6));
+  it("سبعة أقسام، والسابع مكافحة الحشرات والقوارض", () => {
+    expect(CATEGORY_IDS).toHaveLength(7);
+    expect(isValidCategoryType("pest_control", "rodents")).toBe(true);
+  });
   it("النوع لازم يتبع القسم", () => {
     expect(isValidCategoryType("transport", "flatbed")).toBe(true);
     expect(isValidCategoryType("transport", "plumbing")).toBe(false);
@@ -28,7 +31,7 @@ describe("الأقسام", () => {
 });
 
 describe("بيانات المصنع", () => {
-  const ok = { name: "مصنع تجريبي", city: "سدير", commercialRegister: "1010000000", vatNumber: "300000000000003" };
+  const ok = { name: "مصنع تجريبي", commercialRegister: "1010000000", vatNumber: "300000000000003" };
   it("تقبل الصحيح", () => expect(factoryProfileBody.safeParse(ok).success).toBe(true));
   it("ترفض رقم ضريبي لا يبدأ وينتهي بـ ٣", () => expect(factoryProfileBody.safeParse({ ...ok, vatNumber: "400000000000004" }).success).toBe(false));
   it("ترفض سجل ليس ١٠ أرقام", () => expect(factoryProfileBody.safeParse({ ...ok, commercialRegister: "12345" }).success).toBe(false));

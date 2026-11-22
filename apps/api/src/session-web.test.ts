@@ -39,7 +39,7 @@ describe("جلسة الموقع في كوكي محمي", () => {
 
   it("طلب يغيّر شي بالكوكي وبدون رأس الحماية ينرفض، ومعه يمر", async () => {
     const cookie = cookieFrom((await webSignIn(ctx, "0511000002")).headers["set-cookie"]);
-    const profile = { name: "مصنع تجريبي", city: "سدير", commercialRegister: "1010000000", vatNumber: "300000000000003" };
+    const profile = { name: "مصنع تجريبي", commercialRegister: "1010000000", vatNumber: "300000000000003" };
     const bad = await ctx.app.inject({ method: "PUT", url: "/v1/factory", headers: { cookie }, payload: profile });
     expect(bad.statusCode).toBe(403);
     expect(bad.json().error.code).toBe("csrf");
