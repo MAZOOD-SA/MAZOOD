@@ -29,6 +29,8 @@ export const otpRequestSchema = z.object({ phone: phoneSchema });
 
 export const otpVerifySchema = z.object({
   phone: phoneSchema,
+  /** اسم الجهاز للعرض في «أجهزتي». اختياري، ونقبله كنص قصير بس. */
+  deviceName: cleanText(1, 60, "invalid_input").optional(),
   code: z
     .string()
     .max(10, "code_invalid")

@@ -2,17 +2,21 @@
 // main.ts يشغّله للناس، والاختبارات تشغّله بنسخة خاصة (buildApp) بدون ما تفتح منفذ.
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyServerOptions } from "fastify";
-import { resolveUser } from "./auth";
+import { CSRF_HEADER, CSRF_VALUE, resolveUser } from "./auth";
 import type { AppContext } from "./context";
-import { registerErrorHandler } from "./errors";
+import { HttpError, registerErrorHandler } from "./errors";
 import { authRoutes } from "./routes/auth";
 import { factoryRoutes } from "./routes/factory";
 import { requestRoutes } from "./routes/requests";
+import { sessionRoutes } from "./routes/sessions";
+
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 /** كل مسارات الخادم تحت هذا البادئ، والموقع يأخذ باقي العناوين. */
 export const API_PREFIX = "/api/v1";
@@ -50,7 +54,9 @@ export async function buildApp(ctx: AppContext, opts: FastifyServerOptions = {})
   });
 
   const allowed = origins(config.CORS_ORIGINS);
-  if (allowed.length) await app.register(cors, { origin: allowed, methods: ["GET", "POST", "PUT", "PATCH"] });
+  // credentials: الموقع وقت التطوير على منفذ ثاني (8081)، ويحتاج يرسل ملف تعريف الجلسة.
+  if (allowed.length) await app.register(cors, { origin: allowed, methods: ["GET", "POST", "PUT", "PATCH"], credentials: true });
+  await app.register(cookie);
 
   // حد عام للطلبات. المسارات الحساسة (الدخول، ورفع الطلبات) لها حدود أشد داخلها.
   // الحد يُحسب **لكل مستخدم** إذا كان داخل، ولكل عنوان IP قبل الدخول. السبب: موظفين كثير في
@@ -65,7 +71,12 @@ export async function buildApp(ctx: AppContext, opts: FastifyServerOptions = {})
 
   app.decorateRequest("user", null);
   app.addHook("onRequest", async (req) => {
-    if (req.url.startsWith(API_PREFIX)) req.user = await resolveUser(ctx.db, req);
+    if (!req.url.startsWith(API_PREFIX)) return;
+    req.user = await resolveUser(ctx.db, req);
+    // حماية CSRF: طلب يغيّر شي ويعتمد على ملف التعريف لازم يحمل رأسنا الخاص (شرحها في auth.ts).
+    if (req.user?.via === "cookie" && !SAFE_METHODS.has(req.method) && req.headers[CSRF_HEADER] !== CSRF_VALUE) {
+      throw new HttpError(403, "csrf");
+    }
   });
 
   await app.register(
@@ -78,6 +89,7 @@ export async function buildApp(ctx: AppContext, opts: FastifyServerOptions = {})
       await authRoutes(api, ctx);
       await factoryRoutes(api, ctx);
       await requestRoutes(api, ctx);
+      await sessionRoutes(api, ctx);
     },
     { prefix: API_PREFIX },
   );

@@ -3,7 +3,8 @@ import type { ConfigDto, FactoryProfileInput, Me, OtpRequestResponse, SessionRes
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { clearLocalCache, persistOptions, queryClient } from "./cache";
-import { api, ApiRequestError, setApiToken, setUnauthorizedHandler } from "./client";
+import { api, ApiRequestError, IS_WEB, setApiToken, setUnauthorizedHandler } from "./client";
+import { deviceName } from "./device";
 import { clearDraft } from "./draft";
 import { loadCachedMe, loadToken, saveCachedMe, saveToken } from "./tokenStore";
 
@@ -39,8 +40,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     api<ConfigDto>("GET", "/config").then(setConfig, () => {});
     (async () => {
       const [saved, cached] = await Promise.all([loadToken(), loadCachedMe()]);
-      if (!saved) return setLoading(false);
-      setApiToken(saved);
+      // الجوال بدون رمز = مو داخل. الموقع ما يعرف إلا لما يسأل الخادم (ملف التعريف ما ينقرى من الصفحة).
+      if (!saved && !IS_WEB) return setLoading(false);
+      if (saved) setApiToken(saved);
       // فتح فوري: نعرض الحساب المحفوظ على الجهاز، ونتحقق من الخادم في الخلفية.
       if (cached) {
         setMe(cached);
@@ -67,11 +69,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       config,
       requestCode: (phone) => api<OtpRequestResponse>("POST", "/auth/otp/request", { phone }),
       verifyCode: async (phone, code) => {
-        const s = await api<SessionResponse>("POST", "/auth/otp/verify", { phone, code });
+        const s = await api<SessionResponse>("POST", "/auth/otp/verify", { phone, code, deviceName: deviceName() });
         // جهاز مشترك: لو دخل مستخدم ثاني، ما يشوف أي بيانات محفوظة من اللي قبله.
         await clearLocalCache();
-        setApiToken(s.token);
-        await saveToken(s.token);
+        if (s.token) {
+          setApiToken(s.token);
+          await saveToken(s.token);
+        }
         await saveCachedMe(s.me);
         setMe(s.me);
         return s.me;

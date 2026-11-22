@@ -9,7 +9,8 @@
 import { localeSchema, otpRequestSchema, otpVerifySchema, type Me, type OtpRequestResponse, type SessionResponse } from "@mazood/shared";
 import type { FastifyInstance } from "fastify";
 import { audit } from "../audit";
-import { requireUser, SESSION_TTL_MS } from "../auth";
+import { requireUser, SESSION_COOKIE, SESSION_TTL_MS } from "../auth";
+import type { Config } from "../config";
 import type { AppContext } from "../context";
 import { HttpError, parse } from "../errors";
 import { generateOtpCode, generateSessionToken, hashOtp, hashSessionToken, safeEqualHex } from "../security";
@@ -60,8 +61,10 @@ export async function authRoutes(app: FastifyInstance, ctx: AppContext) {
     };
   });
 
-  app.post("/auth/otp/verify", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (req): Promise<SessionResponse> => {
-    const { phone, code } = parse(otpVerifySchema, req.body);
+  app.post("/auth/otp/verify", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (req, reply): Promise<SessionResponse> => {
+    const { phone, code, deviceName } = parse(otpVerifySchema, req.body);
+    // الموقع يعرّف نفسه بالرأس X-Client: web، فيستلم الجلسة في ملف تعريف محمي بدل ما ترجع في الرد.
+    const isWeb = req.headers["x-client"] === "web";
     const now = clock.now();
 
     const challenge = await db.otpChallenge.findFirst({
@@ -94,7 +97,14 @@ export async function authRoutes(app: FastifyInstance, ctx: AppContext) {
     const token = generateSessionToken();
     const expiresAt = new Date(now.getTime() + SESSION_TTL_MS);
     const session = await db.session.create({
-      data: { userId: user.id, tokenHash: hashSessionToken(token), expiresAt, userAgent: req.headers["user-agent"]?.slice(0, 300) ?? null },
+      data: {
+        userId: user.id,
+        tokenHash: hashSessionToken(token),
+        expiresAt,
+        userAgent: req.headers["user-agent"]?.slice(0, 300) ?? null,
+        deviceName: deviceName ?? null,
+        channel: isWeb ? "web" : "app",
+      },
     });
     await audit(db, {
       actorUserId: user.id,
@@ -104,12 +114,18 @@ export async function authRoutes(app: FastifyInstance, ctx: AppContext) {
       ip: req.ip,
     });
 
-    return { token, expiresAt: expiresAt.toISOString(), me: await loadMe(ctx, user.id) };
+    const me = await loadMe(ctx, user.id);
+    if (isWeb) {
+      reply.setCookie(SESSION_COOKIE, token, sessionCookieOptions(config.APP_ENV, SESSION_TTL_MS));
+      return { expiresAt: expiresAt.toISOString(), me };
+    }
+    return { token, expiresAt: expiresAt.toISOString(), me };
   });
 
-  app.post("/auth/logout", async (req) => {
+  app.post("/auth/logout", async (req, reply) => {
     const u = requireUser(req);
     await db.session.update({ where: { id: u.sessionId }, data: { revokedAt: clock.now() } });
+    reply.clearCookie(SESSION_COOKIE, sessionCookieOptions(config.APP_ENV, 0));
     await audit(db, { actorUserId: u.id, action: "auth.signed_out", entityType: "session", entityId: u.sessionId, ip: req.ip });
     return { ok: true };
   });
@@ -136,5 +152,22 @@ export async function loadMe({ db }: AppContext, userId: string): Promise<Me> {
     role: user.role,
     locale: user.locale === "en" ? "en" : "ar",
     factory: factory ? factoryDto(factory) : null,
+  };
+}
+
+/**
+ * إعدادات ملف تعريف الجلسة في الموقع:
+ *   - HttpOnly: كود الصفحة ما يقدر يقراه.
+ *   - SameSite=Strict: المتصفح ما يرسله مع طلبات جاية من مواقع ثانية.
+ *   - Secure: ما ينرسل إلا عبر HTTPS (في التجريبي والإنتاج. على جهاز المبرمج العنوان http).
+ *   - Path=/api: ما ينرسل إلا لمسارات الخادم.
+ */
+export function sessionCookieOptions(appEnv: Config["APP_ENV"], maxAgeMs: number) {
+  return {
+    httpOnly: true,
+    sameSite: "strict" as const,
+    secure: appEnv === "staging" || appEnv === "production",
+    path: "/api",
+    maxAge: Math.floor(maxAgeMs / 1000),
   };
 }

@@ -183,6 +183,20 @@ const ar = {
   draftRestored: "استرجعنا مسودة طلبك السابق.",
   discardDraft: "ابدأ طلبًا جديدًا",
   viewRequests: "اعرض طلباتك",
+
+  // أجهزتي
+  devicesTitle: "الأجهزة المسجّل دخولها",
+  devicesHint: "إذا رأيت جهازًا لا تعرفه، سجّل الخروج منه.",
+  thisDevice: "هذا الجهاز",
+  unknownDevice: "جهاز غير معروف",
+  lastActive: "آخر نشاط {time}",
+  signOutDevice: "سجّل الخروج",
+  signOutOthers: "سجّل الخروج من الأجهزة الأخرى",
+  signOutOthersTitle: "تسجيل الخروج من الأجهزة الأخرى؟",
+  signOutOthersBody: "سيُطلب من كل جهاز آخر تسجيل الدخول من جديد. يبقى هذا الجهاز مسجّلًا.",
+  toastDeviceSignedOut: "تم تسجيل الخروج من الجهاز.",
+  toastOthersSignedOut: "تم تسجيل الخروج من الأجهزة الأخرى.",
+  err_csrf: "تعذّر التحقق من الطلب. حدّث الصفحة وحاول مرة أخرى.",
 };
 
 export type StringKey = keyof typeof ar;
@@ -356,6 +370,19 @@ const en: Record<StringKey, string> = {
   draftRestored: "We restored your previous draft.",
   discardDraft: "Start a new request",
   viewRequests: "View your requests",
+
+  devicesTitle: "Signed-in devices",
+  devicesHint: "If you see a device you don't recognize, sign it out.",
+  thisDevice: "This device",
+  unknownDevice: "Unknown device",
+  lastActive: "Last active {time}",
+  signOutDevice: "Sign out",
+  signOutOthers: "Sign out other devices",
+  signOutOthersTitle: "Sign out other devices?",
+  signOutOthersBody: "Every other device will need to sign in again. This device stays signed in.",
+  toastDeviceSignedOut: "Device signed out.",
+  toastOthersSignedOut: "Other devices signed out.",
+  err_csrf: "We couldn't verify the request. Refresh the page and try again.",
 };
 
 export const strings = { ar, en };

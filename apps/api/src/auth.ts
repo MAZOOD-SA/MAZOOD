@@ -1,8 +1,15 @@
 // التحقق من الدخول والصلاحيات. **هنا تُطبّق الصلاحيات، مو في الواجهة.**
 //
-// كل طلب للخادم لازم يحمل رمز الجلسة في الرأس: Authorization: Bearer <token>
+// رمز الجلسة يوصل بطريقتين:
+//   - تطبيق الجوال: في الرأس Authorization: Bearer <token> (الرمز محفوظ في خزنة الجوال).
+//   - الموقع: في ملف تعريف محمي mz_session (HttpOnly)، ما يقدر أي كود في الصفحة يقراه،
+//     فلو صار في الموقع ثغرة XSS ما ينسرق الرمز.
 // الخادم يحسب بصمة الرمز ويدوّرها في جدول الجلسات. إذا الجلسة منتهية أو ملغية
 // أو الحساب موقوف، يرجع ٤٠١ والتطبيق يرجّع المستخدم لشاشة الدخول.
+//
+// حماية الموقع من الطلبات المزوّرة (CSRF): أي طلب يغيّر شي ويعتمد على ملف التعريف لازم يحمل
+// الرأس X-Requested-With: mazood. المتصفح ما يسمح لموقع ثاني يرسل هذا الرأس لخادمنا
+// (سياسة CORS)، فموقع خبيث ما يقدر يستغل جلسة المستخدم. وفوقها ملف التعريف SameSite=Strict.
 import type { FastifyRequest } from "fastify";
 import type { Db } from "./db";
 import { HttpError } from "./errors";
@@ -22,7 +29,15 @@ export type AuthUser = {
   sessionId: string;
   /** المصنع اللي يتبعه المستخدم، إذا كمّل بيانات المصنع. */
   factoryId: string | null;
+  /** من وين جا رمز الجلسة. */
+  via: "bearer" | "cookie";
 };
+
+export const SESSION_COOKIE = "mz_session";
+export const CSRF_HEADER = "x-requested-with";
+export const CSRF_VALUE = "mazood";
+
+const TOKEN_FORMAT = /^[A-Za-z0-9_-]{20,100}$/;
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -35,12 +50,18 @@ function bearerToken(req: FastifyRequest): string | null {
   if (!h || !h.startsWith("Bearer ")) return null;
   const token = h.slice(7).trim();
   // رموزنا ٤٣ حرف base64url. أي شي ثاني نرفضه قبل ما نلمس قاعدة البيانات.
-  return /^[A-Za-z0-9_-]{20,100}$/.test(token) ? token : null;
+  return TOKEN_FORMAT.test(token) ? token : null;
+}
+
+function cookieToken(req: FastifyRequest): string | null {
+  const v = req.cookies?.[SESSION_COOKIE];
+  return v && TOKEN_FORMAT.test(v) ? v : null;
 }
 
 /** يقرأ المستخدم من رمز الجلسة. يرجع null إذا ما فيه جلسة صالحة. */
 export async function resolveUser(db: Db, req: FastifyRequest): Promise<AuthUser | null> {
-  const token = bearerToken(req);
+  const bearer = bearerToken(req);
+  const token = bearer ?? cookieToken(req);
   if (!token) return null;
   const session = await db.session.findUnique({
     where: { tokenHash: hashSessionToken(token) },
@@ -61,6 +82,7 @@ export async function resolveUser(db: Db, req: FastifyRequest): Promise<AuthUser
     locale: u.locale === "en" ? "en" : "ar",
     sessionId: session.id,
     factoryId: u.factoryMembers[0]?.factoryId ?? null,
+    via: bearer ? "bearer" : "cookie",
   };
 }
 

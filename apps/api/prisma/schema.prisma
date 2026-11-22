@@ -96,6 +96,10 @@ model Session {
   revokedAt  DateTime? @map("revoked_at")
   lastUsedAt DateTime  @default(now()) @map("last_used_at")
   userAgent  String?   @map("user_agent")
+  /// اسم الجهاز للعرض في «أجهزتي» (مثل «iPhone» أو «Chrome على Windows»). يرسله التطبيق.
+  deviceName String?   @map("device_name")
+  /// web: الجلسة في ملف تعريف محمي (HttpOnly). app: رمز في خزنة الجوال.
+  channel    String    @default("app")
   createdAt  DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

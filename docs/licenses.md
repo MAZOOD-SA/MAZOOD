@@ -42,6 +42,7 @@
 | المكتبة | الإصدار | الرخصة |
 | --- | --- | --- |
 | fastify | 5.12.8 | MIT |
+| @fastify/cookie | 11.1.5 | MIT |
 | @fastify/cors | 11.4.3 | MIT |
 | @fastify/helmet | 13.2.0 | MIT |
 | @fastify/rate-limit | 11.3.0 | MIT |

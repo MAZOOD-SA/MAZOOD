@@ -7,6 +7,7 @@ export { default as IconBell } from "@tabler/icons-react-native/icons/IconBell";
 export { default as IconCalendar } from "@tabler/icons-react-native/icons/IconCalendar";
 export { default as IconCircleCheck } from "@tabler/icons-react-native/icons/IconCircleCheck";
 export { default as IconClipboardList } from "@tabler/icons-react-native/icons/IconClipboardList";
+export { default as IconDeviceMobile } from "@tabler/icons-react-native/icons/IconDeviceMobile";
 export { default as IconDownload } from "@tabler/icons-react-native/icons/IconDownload";
 export { default as IconFileCertificate } from "@tabler/icons-react-native/icons/IconFileCertificate";
 export { default as IconFileInvoice } from "@tabler/icons-react-native/icons/IconFileInvoice";

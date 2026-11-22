@@ -30,7 +30,22 @@ export type Me = {
   factory: FactoryDto | null;
 };
 
-export type SessionResponse = { token: string; expiresAt: string; me: Me };
+/**
+ * رد الدخول. في الجوال: الرمز يرجع هنا ويتحفظ في الخزنة المشفّرة.
+ * في الموقع: الرمز ما يرجع أبدًا، والخادم يحطه في ملف تعريف محمي (HttpOnly) ما يقدر كود الصفحة يقراه.
+ */
+export type SessionResponse = { token?: string; expiresAt: string; me: Me };
+
+/** جلسة دخول لعرضها في «أجهزتي». */
+export type SessionDto = {
+  id: string;
+  deviceName: string | null;
+  channel: "web" | "app";
+  createdAt: string;
+  lastUsedAt: string;
+  /** هذا الجهاز اللي يتصفح الحين. */
+  current: boolean;
+};
 
 export type FactoryDto = {
   id: string;

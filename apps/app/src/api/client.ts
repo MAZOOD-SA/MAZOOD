@@ -10,6 +10,12 @@ import { setServerReachable } from "./connection";
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === "web" ? "/api/v1" : "http://localhost:3000/api/v1");
 
+/**
+ * الموقع: الجلسة في ملف تعريف محمي (HttpOnly) يرسله المتصفح بنفسه، والتطبيق ما يشوف الرمز أبدًا.
+ * الجوال: الرمز في خزنة الجوال، ويرسله التطبيق في رأس Authorization.
+ */
+export const IS_WEB = Platform.OS === "web";
+
 /** خطأ من الخادم برمز ثابت (مثل "code_wrong")، والشاشة تترجمه برسالة. */
 export class ApiRequestError extends Error {
   constructor(
@@ -44,7 +50,12 @@ export async function api<T>(method: Method, path: string, body?: unknown): Prom
       headers: {
         ...(body !== undefined ? { "content-type": "application/json" } : {}),
         ...(token ? { authorization: `Bearer ${token}` } : {}),
+        // حماية الموقع من الطلبات المزوّرة (CSRF). الشرح في apps/api/src/auth.ts.
+        "x-requested-with": "mazood",
+        ...(IS_WEB ? { "x-client": "web" } : {}),
       },
+      // الموقع وقت التطوير على منفذ ثاني، ولازم يرسل ملف تعريف الجلسة معه.
+      credentials: IS_WEB ? "include" : undefined,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
@@ -54,7 +65,7 @@ export async function api<T>(method: Method, path: string, body?: unknown): Prom
   setServerReachable(true);
   const data = (await res.json().catch(() => null)) as (T & ApiError) | null;
   if (!res.ok) {
-    if (res.status === 401 && token) onUnauthorized?.();
+    if (res.status === 401 && (token || IS_WEB)) onUnauthorized?.();
     throw new ApiRequestError(res.status, data?.error ?? "server_error", data?.field, data?.retryAfterSeconds);
   }
   return data as T;

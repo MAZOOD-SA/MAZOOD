@@ -1,8 +1,7 @@
 // حفظ رمز الجلسة على الجهاز.
 //   - الجوال: في الخزنة المشفّرة للنظام (Keychain في iPhone وKeystore في Android).
-//   - الموقع: في تخزين المتصفح. أضعف من الخزنة، فالجلسة محدودة بـ ٣٠ يوم، والخادم
-//     يقدر يلغيها. قبل الإطلاق (المرحلة ٨) ننقل الموقع لملف تعريف (cookie) محمي.
-//     القرار وأسبابه في docs/decisions.md.
+//   - الموقع: **ما نحفظ الرمز أبدًا.** الخادم يحطه في ملف تعريف محمي (HttpOnly) ما يقدر
+//     كود الصفحة يقراه (القرار ١٥ في docs/decisions.md).
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import type { Me } from "@mazood/shared";
@@ -12,7 +11,12 @@ const KEY = "mazood.session";
 
 export async function loadToken(): Promise<string | null> {
   try {
-    return Platform.OS === "web" ? await AsyncStorage.getItem(KEY) : await SecureStore.getItemAsync(KEY);
+    if (Platform.OS === "web") {
+      // نسخ قديمة من الموقع كانت تحفظ الرمز في تخزين المتصفح: نمسحه.
+      await AsyncStorage.removeItem(KEY);
+      return null;
+    }
+    return await SecureStore.getItemAsync(KEY);
   } catch {
     return null;
   }
@@ -20,10 +24,8 @@ export async function loadToken(): Promise<string | null> {
 
 export async function saveToken(token: string | null): Promise<void> {
   try {
-    if (Platform.OS === "web") {
-      if (token) await AsyncStorage.setItem(KEY, token);
-      else await AsyncStorage.removeItem(KEY);
-    } else if (token) await SecureStore.setItemAsync(KEY, token);
+    if (Platform.OS === "web") return;
+    if (token) await SecureStore.setItemAsync(KEY, token);
     else await SecureStore.deleteItemAsync(KEY);
   } catch {
     // ما انحفظ: المستخدم بيحتاج يدخل مرة ثانية بعد ما يقفل التطبيق، بس التطبيق يكمل عادي.

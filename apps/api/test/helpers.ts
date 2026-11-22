@@ -69,19 +69,19 @@ export async function makeTestApp(env: Record<string, string> = {}) {
 
   // كل اختبار من عنوان IP مختلف، عشان حدود المحاولات لكل IP ما تتداخل بين الاختبارات.
   const ip = randomIp();
-  type Opts = { token?: string; body?: unknown; ip?: string };
+  type Opts = { token?: string; body?: unknown; ip?: string; headers?: Record<string, string> };
   const call = async (method: "GET" | "POST" | "PUT" | "PATCH", path: string, o: Opts = {}) => {
     const res = await app.inject({
       method,
       url: `${API_PREFIX}${path}`,
       remoteAddress: o.ip ?? ip,
-      headers: o.token ? { authorization: `Bearer ${o.token}` } : {},
+      headers: { ...(o.token ? { authorization: `Bearer ${o.token}` } : {}), ...o.headers },
       ...(o.body !== undefined ? { payload: o.body as object } : {}),
     });
     return { status: res.statusCode, body: res.body ? res.json() : null, headers: res.headers };
   };
 
-  async function signIn(phone = randomPhone()): Promise<SessionResponse & { phone: string }> {
+  async function signIn(phone = randomPhone()): Promise<SessionResponse & { token: string; phone: string }> {
     // كل دخول من عنوان مختلف، عشان حد المحاولات لكل عنوان ما يوقف الاختبارات نفسها.
     const ip = randomIp();
     const r = await call("POST", "/auth/otp/request", { body: { phone }, ip });
