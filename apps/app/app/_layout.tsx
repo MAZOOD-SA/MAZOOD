@@ -13,6 +13,7 @@ import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { OfflineBanner, PrototypeBanner } from "@/components/layout";
 import { AccountCard, NavShell, navItemsFor } from "@/components/nav";
+import { useSellerEnabled } from "@/components/market";
 import { Button } from "@/components/ui";
 import { IconPlus } from "@/components/icons";
 import { can } from "@mazood/shared";
@@ -56,7 +57,8 @@ function Shell() {
   // القائمة الجانبية (تابلت وكمبيوتر) للمستخدم الداخل، على كل الشاشات بما فيها التفاصيل.
   // جنب «طلباتي»: عدد العروض اللي ما انفتحت، عشان المصنع يعرف من أي شاشة إن فيه جديد.
   const newOffers = state.requests.reduce((n, r) => n + (r.newOfferCount ?? 0), 0);
-  const items = state.signedIn ? navItemsFor(role, t, (p) => can(staffRole, p), { newOffers }) : [];
+  const seller = useSellerEnabled();
+  const items = state.signedIn ? navItemsFor(role, t, (p) => can(staffRole, p), { newOffers, seller }) : [];
   const phone = state.phone ? digits(`0${state.phone.slice(4)}`) : "";
   const accountTitle = role === "factory" && profileComplete ? tl(factory.name) : phone;
   const roleLabel = role === "factory" ? t("factory") : role === "provider" ? t("providerAccount") : t("staffAccount");

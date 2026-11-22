@@ -14,6 +14,8 @@ import type { StringKey } from "@/i18n/strings";
 import type { Permission } from "@mazood/shared";
 import {
   IconBriefcase,
+  IconBuildingStore,
+  IconShoppingBag,
   IconClipboardList,
   IconFileInvoice,
   IconHistory,
@@ -131,14 +133,15 @@ export function navItemsFor(
   role: "factory" | "provider" | "staff" | null,
   t: (k: StringKey) => string,
   allowed: (p: Permission) => boolean,
-  counts: { newOffers?: number } = {},
+  counts: { newOffers?: number; seller?: boolean } = {},
 ): NavItem[] {
   if (role === "factory")
     return [
       { href: "/home", label: t("tabHome"), icon: IconHome, also: ["/request/new", "/notifications"] },
-      { href: "/requests", label: t("tabRequests"), icon: IconClipboardList, also: ["/request"], badge: counts.newOffers },
-      { href: "/invoices", label: t("tabInvoices"), icon: IconFileInvoice, also: ["/invoice"] },
-      { href: "/account", label: t("tabAccount"), icon: IconUser, also: ["/factory-profile"] },
+      { href: "/requests", label: t("tabRequests"), icon: IconClipboardList, also: ["/request", "/purchase"], badge: counts.newOffers },
+      { href: "/shop", label: t("tabMarket"), icon: IconShoppingBag, also: ["/market"] },
+      ...(counts.seller ? [{ href: "/store" as const, label: t("tabStore"), icon: IconBuildingStore, also: ["/seller"] }] : []),
+      { href: "/account", label: t("tabAccount"), icon: IconUser, also: ["/factory-profile", "/invoices", "/invoice"] },
     ];
   if (role === "provider")
     return [

@@ -1,7 +1,9 @@
-// تنقّل المصنع: الرئيسية، وطلباتي، والفواتير، وحسابي (كما في brand/reference.html).
+// تنقّل العميل: الرئيسية، وطلباتي، والسوق، ومتجري (للمنشأة اللي فعّلت البيع)، وحسابي (خطة السوق، القسم ٥).
+// الفواتير انتقلت داخل «حسابي» عشان التبويبات ما تزيد عن ٥.
 // في الجوال تبويبات تحت، وفي التابلت والكمبيوتر القائمة الجانبية (NavShell في app/_layout.tsx) والتبويبات تختفي.
 import { fontFamilyByWeight } from "@mazood/brand";
-import { IconClipboardList, IconFileInvoice, IconHome, IconUser } from "@/components/icons";
+import { IconBuildingStore, IconClipboardList, IconHome, IconShoppingBag, IconUser } from "@/components/icons";
+import { useSellerEnabled } from "@/components/market";
 import { Redirect, Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useStore } from "@/data/store";
@@ -10,12 +12,16 @@ import { homeRouteFor } from "@/lib/home-route";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useTheme } from "@/theme/ThemeProvider";
 
+/** تبويب موجود (رابطه يشتغل) بس زرّه مخفي من الشريط. */
+const HIDDEN = { tabBarButton: () => null, tabBarItemStyle: { display: "none" as const } };
+
 export default function TabsLayout() {
   const { colors } = useTheme();
   const { t } = useI18n();
   const { state, ready, role } = useStore();
   const insets = useSafeAreaInsets();
   const { sidebar } = useLayout();
+  const seller = useSellerEnabled();
 
   // الشاشات هذي للمستخدم الداخل بس.
   if (!ready) return null;
@@ -38,7 +44,13 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="home" options={{ title: t("tabHome"), tabBarIcon: ({ color }) => <IconHome size={22} color={color} strokeWidth={1.75} /> }} />
       <Tabs.Screen name="requests" options={{ title: t("tabRequests"), tabBarIcon: ({ color }) => <IconClipboardList size={22} color={color} strokeWidth={1.75} /> }} />
-      <Tabs.Screen name="invoices" options={{ title: t("tabInvoices"), tabBarIcon: ({ color }) => <IconFileInvoice size={22} color={color} strokeWidth={1.75} /> }} />
+      <Tabs.Screen name="shop" options={{ title: t("tabMarket"), tabBarIcon: ({ color }) => <IconShoppingBag size={22} color={color} strokeWidth={1.75} /> }} />
+      {/* نخفي الزر بس (مو href: null)، عشان الرابط المباشر للشاشة يشتغل (مثل /invoices بعد تحديث الصفحة). */}
+      <Tabs.Screen
+        name="store"
+        options={{ title: t("tabStore"), tabBarIcon: ({ color }) => <IconBuildingStore size={22} color={color} strokeWidth={1.75} />, ...(seller ? {} : HIDDEN) }}
+      />
+      <Tabs.Screen name="invoices" options={{ title: t("tabInvoices"), ...HIDDEN }} />
       <Tabs.Screen name="account" options={{ title: t("tabAccount"), tabBarIcon: ({ color }) => <IconUser size={22} color={color} strokeWidth={1.75} /> }} />
     </Tabs>
   );

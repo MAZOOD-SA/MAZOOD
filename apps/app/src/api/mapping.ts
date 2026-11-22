@@ -63,7 +63,9 @@ export type ErrorKey =
   | "errPriceChangePending" | "errCancellationPending" | "errAlreadyRated" | "errInvalidTransition" | "errDeletionPending"
   | "errDemoUnsupported" | "errPhotosLimit" | "errPhotoNotAllowed" | "errPhoneInUse" | "errProviderNotVerified" | "errNotFound"
   | "errPriceUnchanged" | "errManagerApproval" | "errProviderUnavailable"
-  | "errProfileIncomplete" | "errIdentityUnverified" | "errKindLocked" | "errIndividualNoMembers";
+  | "errProfileIncomplete" | "errIdentityUnverified" | "errKindLocked" | "errIndividualNoMembers"
+  | "errProductsLimit" | "errImagesLimit" | "errBelowMinOrder" | "errOwnProduct" | "errSellerNotEnabled" | "errProductRemoved"
+  | "errMarketBuyerNotAllowed" | "errSellerBusinessOnly";
 
 export function errorKey(code: string): ErrorKey {
   switch (code) {
@@ -147,6 +149,22 @@ export function errorKey(code: string): ErrorKey {
       return "errKindLocked";
     case "individual_no_members":
       return "errIndividualNoMembers";
+    case "products_limit":
+      return "errProductsLimit";
+    case "images_limit":
+      return "errImagesLimit";
+    case "below_min_order":
+      return "errBelowMinOrder";
+    case "own_product":
+      return "errOwnProduct";
+    case "seller_not_enabled":
+      return "errSellerNotEnabled";
+    case "product_removed":
+      return "errProductRemoved";
+    case "market_buyer_not_allowed":
+      return "errMarketBuyerNotAllowed";
+    case "seller_business_only":
+      return "errSellerBusinessOnly";
     case "network":
       return "networkError";
     case "request_not_cancellable":

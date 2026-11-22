@@ -1,6 +1,9 @@
-// طلباتي: كل طلبات المصنع، مع تصفية حسب المرحلة. اللي فيها عروض جديدة تطلع فوق.
+// طلباتي: طلبات الخدمات وطلبات الشراء من السوق في مكان واحد (خطة السوق، القسم ٥)، مع تصفية.
+// الخدمات: اللي فيها عروض جديدة تطلع فوق. الشراء: الأحدث أول.
 import { router } from "expo-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import type { PurchaseRequest } from "@/api/market-types";
+import { PurchaseCard } from "@/components/market";
 import { RequestCard, sortRequests } from "@/components/domain";
 import { useAutoRefresh } from "@/components/flow";
 import { Grid, Screen } from "@/components/layout";
@@ -22,9 +25,15 @@ const GROUPS: Record<Exclude<Filter, "all">, RequestStatus[]> = {
 
 export default function Requests() {
   const { t } = useI18n();
-  const { state, refreshRequests } = useStore();
+  const { state, refreshRequests, authed } = useStore();
   const [filter, setFilter] = useState<Filter>("all");
-  useAutoRefresh(refreshRequests);
+  const [kind, setKind] = useState<"services" | "purchases">("services");
+  const [purchases, setPurchases] = useState<PurchaseRequest[]>([]);
+  const loadPurchases = useCallback(
+    () => authed<{ purchaseRequests: PurchaseRequest[] }>("/v1/market/purchase-requests").then((r) => setPurchases(r.purchaseRequests)).catch(() => {}),
+    [authed],
+  );
+  useAutoRefresh(() => Promise.all([refreshRequests(), loadPurchases()]));
   const { sidebar } = useLayout();
   const list = sortRequests(state.requests.filter((r) => filter === "all" || GROUPS[filter].includes(r.status)));
 
@@ -36,6 +45,28 @@ export default function Requests() {
       // في التابلت والكمبيوتر «طلب جديد» موجود في القائمة الجانبية.
       headerAction={sidebar ? undefined : <Button label={t("newRequestShort")} icon={IconPlus} variant="secondary" onPress={() => router.push("/request/new")} />}
     >
+      <Chips<"services" | "purchases">
+        value={kind}
+        onChange={setKind}
+        options={[
+          { value: "services", label: t("servicesTab") },
+          { value: "purchases", label: t("purchasesTab") },
+        ]}
+      />
+      {kind === "purchases" ? (
+        purchases.length === 0 ? (
+          <AppText variant="bodySm" color="inkMuted">
+            {t("noPurchases")}
+          </AppText>
+        ) : (
+          <Grid minItemWidth={320} max={2}>
+            {purchases.map((p) => (
+              <PurchaseCard key={p.id} purchase={p} viewer="buyer" onPress={() => router.push(`/purchase/${p.id}`)} />
+            ))}
+          </Grid>
+        )
+      ) : (
+      <>
       <Chips<Filter>
         value={filter}
         onChange={setFilter}
@@ -56,6 +87,8 @@ export default function Requests() {
             <RequestCard key={r.id} request={r} onPress={() => router.push(`/request/${r.id}`)} />
           ))}
         </Grid>
+      )}
+      </>
       )}
     </Screen>
   );

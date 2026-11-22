@@ -179,7 +179,16 @@
 | `verify.tsx` | `/verify` | رمز التحقق |
 | `(tabs)/home.tsx` | `/home` | الرئيسية |
 | `(tabs)/requests.tsx` | `/requests` | طلباتي |
-| `(tabs)/invoices.tsx` | `/invoices` | الفواتير |
+| `(tabs)/invoices.tsx` | `/invoices` | الفواتير (زرّها مخفي من الشريط، وتنفتح من «حسابي») |
+| `(tabs)/shop.tsx` | `/shop` | تبويب «السوق» للعميل الداخل (نفس `src/screens/MarketBrowse.tsx`) |
+| `(tabs)/store.tsx` | `/store` | «متجري»: التفعيل، وخطوات الظهور، والسجل، والاشتراك، وطلبات الشراء الواصلة، ومنتجاتي. التبويب يظهر بس للمنشأة اللي فعّلت البيع |
+| `market/index.tsx` | `/market` | **الصفحة العامة للسوق** (بدون دخول): البحث والتصنيفات والمنتجات |
+| `market/[id].tsx` | `/market/:id` | صفحة المنتج (بدون دخول). «اطلب سعر» هو الزر الكهرماني |
+| `market/seller/[id].tsx` | `/market/seller/:id` | صفحة المصنع البائع (بدون دخول) |
+| `purchase/new.tsx` | `/purchase/new?product=ID` | «اطلب سعر»: الكمية والموعد والملاحظة، مع تقدير من السعر المعلن |
+| `purchase/[id].tsx` | `/purchase/:id` | طلب الشراء للمشتري: رد المصنع والأزرار من الخادم (`actions`) والتواصل بعد الاتفاق |
+| `seller/product.tsx` | `/seller/product[?id=]` | إضافة منتج أو تعديله وصوره وإخفاؤه |
+| `seller/purchase/[id].tsx` | `/seller/purchase/:id` | طلب شراء واصل للبائع: الرد بسعر ومدة وتوصيل، أو الاعتذار |
 | `(tabs)/account.tsx` | `/account` | حسابي: بيانات المصنع، وموظفين المصنع، واللغة والمظهر، وطلب حذف الحساب |
 | `factory-profile.tsx` | `/factory-profile` | بيانات الحساب: «أنت منشأة أو فرد؟» أول مرة، وبعدها النموذج حسب النوع |
 | `provider/index.tsx` | `/provider` | المزوّد قبل التوثيق: حالة التوثيق ومستنداته (بعد التوثيق يحوّل للطلبات المتاحة) |
@@ -213,6 +222,12 @@
 - `src/components/account.tsx`: التفضيلات، وطلب حذف الحساب، والخروج.
 - `src/i18n/strings-flow.ts`: نصوص شاشات المرحلة ٤.
 - `src/i18n/strings-customer.ts`: نصوص العميل الفرد والسوق.
+- `src/api/market-types.ts`: شكل ردود الخادم لشاشات السوق.
+- `src/components/market.tsx` و`src/components/purchase.tsx`: بطاقة المنتج والسعر والصورة، وبطاقة طلب الشراء وتفاصيله، و`useSellerEnabled()` (يظهر تبويب «متجري»).
+- `src/demo/market.ts`: السوق في الخادم التجريبي (البائعين التجريبيين موثّقين ومشتركين من البداية).
+- `src/lib/image.ts`: تصغير صورة المنتج في الموقع قبل الرفع (القرار ٤٦).
+
+**ملاحظة على التبويبات:** التبويب المخفي يُخفى بـ `tabBarButton: () => null` مو `href: null`، لأن `href: null` يكسر الرابط المباشر (مثل `/invoices` بعد تحديث الصفحة يفتح الرئيسية).
 
 ## كيف تتواصل الأجزاء
 

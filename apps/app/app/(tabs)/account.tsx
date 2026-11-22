@@ -8,7 +8,8 @@ import { ApiClientError, LIVE } from "@/api/client";
 import { errorKey } from "@/api/mapping";
 import { DeleteAccountSection, PreferencesSection, SignOutButton } from "@/components/account";
 import { Field } from "@/components/Field";
-import { IconInfoCircle, IconUsers } from "@/components/icons";
+import { IconFileInvoice, IconInfoCircle, IconUsers } from "@/components/icons";
+import { useSellerEnabled } from "@/components/market";
 import { Screen, SectionTitle, TwoColumn } from "@/components/layout";
 import { AppText, Badge, Button, Card, Chips, Divider, Notice, Row } from "@/components/ui";
 import { useStore } from "@/data/store";
@@ -19,6 +20,7 @@ type Member = { userId: string; phone: string; role: "manager" | "member"; activ
 export default function Account() {
   const { t, tl, locale, digits, code } = useI18n();
   const { state, factory: FACTORY, profileComplete, factoryRole } = useStore();
+  const seller = useSellerEnabled();
   const phone = state.phone ? `0${state.phone.slice(4)}` : "";
 
   const main = (
@@ -57,6 +59,16 @@ export default function Account() {
         variant={profileComplete ? "secondary" : "primary"}
         onPress={() => router.push("/factory-profile")}
       />
+      <Button label={t("tabInvoices")} icon={IconFileInvoice} variant="secondary" onPress={() => router.push("/invoices")} />
+      {FACTORY.kind === "business" && !seller && (
+        // مدخل «متجري» للمنشأة اللي ما فعّلت البيع (التبويب يظهر بعد التفعيل).
+        <Card onPress={() => router.push("/store")} style={{ gap: spacing["1"] }}>
+          <AppText weight={700}>{t("storeEnableTitle")}</AppText>
+          <AppText variant="bodySm" color="inkMuted">
+            {t("storeEnableHint")}
+          </AppText>
+        </Card>
+      )}
       {FACTORY.kind === "business" && <Members manager={factoryRole !== "member"} />}
     </>
   );

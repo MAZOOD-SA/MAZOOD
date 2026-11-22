@@ -8,6 +8,7 @@
 //
 // اللي ما يسويه الخادم التجريبي (قصدًا): رسائل نصية، وتوثيق المزوّد (المزوّد التجريبي موثّق من البداية)،
 // ولوحة الإدارة، والمهام في الخلفية (التأكيد التلقائي وانتهاء الطلب).
+import { demoProductImage, registerMarketDemo, seedMarket, type DemoHost, type MarketState } from "./market";
 import {
   cancellationFee,
   CATEGORY_IDS,
@@ -113,13 +114,16 @@ type Db = {
   disputes: Dispute[];
   ratings: Rating[];
   deletions: { userId: string; requestedAt: string }[];
+  /** السوق (src/demo/market.ts). */
+  market: MarketState;
   /** جلسة «الكوكي» في الموقع (الخادم الحقيقي يحطها في كوكي محمي). */
   session: string | null;
 };
 
 const CITY = "sudair";
 const HOUR = 3600_000;
-const STORAGE_KEY = "mazood.demo.v1";
+// v2: نوع العميل والسوق (خطة العميل الفرد والسوق). النسخة القديمة المحفوظة تنتهي وتبدأ من جديد.
+const STORAGE_KEY = "mazood.demo.v2";
 /** كم ثانية بعد رفع الطلب توصل العروض الوهمية من مزوّدين ثانيين. */
 const SIMULATED_OFFER_DELAY_MS = 5000;
 /** أرقام جاهزة للتجربة: تظهر في شاشة الدخول. */
@@ -153,6 +157,7 @@ function seed(): Db {
     disputes: [],
     ratings: [],
     deletions: [],
+    market: seedMarket(t, iso),
     session: null,
   };
   db.users.push({ id: "u1", phone: "+966500000001", role: "factory", factoryId: "f1", providerId: null });
@@ -923,6 +928,19 @@ on("POST", "/v1/account/deletion", ({ u, body }) => {
 });
 
 /** الطلب للخادم التجريبي. يرمي ApiClientError مثل الخادم الحقيقي بالضبط. */
+// السوق: مسارات منفصلة في src/demo/market.ts.
+const marketHost: DemoHost = {
+  on: (method, pattern, h) => on(method, pattern, h as Handler),
+  market: () => db.market,
+  factories: () => db.factories,
+  phoneOf: (factoryId) => db.users.find((u) => u.factoryId === factoryId)?.phone ?? "",
+  fail,
+  id,
+  now,
+  iso,
+};
+registerMarketDemo(marketHost);
+
 export async function demoApi<T>(method: string, path: string, body: unknown, token: string | null): Promise<T> {
   const [pathname, qs] = path.split("?");
   for (const [m, re, h] of routes) {
@@ -939,6 +957,13 @@ export async function demoApi<T>(method: string, path: string, body: unknown, to
 
 /** رفع صور التنفيذ في الوضع التجريبي: الصورة تبقى في المتصفح نفسه (رابط blob). */
 export async function demoUpload<T>(path: string, form: FormData, token: string | null): Promise<T> {
+  const img = path.match(/^\/v1\/market\/seller\/products\/([^/]+)\/images$/);
+  if (img) {
+    const file = form.get("file");
+    const r = demoProductImage(marketHost, userFrom(token), img[1], file && typeof file !== "string" ? file : null);
+    persist();
+    return JSON.parse(JSON.stringify(r)) as T;
+  }
   const m = path.match(/^\/v1\/provider\/jobs\/([^/]+)\/photos$/);
   if (!m) return fail(501, "demo_unsupported");
   const user = userFrom(token);

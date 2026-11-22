@@ -84,6 +84,14 @@ export default function Home() {
           ))}
         </View>
 
+        {/* مدخل السوق من الرئيسية (خطة السوق، القسم ٥). */}
+        <Card onPress={() => router.push("/shop")} style={{ gap: spacing["1"] }}>
+          <AppText weight={700}>{t("marketEntryTitle")}</AppText>
+          <AppText variant="bodySm" color="inkMuted">
+            {t("marketEntryHint")}
+          </AppText>
+        </Card>
+
         <View style={{ marginTop: spacing["2"] }}>
           <SectionTitle
             title={t("yourRequests")}
