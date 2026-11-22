@@ -17,6 +17,20 @@ export class ApiClientError extends Error {
   }
 }
 
+/** رفع ملف (multipart). ما نحدد content-type: المتصفح أو الجوال يحطه مع الحدود (boundary). */
+export async function apiUpload<T = unknown>(path: string, form: FormData, token: string | null): Promise<T> {
+  if (!API_URL) throw new ApiClientError(0, "not_live");
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { method: "POST", body: form, headers: token ? { authorization: `Bearer ${token}` } : {} });
+  } catch {
+    throw new ApiClientError(0, "network");
+  }
+  const json = (await res.json().catch(() => null)) as { error?: { code?: string } } | null;
+  if (!res.ok) throw new ApiClientError(res.status, json?.error?.code ?? "server");
+  return json as T;
+}
+
 export async function api<T = unknown>(
   path: string,
   opts: { method?: "GET" | "POST" | "PUT"; body?: unknown; token?: string | null } = {},

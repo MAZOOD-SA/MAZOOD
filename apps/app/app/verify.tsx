@@ -5,6 +5,7 @@ import { useState } from "react";
 import { View } from "react-native";
 import { api, ApiClientError, LIVE } from "@/api/client";
 import { errorKey } from "@/api/mapping";
+import { homeRouteFor } from "@/lib/home-route";
 import { Field } from "@/components/Field";
 import { Screen } from "@/components/layout";
 import { AppText, Button, Notice } from "@/components/ui";
@@ -14,7 +15,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 export default function Verify() {
   const { t, digits } = useI18n();
   const { dispatch, startSession } = useStore();
-  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const { phone, as } = useLocalSearchParams<{ phone: string; as?: string }>();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -26,8 +27,13 @@ export default function Verify() {
     if (LIVE) {
       setBusy(true);
       try {
-        const res = await api<{ token: string }>("/v1/auth/otp/verify", { method: "POST", body: { phone, code: latin } });
-        await startSession(res.token, phone ?? "");
+        const res = await api<{ token: string }>("/v1/auth/otp/verify", {
+          method: "POST",
+          body: { phone, code: latin, ...(as === "provider" ? { as: "provider" } : {}) },
+        });
+        const role = await startSession(res.token, phone ?? "");
+        setBusy(false);
+        return router.replace(homeRouteFor(role));
       } catch (e) {
         setError(t(errorKey(e instanceof ApiClientError ? e.code : "server")));
         setBusy(false);

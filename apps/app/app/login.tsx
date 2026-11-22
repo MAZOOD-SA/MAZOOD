@@ -1,7 +1,7 @@
 // الدخول برقم الجوال. في النسخة التجريبية ما ترسل رسالة حقيقية.
 // في المرحلة ٢: الخادم يرسل رمز التحقق، ويحدد عدد المحاولات لكل رقم ولكل جهاز.
 import { spacing } from "@mazood/brand";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
 import { api, ApiClientError, LIVE } from "@/api/client";
@@ -18,6 +18,10 @@ export default function Login() {
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // as=provider: التسجيل كمزوّد خدمة (يأثر بس على الحسابات الجديدة).
+  const { as } = useLocalSearchParams<{ as?: string }>();
+  const asProvider = as === "provider";
+  const next = (phone: string) => ({ pathname: "/verify" as const, params: { phone, ...(asProvider ? { as: "provider" } : {}) } });
 
   async function submit() {
     if (busy) return;
@@ -32,7 +36,7 @@ export default function Login() {
         // فاصل ٦٠ ثانية: المستخدم غالبًا طلب الرمز قبل شوي، نوديه لشاشة الرمز عشان يدخل اللي وصله.
         if (e instanceof ApiClientError && e.code === "otp_cooldown") {
           setBusy(false);
-          return router.push({ pathname: "/verify", params: { phone: normalized } });
+          return router.push(next(normalized));
         }
         setError(t(errorKey(e instanceof ApiClientError ? e.code : "server")));
         setBusy(false);
@@ -40,7 +44,7 @@ export default function Login() {
       }
       setBusy(false);
     }
-    router.push({ pathname: "/verify", params: { phone: normalized } });
+    router.push(next(normalized));
   }
 
   return (
@@ -50,7 +54,7 @@ export default function Login() {
         <AppText variant="display">{t("appName")}</AppText>
       </View>
       <View style={{ gap: spacing["1"] }}>
-        <AppText variant="h1">{t("loginTitle")}</AppText>
+        <AppText variant="h1">{asProvider ? t("loginProviderTitle") : t("loginTitle")}</AppText>
         <AppText color="inkMuted">{t("loginSubtitle")}</AppText>
       </View>
       <Field
@@ -68,6 +72,13 @@ export default function Login() {
         ltr
       />
       <Button label={t("sendCode")} variant="accent" size="lg" full onPress={submit} disabled={busy} />
+      {LIVE && (
+        <Button
+          label={asProvider ? t("iAmFactory") : t("iAmProvider")}
+          variant="ghost"
+          onPress={() => router.setParams({ as: asProvider ? "" : "provider" })}
+        />
+      )}
     </Screen>
   );
 }

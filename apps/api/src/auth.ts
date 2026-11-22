@@ -1,4 +1,5 @@
 // منطق الدخول: رمز تحقق ثم جلسة. الحدود هنا (لكل رقم) تكمّل حدود الـ IP اللي في app.ts.
+import type { StaffRole } from "@mazood/shared";
 import { audit } from "./audit.ts";
 import type { Db } from "./db.ts";
 import { ApiError } from "./errors.ts";
@@ -14,7 +15,15 @@ export const OTP_MAX_PER_WINDOW = 3;
 export const OTP_WINDOW_MS = 10 * 60_000;
 export const SESSION_TTL_MS = 30 * 24 * 3600_000;
 
-export type SessionUser = { id: string; phone: string; role: "factory" | "provider" | "staff"; factoryId: string | null };
+export type SessionUser = {
+  id: string;
+  phone: string;
+  role: "factory" | "provider" | "staff";
+  factoryId: string | null;
+  providerId: string | null;
+  /** دور الموظف داخل الإدارة. null إذا ما كان موظف أو كان موقوف. */
+  staffRole: StaffRole | null;
+};
 
 export async function requestOtp(
   db: Db,
@@ -63,6 +72,8 @@ export async function verifyOtp(
   phone: string,
   code: string,
   now: Date = new Date(),
+  /** نوع الحساب لو الرقم جديد. */
+  as: "factory" | "provider" = "factory",
 ): Promise<{ token: string; user: SessionUser }> {
   const result = await db.tx(async (t) => {
     const rows = await t.query<{ id: string; code_hash: string; attempts: number }>(
@@ -92,12 +103,17 @@ export async function verifyOtp(
     if (used.length === 0) return { ok: false as const };
 
     const [user] = await t.query<{ id: string; role: SessionUser["role"]; status: string }>(
-      `INSERT INTO users (phone, last_login_at) VALUES ($1, $2)
+      `INSERT INTO users (phone, last_login_at, role) VALUES ($1, $2, $3)
        ON CONFLICT (phone) DO UPDATE SET last_login_at = EXCLUDED.last_login_at
        RETURNING id, role, status`,
-      [phone, now],
+      [phone, now, as],
     );
     if (user.status !== "active") return { ok: false as const, suspended: true };
+    if (user.role === "staff") {
+      // موظف أُوقف من الإدارة: ما يدخل.
+      const s = await t.query("SELECT 1 FROM staff WHERE user_id = $1 AND active", [user.id]);
+      if (s.length === 0) return { ok: false as const, suspended: true };
+    }
 
     if (user.role === "factory") {
       const member = await t.query("SELECT 1 FROM factory_members WHERE user_id = $1", [user.id]);
@@ -127,16 +143,28 @@ export async function verifyOtp(
 
 /** يرجّع المستخدم صاحب التوكن، أو null إذا التوكن غلط أو منتهي أو ملغي أو الحساب موقوف. */
 export async function sessionUserByToken(db: Db, token: string, now: Date = new Date()): Promise<SessionUser | null> {
-  const rows = await db.query<{ id: string; phone: string; role: SessionUser["role"]; factory_id: string | null }>(
-    `SELECT u.id, u.phone, u.role, fm.factory_id
+  const rows = await db.query<{
+    id: string;
+    phone: string;
+    role: SessionUser["role"];
+    factory_id: string | null;
+    provider_id: string | null;
+    staff_role: StaffRole | null;
+  }>(
+    `SELECT u.id, u.phone, u.role, fm.factory_id, p.id AS provider_id, st.role AS staff_role
        FROM sessions s
        JOIN users u ON u.id = s.user_id
        LEFT JOIN factory_members fm ON fm.user_id = u.id
+       LEFT JOIN providers p ON p.user_id = u.id
+       LEFT JOIN staff st ON st.user_id = u.id AND st.active
       WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > $2 AND u.status = 'active'`,
     [hashSessionToken(token), now],
   );
   const r = rows[0];
-  return r ? { id: r.id, phone: r.phone, role: r.role, factoryId: r.factory_id } : null;
+  if (!r) return null;
+  // موظف موقوف: جلسته ما تشتغل حتى لو ما انتهت.
+  if (r.role === "staff" && !r.staff_role) return null;
+  return { id: r.id, phone: r.phone, role: r.role, factoryId: r.factory_id, providerId: r.provider_id, staffRole: r.role === "staff" ? r.staff_role : null };
 }
 
 export async function revokeSession(db: Db, token: string, user: SessionUser): Promise<void> {

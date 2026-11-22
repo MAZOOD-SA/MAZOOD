@@ -33,6 +33,7 @@
 | react-native-svg | 15.16.0 | MIT |
 | @react-native-async-storage/async-storage | 2.2.0 | MIT |
 | expo-secure-store (حفظ الجلسة مشفّرة على الجوال) | 58.0.3 | MIT |
+| expo-document-picker (اختيار ملف المستند) | 58.0.5 | MIT |
 
 ## مكتبات الخادم (`apps/api`) والحزمة المشتركة
 
@@ -41,6 +42,7 @@
 | fastify | 5.12.8 | MIT |
 | @fastify/cors | 11.4.3 | MIT |
 | @fastify/rate-limit | 10.3.0 | MIT |
+| @fastify/multipart (رفع الملفات) | 9.4.0 | MIT |
 | pg (اتصال PostgreSQL) | 8.23.1 | MIT |
 | zod (التحقق من المدخلات) | 3.25.76 | MIT |
 | @electric-sql/pglite (PostgreSQL داخل العملية، للاختبارات والتطوير) | 0.3.16 | Apache-2.0 |
@@ -51,6 +53,7 @@
 | --- | --- | --- |
 | typescript | 5.9.3 | Apache-2.0 |
 | vitest | 3.2.7 | MIT |
+| graphifyy (خريطة الكود، أداة Python تُثبّت على جهاز المبرمج، ما تدخل في المنصة) | 0.9.115 | Apache-2.0 |
 
 ## الهوية
 

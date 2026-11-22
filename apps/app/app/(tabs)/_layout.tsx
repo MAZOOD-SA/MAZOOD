@@ -4,18 +4,21 @@ import { IconClipboardList, IconFileInvoice, IconHome, IconUser } from "@/compon
 import { Redirect, Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useStore } from "@/data/store";
+import { homeRouteFor } from "@/lib/home-route";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useTheme } from "@/theme/ThemeProvider";
 
 export default function TabsLayout() {
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { state, ready } = useStore();
+  const { state, ready, role } = useStore();
   const insets = useSafeAreaInsets();
 
   // الشاشات هذي للمستخدم الداخل بس.
   if (!ready) return null;
   if (!state.signedIn) return <Redirect href="/login" />;
+  // شاشات المصنع للمصنع بس. المزوّد والموظف يروحون لشاشاتهم.
+  if (role && role !== "factory") return <Redirect href={homeRouteFor(role)} />;
 
   return (
     <Tabs

@@ -40,16 +40,41 @@ export type ServerFactory = {
 };
 
 /** رسالة الخطأ المناسبة لرمز الخطأ القادم من الخادم. */
-export function errorKey(code: string): "otpCooldown" | "otpRateLimited" | "otpInvalid" | "networkError" | "serverError" | "notCancellable" {
+export type ErrorKey =
+  | "otpCooldown" | "otpRateLimited" | "otpInvalid" | "networkError" | "serverError" | "notCancellable"
+  | "errFileType" | "errFileTooLarge" | "errDocExpired" | "errDocumentsMissing" | "errProfileLocked"
+  | "errChecklistIncomplete" | "errReasonRequired" | "errForbidden" | "errPhoneUsed" | "errNotApproved" | "errValidation";
+
+export function errorKey(code: string): ErrorKey {
   switch (code) {
+    case "file_type_not_allowed":
+      return "errFileType";
+    case "file_too_large":
+      return "errFileTooLarge";
+    case "doc_expired":
+      return "errDocExpired";
+    case "documents_missing":
+      return "errDocumentsMissing";
+    case "profile_locked":
+    case "already_submitted":
+      return "errProfileLocked";
+    case "checklist_incomplete":
+      return "errChecklistIncomplete";
+    case "forbidden":
+      return "errForbidden";
+    case "phone_used_by_customer":
+      return "errPhoneUsed";
+    case "documents_not_approved":
+      return "errNotApproved";
     case "otp_cooldown":
       return "otpCooldown";
     case "otp_rate_limited":
     case "rate_limited":
       return "otpRateLimited";
     case "otp_invalid":
-    case "validation":
       return "otpInvalid";
+    case "validation":
+      return "errValidation";
     case "network":
       return "networkError";
     case "request_not_cancellable":

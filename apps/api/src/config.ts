@@ -12,6 +12,8 @@ const schema = z.object({
   CORS_ORIGINS: z.string().default(""),
   TRUST_PROXY: z.enum(["true", "false"]).default("false"),
   SMS_PROVIDER: z.enum(["console", "none"]).default("console"),
+  DATA_ENCRYPTION_KEY: z.string().optional(),
+  STORAGE_DIR: z.string().optional(),
 });
 
 export type Config = {
@@ -24,9 +26,13 @@ export type Config = {
   corsOrigins: string[];
   trustProxy: boolean;
   smsProvider: "console" | "none";
+  dataEncryptionKey: string;
+  /** مجلد التخزين الخاص للمستندات. فاضي في التطوير = في الذاكرة (ينمسح مع كل تشغيل). */
+  storageDir?: string;
 };
 
 const DEV_SECRET = "dev-only-secret-do-not-use-in-production-0000";
+const DEV_DATA_KEY = "dev-only-data-key-do-not-use-in-production-000";
 
 export function loadConfig(env: Record<string, string | undefined>): Config {
   const e = schema.parse(env);
@@ -37,6 +43,9 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   if (prod && (!e.AUTH_SECRET || e.AUTH_SECRET.length < 32)) problems.push("AUTH_SECRET مطلوب في الإنتاج (٣٢ حرف أو أكثر)");
   if (prod && e.SMS_PROVIDER === "console") problems.push("SMS_PROVIDER=console ممنوع في الإنتاج: الرمز كان راح يطلع في السجلات");
   if (prod && !e.CORS_ORIGINS) problems.push("CORS_ORIGINS مطلوب في الإنتاج");
+  if (prod && (!e.DATA_ENCRYPTION_KEY || e.DATA_ENCRYPTION_KEY.length < 32)) problems.push("DATA_ENCRYPTION_KEY مطلوب في الإنتاج (٣٢ حرف أو أكثر)");
+  if (prod && e.DATA_ENCRYPTION_KEY && e.DATA_ENCRYPTION_KEY === e.AUTH_SECRET) problems.push("DATA_ENCRYPTION_KEY لازم يختلف عن AUTH_SECRET");
+  if (prod && !e.STORAGE_DIR) problems.push("STORAGE_DIR مطلوب في الإنتاج (مكان حفظ المستندات)");
   if (e.AUTH_SECRET && e.AUTH_SECRET.length < 32) problems.push("AUTH_SECRET أقصر من ٣٢ حرف");
   if (problems.length) throw new Error(`إعدادات غير صالحة:\n- ${problems.join("\n- ")}`);
 
@@ -50,5 +59,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     corsOrigins: e.CORS_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean),
     trustProxy: e.TRUST_PROXY === "true",
     smsProvider: e.SMS_PROVIDER,
+    dataEncryptionKey: e.DATA_ENCRYPTION_KEY ?? DEV_DATA_KEY,
+    storageDir: e.STORAGE_DIR,
   };
 }

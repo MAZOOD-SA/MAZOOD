@@ -16,7 +16,10 @@ export const phoneSchema = z
 export const otpCodeSchema = z.string().regex(/^\d{6}$/, "code_invalid");
 
 export const requestOtpBody = z.object({ phone: phoneSchema }).strict();
-export const verifyOtpBody = z.object({ phone: phoneSchema, code: otpCodeSchema }).strict();
+/** as: نوع الحساب لو الرقم جديد (مصنع أو مزوّد). الحسابات الموجودة يبقى نوعها كما هو. */
+export const verifyOtpBody = z
+  .object({ phone: phoneSchema, code: otpCodeSchema, as: z.enum(["factory", "provider"]).optional() })
+  .strict();
 
 /** نص حر: نشيل الأحرف التحكمية (ما عدا السطر الجديد) ونقص المسافات. */
 const freeText = (min: number, max: number) =>

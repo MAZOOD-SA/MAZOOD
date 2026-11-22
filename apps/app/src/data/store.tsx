@@ -3,7 +3,8 @@
 //  - الوضع الحقيقي: الطلبات والحساب من الخادم. الجلسة تنحفظ على الجهاز وترجع بعد قفل التطبيق.
 // الشاشات تقرأ من نفس المخزن في الوضعين، فما تحتاج تعرف أي وضع نشتغل فيه.
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
-import { api, ApiClientError, LIVE } from "@/api/client";
+import { api, ApiClientError, apiUpload, LIVE } from "@/api/client";
+import type { StaffRole } from "@mazood/shared";
 import { fromServerRequest, type ServerFactory, type ServerRequest } from "@/api/mapping";
 import { clearToken, loadToken, saveToken } from "@/api/session";
 import { categoryById } from "./categories";
@@ -13,6 +14,8 @@ import type { Factory } from "./types";
 
 /** كم ثانية بعد رفع الطلب توصل العروض الوهمية (الوضع التجريبي فقط). */
 const SIMULATED_OFFER_DELAY_MS = 5000;
+
+export type Role = "factory" | "provider" | "staff";
 
 export type FactoryProfileInput = { name: string; city: string; commercialRegister: string; vatNumber: string };
 
@@ -26,8 +29,15 @@ type StoreValue = {
   profileComplete: boolean;
   createRequest: (input: Omit<NewRequestInput, "id" | "now">) => Promise<string>;
   cancelRequest: (requestId: string) => Promise<void>;
-  /** بعد نجاح التحقق من الرمز في الوضع الحقيقي. */
-  startSession: (token: string, phone: string) => Promise<void>;
+  /** نوع الحساب الداخل (في الوضع التجريبي دائمًا مصنع). */
+  role: Role | null;
+  /** دور الموظف في الإدارة، لو كان موظف. */
+  staffRole: StaffRole | null;
+  /** طلب للخادم بتوكن الجلسة الحالية (لشاشات المزوّد والإدارة). */
+  authed: <T>(path: string, opts?: { method?: "GET" | "POST" | "PUT"; body?: unknown }) => Promise<T>;
+  upload: <T>(path: string, form: FormData) => Promise<T>;
+  /** بعد نجاح التحقق من الرمز في الوضع الحقيقي. يرجّع نوع الحساب عشان نوجّهه لشاشاته. */
+  startSession: (token: string, phone: string) => Promise<Role>;
   signOut: () => Promise<void>;
   saveProfile: (input: FactoryProfileInput) => Promise<void>;
 };
@@ -63,18 +73,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
   const [ready, setReady] = useState(!LIVE);
   const [liveFactory, setLiveFactory] = useState<{ factory: Factory; complete: boolean } | null>(null);
+  const [account, setAccount] = useState<{ role: Role; staffRole: StaffRole | null } | null>(LIVE ? null : { role: "factory", staffRole: null });
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const token = useRef<string | null>(null);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  const loadAccount = useCallback(async (tk: string) => {
-    const me = await api<{ user: { phone: string }; factory: ServerFactory | null }>("/v1/me", { token: tk });
-    const list = await api<{ requests: ServerRequest[] }>("/v1/requests", { token: tk });
+  const loadAccount = useCallback(async (tk: string): Promise<Role> => {
+    const me = await api<{ user: { phone: string; role: Role; staffRole: StaffRole | null }; factory: ServerFactory | null }>("/v1/me", { token: tk });
+    // الطلبات تخص المصنع بس. المزوّد والموظف لهم شاشاتهم اللي تجيب بياناتها.
+    if (me.user.role === "factory") {
+      const list = await api<{ requests: ServerRequest[] }>("/v1/requests", { token: tk });
+      dispatch({ type: "setRequests", requests: list.requests.map(fromServerRequest) });
+    }
     token.current = tk;
+    setAccount({ role: me.user.role, staffRole: me.user.staffRole });
     dispatch({ type: "signIn", phone: me.user.phone });
-    dispatch({ type: "setRequests", requests: list.requests.map(fromServerRequest) });
     if (me.factory) setLiveFactory({ factory: toFactory(me.factory), complete: me.factory.profileComplete });
+    return me.user.role;
   }, []);
 
   // استرجاع الجلسة المحفوظة عند فتح التطبيق.
@@ -136,7 +152,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const startSession = useCallback<StoreValue["startSession"]>(
     async (tk) => {
       await saveToken(tk);
-      await loadAccount(tk);
+      return loadAccount(tk);
     },
     [loadAccount],
   );
@@ -148,6 +164,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       await clearToken();
       token.current = null;
       setLiveFactory(null);
+      setAccount(null);
     }
     dispatch({ type: "signOut" });
   }, []);
@@ -157,6 +174,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setLiveFactory({ factory: toFactory(res.factory), complete: res.factory.profileComplete });
   }, []);
 
+  const authed = useCallback(<T,>(path: string, opts: { method?: "GET" | "POST" | "PUT"; body?: unknown } = {}) =>
+    api<T>(path, { ...opts, token: token.current }), []);
+  const upload = useCallback(<T,>(path: string, form: FormData) => apiUpload<T>(path, form, token.current), []);
+
   const value = useMemo<StoreValue>(
     () => ({
       state,
@@ -164,13 +185,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ready,
       factory: LIVE ? (liveFactory?.factory ?? EMPTY) : FACTORY,
       profileComplete: LIVE ? (liveFactory?.complete ?? false) : true,
+      role: account?.role ?? null,
+      staffRole: account?.staffRole ?? null,
+      authed,
+      upload,
       createRequest,
       cancelRequest,
       startSession,
       signOut,
       saveProfile,
     }),
-    [state, ready, liveFactory, createRequest, cancelRequest, startSession, signOut, saveProfile],
+    [state, ready, liveFactory, account, authed, upload, createRequest, cancelRequest, startSession, signOut, saveProfile],
   );
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

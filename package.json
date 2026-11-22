@@ -15,7 +15,9 @@
     "start": "pnpm --filter @mazood/app start",
     "build:web": "pnpm --filter @mazood/app build:web",
     "api": "pnpm --filter @mazood/api dev",
-    "api:migrate": "pnpm --filter @mazood/api migrate"
+    "api:migrate": "pnpm --filter @mazood/api migrate",
+    "map": "bash scripts/code-map.sh",
+    "api:add-staff": "pnpm --filter @mazood/api add-staff"
   },
   "devDependencies": {
     "vitest": "^3.2.4",
