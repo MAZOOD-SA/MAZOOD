@@ -1,0 +1,27 @@
+// قواعد إدخال العرض. الخادم يطبّقها، والواجهة تستخدمها لرسائل فورية.
+import { z } from "zod";
+
+/** نص حر: نشيل الأحرف التحكمية ونقص المسافات. */
+const note = z
+  .string()
+  // eslint-disable-next-line no-control-regex
+  .transform((v) => v.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").trim())
+  .pipe(z.string().max(500, "too_long"));
+
+/**
+ * priceHalalas: سعر المزوّد بالهللة **قبل الضريبة** (رقم صحيح، والكسور تنرفض).
+ * durationHours: مدة التنفيذ بالساعات.
+ * validHours: صلاحية العرض بالساعات. اختياري: الافتراضي والحد الأقصى من الإعدادات (offerValidityHours).
+ */
+export const offerBody = z
+  .object({
+    priceHalalas: z.number().int("halalas_integer").positive().max(100_000_000_000),
+    durationHours: z.number().int().min(1).max(2160),
+    note: note.optional(),
+    validHours: z.number().int().min(1).max(24 * 30).optional(),
+  })
+  .strict();
+export type OfferBody = z.infer<typeof offerBody>;
+
+export const OFFER_STATUSES = ["active", "withdrawn", "accepted", "rejected", "expired"] as const;
+export type OfferStatus = (typeof OFFER_STATUSES)[number];

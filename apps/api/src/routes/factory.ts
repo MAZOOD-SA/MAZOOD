@@ -6,6 +6,7 @@ import type { Db } from "../db.ts";
 import { ApiError } from "../errors.ts";
 import { activeCities, resolveCityId } from "../cities.ts";
 import { getSettings } from "../settings.ts";
+import { rejectContactInfo } from "./offers.ts";
 import { actorOf, parse, type Ctx, type Guards } from "../http.ts";
 import { publicUser } from "./auth.ts";
 
@@ -40,6 +41,8 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
   app.post("/v1/requests", async (req, reply) => {
     const { user, factoryId } = await g.requireFactory(req);
     const body = parse(createRequestBody, req.body);
+    // التفاصيل والمنطقة تظهر للمزوّدين قبل القبول: ممنوع فيها أرقام أو روابط (الإضافة ٨).
+    rejectContactInfo({ details: body.details, area: body.area });
     // المدينة: المطلوبة، أو مدينة المصنع، أو المدينة الوحيدة الفعّالة.
     const [f] = await db.query<{ city_id: string | null }>("SELECT city_id FROM factories WHERE id=$1", [factoryId]);
     const cityId = await resolveCityId(db, body.cityId ?? f.city_id);
