@@ -12,7 +12,9 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { OfflineBanner, PrototypeBanner } from "@/components/layout";
-import { StoreProvider } from "@/data/store";
+import { NavShell, navItemsFor } from "@/components/nav";
+import { can } from "@mazood/shared";
+import { StoreProvider, useStore } from "@/data/store";
 import { I18nProvider, useI18n } from "@/i18n/I18nProvider";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
 
@@ -47,14 +49,19 @@ export default function RootLayout() {
 
 function Shell() {
   const { colors, name } = useTheme();
-  const { isRTL } = useI18n();
+  const { isRTL, t } = useI18n();
+  const { state, role, staffRole } = useStore();
+  // القائمة الجانبية (تابلت وكمبيوتر) للمستخدم الداخل، على كل الشاشات بما فيها التفاصيل.
+  const items = state.signedIn ? navItemsFor(role, t, (p) => can(staffRole, p)) : [];
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface, direction: isRTL ? "rtl" : "ltr" }}>
       <StatusBar style={name === "dark" ? "light" : "dark"} />
       <PrototypeBanner />
       <OfflineBanner />
       <View style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }} />
+        <NavShell items={items}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }} />
+        </NavShell>
       </View>
     </View>
   );

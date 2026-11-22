@@ -114,3 +114,21 @@ export const typography = {
     "fontWeight": 700
   }
 } as const;
+
+export const breakpoints = {
+  "tablet": 768,
+  "desktop": 1200
+} as const;
+
+export const layout = {
+  "contentMax": 640,
+  "pageMax": 1200,
+  "sidebar": 248,
+  "sideColumn": 360,
+  "touchMin": 44
+} as const;
+
+export const motion = {
+  "reward": 700,
+  "fast": 150
+} as const;

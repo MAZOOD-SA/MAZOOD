@@ -53,7 +53,13 @@ export function buildTokens(json) {
       typography[camel(s.name)] = { fontSize: px(s.fontSize), lineHeight: px(s.lineHeight), fontWeight: s.fontWeight };
     }
   }
-  return { colors, spacing, radius, typography };
+  // المقاسات (breakpoints) وأبعاد الهيكل ومدد الحركة: أرقام بالبكسل أو بالمللي ثانية.
+  const ms = (v) => Number(String(v).replace("ms", ""));
+  const named = (group, conv) => Object.fromEntries((json[group]?.tokens ?? []).map((t) => [camel(t.name), conv(t.value)]));
+  const breakpoints = named("breakpoints", px);
+  const layout = named("layout", px);
+  const motion = named("motion", ms);
+  return { colors, spacing, radius, typography, breakpoints, layout, motion };
 }
 
 function main() {

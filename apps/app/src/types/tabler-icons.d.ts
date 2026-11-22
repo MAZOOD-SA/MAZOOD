@@ -2,6 +2,6 @@
 declare module "@tabler/icons-react-native/icons/*" {
   import type { ComponentType } from "react";
   import type { ColorValue } from "react-native";
-  const Icon: ComponentType<{ size?: number; color?: ColorValue; strokeWidth?: number }>;
+  const Icon: ComponentType<{ size?: number; color?: ColorValue; strokeWidth?: number; fill?: ColorValue }>;
   export default Icon;
 }
