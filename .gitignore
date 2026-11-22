@@ -37,3 +37,6 @@ build/
 .next/
 coverage/
 *.log
+
+# خريطة Graphify: تتولّد تلقائيًا، لا ترفعها
+graphify-out/
