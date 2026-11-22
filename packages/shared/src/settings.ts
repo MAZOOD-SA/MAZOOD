@@ -1,6 +1,7 @@
 // إعدادات المنصة: كل قيمة رقمية تتحكم في الطلبات والعروض. تنحفظ في جدول settings بقاعدة البيانات،
 // فتتغيّر بدون مبرمج (بالأمر pnpm api:set-setting الحين، ومن لوحة الإدارة في المرحلة ٦).
 // القيم هنا هي المقترحة في docs/plans/phase-4.md (القسم ٣)، ونرجع لها لو ما فيه قيمة محفوظة.
+import { DEFAULT_MARKET_SETTINGS, marketSettingsSchema } from "./market.ts";
 import { z } from "zod";
 import { cancellationPolicySchema, DEFAULT_CANCELLATION_POLICY, upgradeCancellationPolicy } from "./cancellation.ts";
 import { commitmentSettingsSchema, DEFAULT_COMMITMENT_SETTINGS } from "./commitment.ts";
@@ -35,6 +36,8 @@ export const SETTINGS_SCHEMA = z
      * سجل الشركة وموافقة «علم»، وقبله الفحص بصيغة الرقم بس. لما يجهز الربط: يتفعّل بأمر واحد.
      */
     individualRequiresVerifiedIdentity: z.boolean(),
+    /** سوق منتجات المصانع: مين يشتري، والفترة المجانية، والعمولة، وفتح الصفحة العامة (market.ts). */
+    market: marketSettingsSchema,
   })
   .strict();
 
@@ -52,4 +55,5 @@ export const SETTING_DEFAULTS: Settings = {
   smsEvents: ["first_offer", "offer_accepted", "cancellation_requested"],
   commitment: DEFAULT_COMMITMENT_SETTINGS,
   individualRequiresVerifiedIdentity: false,
+  market: DEFAULT_MARKET_SETTINGS,
 };
