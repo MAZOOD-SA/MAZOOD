@@ -5,18 +5,20 @@ import { IconPaperclip, IconSend } from "@/components/icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { ApiClientError } from "@/api/client";
 import { errorKey } from "@/api/mapping";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { clearDraft, loadDraft, saveDraft } from "@/api/draft";
 import { View } from "react-native";
 import { CategoryTile } from "@/components/domain";
 import { Field } from "@/components/Field";
 import { Screen, SectionTitle } from "@/components/layout";
-import { AppText, Button, Chips } from "@/components/ui";
+import { AppText, Button, Chips, Notice } from "@/components/ui";
 import { CATEGORIES, categoryById, type CategoryId } from "@/data/categories";
 import { useStore } from "@/data/store";
 import type { When } from "@/data/types";
 import { useI18n } from "@/i18n/I18nProvider";
 
 const DEFAULT_LOCATION = { ar: "مدينة سدير الصناعية · مصنع 14", en: "Sudair Industrial City · Factory 14" };
+const DEFAULT_AREA = { ar: "المرحلة الثانية", en: "Phase 2" };
 
 export default function NewRequest() {
   const { t, tl } = useI18n();
@@ -27,14 +29,53 @@ export default function NewRequest() {
   const [category, setCategory] = useState<CategoryId | null>(initial);
   const [typeId, setTypeId] = useState<string | null>(initial ? categoryById(initial).types[0].id : null);
   const [details, setDetails] = useState("");
+  const [area, setArea] = useState(tl(DEFAULT_AREA));
   const [location, setLocation] = useState(tl(DEFAULT_LOCATION));
   const [when, setWhen] = useState<When>("tomorrow");
-  const [errors, setErrors] = useState<{ category?: string; details?: string }>({});
+  const [errors, setErrors] = useState<{ category?: string; details?: string; area?: string }>({});
   const [attachNote, setAttachNote] = useState(false);
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const cat = category ? categoryById(category) : null;
+
+  // المسودة: نرجّعها لو المستخدم طلع قبل الإرسال (إلا لو فتح الشاشة من قسم معيّن)، ونحفظها مع كل تعديل.
+  const [restored, setRestored] = useState(false);
+  const draftLoaded = useRef(false);
+  useEffect(() => {
+    if (initial) {
+      draftLoaded.current = true;
+      return;
+    }
+    loadDraft().then((d) => {
+      draftLoaded.current = true;
+      if (!d) return;
+      const c = CATEGORIES.some((x) => x.id === d.category) ? (d.category as CategoryId) : null;
+      setCategory(c);
+      setTypeId(c && categoryById(c).types.some((x) => x.id === d.typeId) ? d.typeId : c ? categoryById(c).types[0].id : null);
+      setDetails(d.details);
+      if (d.area) setArea(d.area);
+      if (d.location) setLocation(d.location);
+      setWhen(d.when);
+      setRestored(true);
+    });
+  }, [initial]);
+  useEffect(() => {
+    if (!draftLoaded.current) return;
+    const id = setTimeout(() => saveDraft({ category, typeId, details, area, location, when }), 400);
+    return () => clearTimeout(id);
+  }, [category, typeId, details, area, location, when]);
+
+  function discardDraft() {
+    clearDraft();
+    setRestored(false);
+    setCategory(null);
+    setTypeId(null);
+    setDetails("");
+    setArea(tl(DEFAULT_AREA));
+    setLocation(tl(DEFAULT_LOCATION));
+    setWhen("tomorrow");
+  }
 
   function pickCategory(id: CategoryId) {
     setCategory(id);
@@ -47,8 +88,9 @@ export default function NewRequest() {
     const next: typeof errors = {};
     if (!category || !typeId) next.category = t("categoryRequired");
     if (details.trim().length < 10) next.details = t("detailsTooShort");
+    if (area.trim().length < 2) next.area = t("areaRequired");
     setErrors(next);
-    if (next.category || next.details || !category || !typeId) return;
+    if (next.category || next.details || next.area || !category || !typeId) return;
 
     const type = categoryById(category).types.find((x) => x.id === typeId)!;
     setBusy(true);
@@ -60,6 +102,7 @@ export default function NewRequest() {
         typeId,
         title: type.name,
         details: details.trim(),
+        area: area.trim(),
         location: { ar: location.trim(), en: location.trim() },
         when,
       });
@@ -77,6 +120,12 @@ export default function NewRequest() {
       back
       footer={<Button label={t("submitRequest")} icon={IconSend} variant="accent" size="lg" full onPress={submit} disabled={busy} />}
     >
+      {restored && (
+        <View style={{ gap: spacing["2"] }}>
+          <Notice text={t("draftRestored")} />
+          <Button label={t("draftDiscard")} variant="ghost" onPress={discardDraft} />
+        </View>
+      )}
       <SectionTitle title={t("chooseCategory")} />
       {cat ? (
         <View style={{ flexDirection: "row", alignItems: "center", gap: spacing["2"] }}>
@@ -119,7 +168,23 @@ export default function NewRequest() {
         error={errors.details}
       />
 
+      <Field
+        label={t("areaLabel")}
+        value={area}
+        onChangeText={(v) => {
+          setArea(v);
+          if (errors.area) setErrors((e) => ({ ...e, area: undefined }));
+        }}
+        maxLength={120}
+        error={errors.area}
+      />
+      <AppText variant="caption" color="inkMuted">
+        {t("areaHint")}
+      </AppText>
       <Field label={t("locationLabel")} value={location} onChangeText={setLocation} maxLength={200} />
+      <AppText variant="caption" color="inkMuted">
+        {t("locationHint")}
+      </AppText>
 
       <SectionTitle title={t("whenLabel")} />
       <Chips<When>

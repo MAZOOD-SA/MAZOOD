@@ -3,6 +3,7 @@
 // لإضافة أيقونة: أضف سطر هنا بنفس الشكل، واسمها من https://tabler.io/icons
 export { default as IconArrowLeft } from "@tabler/icons-react-native/icons/IconArrowLeft";
 export { default as IconArrowRight } from "@tabler/icons-react-native/icons/IconArrowRight";
+export { default as IconBug } from "@tabler/icons-react-native/icons/IconBug";
 export { default as IconBell } from "@tabler/icons-react-native/icons/IconBell";
 export { default as IconCalendar } from "@tabler/icons-react-native/icons/IconCalendar";
 export { default as IconCircleCheck } from "@tabler/icons-react-native/icons/IconCircleCheck";

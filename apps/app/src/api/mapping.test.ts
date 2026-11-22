@@ -6,11 +6,12 @@ import { errorKey, fromServerRequest } from "./mapping";
 describe("fromServerRequest", () => {
   it("يبني العنوان من نوع الطلب ويحفظ نص المستخدم", () => {
     const r = fromServerRequest({
-      id: "x", category: "transport", typeId: "flatbed", details: "نقل ماكينة", location: "سدير",
+      id: "x", category: "transport", typeId: "flatbed", details: "نقل ماكينة", area: "المرحلة الثانية", location: "سدير", cityId: "sudair",
       when: "today", status: "awaiting_offers", createdAt: "2026-11-22T10:00:00Z",
     });
     expect(r.title.ar).toBe("سطحة");
     expect(r.details.en).toBe("نقل ماكينة");
+    expect(r.area).toBe("المرحلة الثانية");
   });
 });
 

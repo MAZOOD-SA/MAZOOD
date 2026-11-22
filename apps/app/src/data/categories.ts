@@ -1,6 +1,7 @@
-// الأقسام الستة. أيقونة كل قسم ثابتة حسب جدول الأيقونات في brand/BRAND.md.
+// الأقسام السبعة. أيقونة كل قسم ثابتة حسب جدول الأيقونات في brand/BRAND.md.
 // لاحقًا (المرحلة 6) تنتقل الأقسام لقاعدة البيانات وتتعدل من لوحة الإدارة.
 import {
+  IconBug,
   IconFileCertificate,
   IconShieldCheck,
   IconShovel,
@@ -12,7 +13,7 @@ import type { ComponentType } from "react";
 import type { ColorValue } from "react-native";
 import type { Localized } from "@/i18n/I18nProvider";
 
-export type CategoryId = "transport" | "maintenance" | "materials" | "security" | "cleaning" | "customs";
+export type CategoryId = "transport" | "maintenance" | "materials" | "security" | "cleaning" | "customs" | "pest_control";
 
 export type IconComponent = ComponentType<{ size?: number; color?: ColorValue; strokeWidth?: number }>;
 
@@ -86,6 +87,17 @@ export const CATEGORIES: Category[] = [
     types: [
       { id: "import", name: { ar: "استيراد", en: "Import" } },
       { id: "export", name: { ar: "تصدير", en: "Export" } },
+    ],
+  },
+  {
+    id: "pest_control",
+    name: { ar: "مكافحة الحشرات والقوارض", en: "Pest control" },
+    hint: { ar: "رش حشرات، فيران، عقود دورية", en: "Insects, rodents, periodic contracts" },
+    icon: IconBug,
+    types: [
+      { id: "insects", name: { ar: "رش حشرات", en: "Insect spraying" } },
+      { id: "rodents", name: { ar: "مكافحة قوارض", en: "Rodent control" } },
+      { id: "periodic_contract", name: { ar: "عقد رش دوري", en: "Periodic spraying contract" } },
     ],
   },
 ];

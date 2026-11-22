@@ -5,7 +5,8 @@ import type { Db } from "./db.ts";
 
 const MIGRATIONS_DIR = join(import.meta.dirname, "..", "migrations");
 
-export async function migrate(db: Db, log: (m: string) => void = () => {}): Promise<string[]> {
+/** until: (للاختبارات) يوقف بعد هذا الملف، عشان نختبر نقل البيانات القديمة لملف جديد. */
+export async function migrate(db: Db, log: (m: string) => void = () => {}, opts: { until?: string } = {}): Promise<string[]> {
   await db.exec(
     "CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())",
   );
@@ -13,6 +14,7 @@ export async function migrate(db: Db, log: (m: string) => void = () => {}): Prom
   const files = (await readdir(MIGRATIONS_DIR)).filter((f) => f.endsWith(".sql")).sort();
   const applied: string[] = [];
   for (const file of files) {
+    if (opts.until && file > opts.until) break;
     if (done.has(file)) continue;
     const sql = await readFile(join(MIGRATIONS_DIR, file), "utf8");
     await db.tx(async (t) => {

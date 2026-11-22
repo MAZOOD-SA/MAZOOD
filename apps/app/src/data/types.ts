@@ -12,6 +12,9 @@ export type ServiceRequest = {
   typeId: string;
   title: Localized;
   details: Localized;
+  /** المنطقة (تظهر للمزوّد قبل القبول). */
+  area?: string;
+  /** الموقع بالضبط (يظهر للمزوّد بعد القبول بس). */
   location: Localized;
   when: When;
   createdAt: string;

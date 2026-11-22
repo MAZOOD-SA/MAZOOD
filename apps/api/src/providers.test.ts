@@ -248,7 +248,7 @@ describe("الروابط المؤقتة للمستندات", () => {
     const link = (await call({ method: "GET", url: `/v1/admin/documents/${docId}/link`, token: verifier.token })).json();
     expect((await call({ method: "GET", url: link.path.replace(/by=[^&]+/, `by=${support}`) })).statusCode).toBe(403);
     expect((await call({ method: "GET", url: `/v1/files/${docId}` })).statusCode).toBe(403);
-    expect((await call({ method: "GET", url: link.path.replace(/sig=./, "sig=0") })).statusCode).toBe(403);
+    expect((await call({ method: "GET", url: link.path.replace(/sig=(.)/, (_m: string, c: string) => `sig=${c === "0" ? "1" : "0"}`) })).statusCode).toBe(403);
   });
 
   it("لو انوقف الموظف، روابطه تبطل فورًا", async () => {

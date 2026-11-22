@@ -1,5 +1,6 @@
 // هيكل الشاشات: الغلاف، والعنوان مع زر الرجوع، والشريط التجريبي.
 import { LIVE } from "@/api/client";
+import { useServerReachable } from "@/api/connection";
 import { radius, spacing } from "@mazood/brand";
 import { IconArrowLeft, IconArrowRight } from "@/components/icons";
 import { router } from "expo-router";
@@ -108,6 +109,34 @@ export function SectionTitle({ title, action }: { title: string; action?: ReactN
         {title}
       </AppText>
       {action}
+    </View>
+  );
+}
+
+/** شريط يظهر لما ما نقدر نوصل للخادم: البيانات المعروضة آخر نسخة محفوظة على الجهاز. */
+export function OfflineBanner() {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const reachable = useServerReachable();
+  if (!LIVE || reachable) return null;
+  return (
+    <View accessibilityRole="alert" style={{ backgroundColor: colors.surfaceAlt, borderBottomWidth: 1, borderBottomColor: colors.line, paddingVertical: spacing["2"], alignItems: "center" }}>
+      <AppText variant="caption" weight={600}>
+        {t("offlineBanner")}
+      </AppText>
+    </View>
+  );
+}
+
+/** مكان محجوز رمادي وقت التحميل (بدل شاشة فاضية). */
+export function SkeletonList({ rows = 3 }: { rows?: number }) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  return (
+    <View accessibilityLabel={t("loading")} style={{ width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center", padding: spacing["4"], gap: spacing["3"] }}>
+      {Array.from({ length: rows }, (_, i) => (
+        <View key={i} style={{ height: 88, borderRadius: radius.md, backgroundColor: colors.surfaceAlt }} />
+      ))}
     </View>
   );
 }

@@ -7,7 +7,10 @@ export type ServerRequest = {
   category: CategoryId;
   typeId: string;
   details: string;
+  /** المنطقة (تظهر للمزوّد). فاضية في الطلبات القديمة قبل المرحلة ٤. */
+  area: string | null;
   location: string;
+  cityId: string;
   when: When;
   status: RequestStatus;
   createdAt: string;
@@ -23,6 +26,7 @@ export function fromServerRequest(r: ServerRequest): ServiceRequest {
     title,
     // نص المستخدم يظهر نفسه في اللغتين.
     details: { ar: r.details, en: r.details },
+    area: r.area ?? undefined,
     location: { ar: r.location, en: r.location },
     when: r.when,
     createdAt: new Date(r.createdAt).toISOString(),
@@ -33,7 +37,8 @@ export function fromServerRequest(r: ServerRequest): ServiceRequest {
 export type ServerFactory = {
   id: string;
   name: string | null;
-  city: string | null;
+  cityId: string | null;
+  city: { ar: string; en: string } | null;
   commercialRegister: string | null;
   vatNumber: string | null;
   profileComplete: boolean;

@@ -25,6 +25,7 @@ export type NewRequestInput = {
   typeId: string;
   title: Localized;
   details: string;
+  area: string;
   location: Localized;
   when: When;
   now: string;
@@ -68,6 +69,7 @@ export function reducer(state: State, action: Action): State {
         title: input.title,
         // النص اللي كتبه المستخدم يظهر نفسه في اللغتين.
         details: { ar: input.details, en: input.details },
+        area: input.area,
         location: input.location,
         when: input.when,
         createdAt: input.now,

@@ -11,7 +11,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { PrototypeBanner } from "@/components/layout";
+import { OfflineBanner, PrototypeBanner } from "@/components/layout";
 import { StoreProvider } from "@/data/store";
 import { I18nProvider, useI18n } from "@/i18n/I18nProvider";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
@@ -52,6 +52,7 @@ function Shell() {
     <View style={{ flex: 1, backgroundColor: colors.surface, direction: isRTL ? "rtl" : "ltr" }}>
       <StatusBar style={name === "dark" ? "light" : "dark"} />
       <PrototypeBanner />
+      <OfflineBanner />
       <View style={{ flex: 1 }}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }} />
       </View>

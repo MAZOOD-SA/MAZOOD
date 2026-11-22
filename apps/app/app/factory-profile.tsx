@@ -18,7 +18,6 @@ export default function FactoryProfile() {
   const { t, tl } = useI18n();
   const { factory, saveProfile } = useStore();
   const [name, setName] = useState(tl(factory.name));
-  const [city, setCity] = useState(tl(factory.city));
   const [cr, setCr] = useState(factory.commercialRegister);
   const [vat, setVat] = useState(factory.vatNumber);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -27,14 +26,14 @@ export default function FactoryProfile() {
 
   async function submit() {
     if (busy) return;
-    const input = { name: name.trim(), city: city.trim(), commercialRegister: toLatin(cr), vatNumber: toLatin(vat) };
+    const input = { name: name.trim(), commercialRegister: toLatin(cr), vatNumber: toLatin(vat) };
     // نفس قواعد الخادم (من الحزمة المشتركة)، عشان تطلع الرسالة قبل ما نرسل شي.
     const parsed = factoryProfileBody.safeParse(input);
     if (!parsed.success) {
       const next: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
         const key = String(issue.path[0]);
-        next[key] = { name: t("nameRequired"), city: t("cityRequired"), commercialRegister: t("crInvalid"), vatNumber: t("vatInvalid") }[key] ?? t("serverError");
+        next[key] = { name: t("nameRequired"), commercialRegister: t("crInvalid"), vatNumber: t("vatInvalid") }[key] ?? t("serverError");
       }
       return setErrors(next);
     }
@@ -60,7 +59,12 @@ export default function FactoryProfile() {
       <AppText color="inkMuted">{t("profileHint")}</AppText>
       {failure && <Notice text={failure} />}
       <Field label={t("factoryNameLabel")} value={name} onChangeText={setName} maxLength={120} error={errors.name} />
-      <Field label={t("cityLabel")} value={city} onChangeText={setCity} maxLength={80} error={errors.city} />
+      {/* المدينة: وحدة بس الحين (سدير)، فتنحط تلقائيًا. خانة الاختيار تظهر لما تنضاف مدينة ثانية (القرار ٢٠). */}
+      {!!tl(factory.city) && (
+        <AppText color="inkMuted">
+          {t("cityLabel")}: {tl(factory.city)}
+        </AppText>
+      )}
       <Field label={t("crLabel")} value={cr} onChangeText={setCr} keyboardType="number-pad" maxLength={10} error={errors.commercialRegister} ltr />
       <Field label={t("vatLabel")} value={vat} onChangeText={setVat} keyboardType="number-pad" maxLength={15} error={errors.vatNumber} ltr />
     </Screen>

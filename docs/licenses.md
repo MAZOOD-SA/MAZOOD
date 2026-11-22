@@ -43,6 +43,7 @@
 | @fastify/cors | 11.4.3 | MIT |
 | @fastify/rate-limit | 10.3.0 | MIT |
 | @fastify/multipart (رفع الملفات) | 9.4.0 | MIT |
+| @fastify/cookie (كوكي جلسة الموقع) | 11.1.5 | MIT |
 | pg (اتصال PostgreSQL) | 8.23.1 | MIT |
 | zod (التحقق من المدخلات) | 3.25.76 | MIT |
 | @electric-sql/pglite (PostgreSQL داخل العملية، للاختبارات والتطوير) | 0.3.16 | Apache-2.0 |

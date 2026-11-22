@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { audit } from "../audit.ts";
+import { resolveCityIds } from "../cities.ts";
 import { ApiError } from "../errors.ts";
 import { actorOf, parse, todayRiyadh, type Ctx, type Guards } from "../http.ts";
 import { loadDocs, slotView, summarize, type ProviderRow } from "../providers.ts";
@@ -23,6 +24,7 @@ export function providerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
   async function view(p: ProviderRow) {
     const today = todayRiyadh(ctx.now());
     const s = summarize(p, await loadDocs(db, p.id), today);
+    const cities = await db.query<{ city_id: string }>("SELECT city_id FROM provider_cities WHERE provider_id=$1 ORDER BY city_id", [p.id]);
     return {
       id: p.id,
       tradeName: p.trade_name,
@@ -32,6 +34,7 @@ export function providerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       idNumberMasked: `******${p.id_number_last4}`,
       commercialRegister: p.commercial_register,
       categories: p.categories,
+      cityIds: cities.map((c) => c.city_id),
       status: p.status,
       statusReason: p.status_reason,
       verified: s.effectiveVerified,
@@ -53,21 +56,28 @@ export function providerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const body = parse(providerProfileBody, req.body);
     const existing = await myProvider(user.id);
     if (existing && !["draft", "rejected"].includes(existing.status)) throw new ApiError(409, "profile_locked");
+    const cityIds = await resolveCityIds(db, body.cityIds);
     const enc = ctx.box.encrypt(body.idNumber);
     const values = [user.id, body.tradeName, body.ownerName, body.idType, enc, body.idNumber.slice(-4), body.commercialRegister, body.categories];
-    const [row] = existing
-      ? await db.query<ProviderRow>(
-          `UPDATE providers SET trade_name=$2, owner_name=$3, id_type=$4, id_number_enc=$5, id_number_last4=$6,
-             commercial_register=$7, categories=$8, updated_at=now() WHERE user_id=$1 RETURNING *`,
-          values,
-        )
-      : await db.query<ProviderRow>(
-          `INSERT INTO providers (user_id, trade_name, owner_name, id_type, id_number_enc, id_number_last4, commercial_register, categories)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-          values,
-        );
-    await audit(db, actorOf(user), existing ? "provider.profile_updated" : "provider.registered", { type: "provider", id: row.id }, {
-      categories: body.categories,
+    const row = await db.tx(async (t) => {
+      const [r] = existing
+        ? await t.query<ProviderRow>(
+            `UPDATE providers SET trade_name=$2, owner_name=$3, id_type=$4, id_number_enc=$5, id_number_last4=$6,
+               commercial_register=$7, categories=$8, updated_at=now() WHERE user_id=$1 RETURNING *`,
+            values,
+          )
+        : await t.query<ProviderRow>(
+            `INSERT INTO providers (user_id, trade_name, owner_name, id_type, id_number_enc, id_number_last4, commercial_register, categories)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+            values,
+          );
+      await t.query("DELETE FROM provider_cities WHERE provider_id=$1", [r.id]);
+      for (const c of cityIds) await t.query("INSERT INTO provider_cities (provider_id, city_id) VALUES ($1,$2)", [r.id, c]);
+      await audit(t, actorOf(user), existing ? "provider.profile_updated" : "provider.registered", { type: "provider", id: r.id }, {
+        categories: body.categories,
+        cityIds,
+      });
+      return r;
     });
     return { provider: await view(row) };
   });

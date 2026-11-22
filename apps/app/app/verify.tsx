@@ -3,7 +3,7 @@ import { spacing } from "@mazood/brand";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { api, ApiClientError, LIVE } from "@/api/client";
+import { api, ApiClientError, IS_WEB, LIVE } from "@/api/client";
 import { errorKey } from "@/api/mapping";
 import { homeRouteFor } from "@/lib/home-route";
 import { Field } from "@/components/Field";
@@ -27,11 +27,12 @@ export default function Verify() {
     if (LIVE) {
       setBusy(true);
       try {
-        const res = await api<{ token: string }>("/v1/auth/otp/verify", {
+        // الموقع: الخادم يحط الجلسة في كوكي محمي وما يرجّع الرمز. الجوال: الرمز يرجع وينحفظ في الخزنة.
+        const res = await api<{ token?: string }>("/v1/auth/otp/verify", {
           method: "POST",
-          body: { phone, code: latin, ...(as === "provider" ? { as: "provider" } : {}) },
+          body: { phone, code: latin, ...(as === "provider" ? { as: "provider" } : {}), ...(IS_WEB ? { channel: "web" } : {}) },
         });
-        const role = await startSession(res.token, phone ?? "");
+        const role = await startSession(res.token ?? null, phone ?? "");
         setBusy(false);
         return router.replace(homeRouteFor(role));
       } catch (e) {
