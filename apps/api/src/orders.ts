@@ -139,35 +139,4 @@ export async function withdrawNomination(db: Db, user: SessionUser, factoryId: s
   });
 }
 
-/**
- * الإلغاء المجاني قبل ما يبدأ المزوّد (سؤال ١٥): من «مفتوح» أو «ينتظر موافقة المدير» أو «مقبول» أو «منتهي».
- * العروض الفعّالة تنرفض، والترشيح ينسحب، والطلب المنفّذ (لو انقبل عرض) ينقفل.
- * بعد البدء ما ينلغي مباشرة: «طلب إلغاء» يوافق عليه المزوّد (الخطوة ٨).
- */
-export async function cancelBeforeStart(db: Db, user: SessionUser, factoryId: string, requestId: string, now: Date) {
-  await db.tx(async (t) => {
-    const r = await lockFactoryRequest(t, requestId, factoryId);
-    let to: RequestStatus;
-    try {
-      to = nextStatus(effectiveStatus(r, now), "cancel", "factory");
-    } catch {
-      throw new ApiError(409, "request_not_cancellable");
-    }
-    await t.query("UPDATE requests SET status=$2, updated_at=$3 WHERE id=$1", [requestId, to, now]);
-    await t.query(
-      "UPDATE offers SET status='rejected', rejected_reason='request_closed', updated_at=$2 WHERE request_id=$1 AND status='active'",
-      [requestId, now],
-    );
-    await t.query("UPDATE approvals_internal SET decision='withdrawn', decided_by=$2, decided_at=$3 WHERE request_id=$1 AND decision IS NULL", [
-      requestId,
-      user.id,
-      now,
-    ]);
-    const [order] = await t.query<{ id: string }>(
-      "UPDATE orders SET state='closed', cancelled_at=$2 WHERE request_id=$1 AND state='open' RETURNING id",
-      [requestId, now],
-    );
-    await orderEvent(t, { requestId, orderId: order?.id, at: now, actor: { id: user.id, role: "factory" }, event: "cancelled", details: { freeCancellation: true } });
-    await audit(t, actorOf(user), "request.cancelled", { type: "request", id: requestId });
-  });
-}
+// الإلغاء (قبل البدء وبعده)، واعتذار المزوّد، والبلاغ: في cancellations.ts.

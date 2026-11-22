@@ -17,6 +17,8 @@ export const PERMISSIONS = {
   "documents.view": ["owner", "general_manager", "verification"],
   /** يضيف موظفين ويوقفهم (المدير العام ما يقدر يضيف أو يوقف مدير عام: هذا قرار المالك) */
   "staff.manage": ["owner", "general_manager"],
+  /** يتابع البلاغات: يقرأها، ويكتب ملاحظات (منها الداخلية)، ويقرر فيها (المرحلة ٤، نسخة أولى) */
+  "disputes.manage": ["owner", "general_manager", "support"],
   /** يشوف سجل الإجراءات */
   "audit.view": ["owner", "general_manager"],
 } as const satisfies Record<string, readonly StaffRole[]>;

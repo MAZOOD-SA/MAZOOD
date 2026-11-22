@@ -20,7 +20,7 @@ import { activeMemberCount, lockFactoryRequest, orderEvent } from "./orders.ts";
 import { getSettings } from "./settings.ts";
 import type { FileStorage } from "./storage.ts";
 
-type LockedOrder = {
+export type LockedOrder = {
   id: string;
   request_id: string;
   provider_id: string;
@@ -39,7 +39,7 @@ export async function providerIdFor(db: Db, userId: string): Promise<string> {
 }
 
 /** يقفل طلب منفّذ شغّال يخص هذا المزوّد، مع طلبه. طلب مزوّد ثاني: «غير موجود». */
-async function lockProviderOrder(t: Db, orderId: string, providerId: string): Promise<LockedOrder> {
+export async function lockProviderOrder(t: Db, orderId: string, providerId: string): Promise<LockedOrder> {
   const [o] = await t.query<LockedOrder>(
     `SELECT o.id, o.request_id, o.provider_id, o.factory_id, o.price_halalas, o.state, r.status AS request_status
        FROM orders o JOIN requests r ON r.id = o.request_id
@@ -52,7 +52,7 @@ async function lockProviderOrder(t: Db, orderId: string, providerId: string): Pr
 }
 
 /** الطلب المنفّذ الشغّال لطلب المصنع (بعد قفل الطلب). */
-async function lockOpenOrderOfRequest(t: Db, requestId: string): Promise<LockedOrder> {
+export async function lockOpenOrderOfRequest(t: Db, requestId: string): Promise<LockedOrder> {
   const [o] = await t.query<LockedOrder>(
     `SELECT o.id, o.request_id, o.provider_id, o.factory_id, o.price_halalas, o.state, r.status AS request_status
        FROM orders o JOIN requests r ON r.id = o.request_id
@@ -64,7 +64,7 @@ async function lockOpenOrderOfRequest(t: Db, requestId: string): Promise<LockedO
   return o;
 }
 
-const setRequestStatus = (t: Db, requestId: string, to: RequestStatus, now: Date) =>
+export const setRequestStatus = (t: Db, requestId: string, to: RequestStatus, now: Date) =>
   t.query("UPDATE requests SET status=$2, updated_at=$3 WHERE id=$1", [requestId, to, now]);
 
 /** المزوّد: «بدأت التنفيذ». من «مقبول» بس. */
@@ -90,6 +90,9 @@ export async function deliverJob(db: Db, user: SessionUser, orderId: string, now
     const to = nextStatus(o.request_status, "deliver", "provider");
     const pending = await t.query("SELECT 1 FROM price_changes WHERE order_id=$1 AND status='pending'", [o.id]);
     if (pending.length) throw new ApiError(409, "price_change_pending");
+    // المصنع طلب الإلغاء وينتظر رد المزوّد: يرد أول (يوافق أو يرفض)، بعدين يكمّل.
+    const cancelPending = await t.query("SELECT 1 FROM cancellations WHERE order_id=$1 AND status='pending'", [o.id]);
+    if (cancelPending.length) throw new ApiError(409, "cancellation_pending");
     const autoConfirmAt = new Date(now.getTime() + autoConfirmHours * 3600_000);
     await setRequestStatus(t, o.request_id, to, now);
     await t.query("UPDATE orders SET delivered_at=$2, auto_confirm_at=$3 WHERE id=$1", [o.id, now, autoConfirmAt]);
