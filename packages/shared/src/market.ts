@@ -108,11 +108,18 @@ export const purchaseNoteBody = z.object({ note: text(0, 500).optional() }).stri
 export const PURCHASE_STATUSES = ["pending", "quoted", "revision_requested", "accepted", "received", "rejected", "declined", "cancelled", "expired"] as const;
 export type PurchaseStatus = (typeof PURCHASE_STATUSES)[number];
 
+/**
+ * مين يقدر يشتري من السوق: أنواع العميل (منشأة أو فرد) + المزوّد الموثّق
+ * (قرار المالك 23 نوفمبر 2026: المزوّد يشتري من المصانع، مثل مزوّد النظافة يشتري منظفات).
+ */
+export const MARKET_BUYER_KINDS = [...CUSTOMER_KINDS, "provider"] as const;
+export type MarketBuyerKind = (typeof MARKET_BUYER_KINDS)[number];
+
 /** إعدادات السوق (تتغيّر بأمر واحد، مثل باقي الإعدادات). */
 export const marketSettingsSchema = z
   .object({
-    /** مين يقدر يطلب من السوق. الحين المنشآت بس (قرار المالك يراجعه مع الشريك). */
-    buyerKinds: z.array(z.enum(CUSTOMER_KINDS)).min(1),
+    /** مين يقدر يطلب من السوق. الحين المنشآت والمزوّدين الموثّقين (قرار المالك). */
+    buyerKinds: z.array(z.enum(MARKET_BUYER_KINDS)).min(1),
     /** الفترة المجانية لأول اشتراك بالأيام. صفر = مقفولة لين يتقرر (قرار المالك). */
     trialDays: z.number().int().min(0).max(180),
     /** عمولة المنصة على البيعة بالجزء من عشرة آلاف (١٠٠ = ١٪). صفر الحين. **تغييرها قرار المالك بس** (CLAUDE.md). */
@@ -126,7 +133,7 @@ export const marketSettingsSchema = z
 export type MarketSettings = z.infer<typeof marketSettingsSchema>;
 
 export const DEFAULT_MARKET_SETTINGS: MarketSettings = {
-  buyerKinds: ["business"],
+  buyerKinds: ["business", "provider"],
   trialDays: 0,
   commissionBps: 0,
   publicMinProducts: 0,

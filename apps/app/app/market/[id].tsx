@@ -40,9 +40,10 @@ export default function ProductPage() {
     );
   }
 
-  // مين يقدر يطلب: العميل الداخل (المنشآت الحين، والخادم هو اللي يقرر). الفرد يشوف السبب.
-  const signedIn = state.signedIn && role === "factory";
-  const individual = signedIn && factory.kind === "individual";
+  // مين يقدر يطلب: العميل الداخل (المنشآت الحين) والمزوّد (القرار ٥٧). الخادم هو اللي يقرر،
+  // والفرد يشوف السبب. المزوّد اللي ما توثّق يشوف رسالته في شاشة الطلب نفسها، مع زر يكمّل فيه التوثيق.
+  const signedIn = state.signedIn && (role === "factory" || role === "provider");
+  const individual = state.signedIn && role === "factory" && factory.kind === "individual";
   const cta = !state.signedIn ? (
     <Button label={t("signInToRequest")} variant="accent" size="lg" full onPress={() => router.push("/login")} />
   ) : signedIn && !individual ? (

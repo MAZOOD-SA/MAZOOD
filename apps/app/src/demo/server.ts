@@ -1066,6 +1066,7 @@ const marketHost: DemoHost = {
   market: () => db.market,
   factories: () => db.factories,
   phoneOf: (factoryId) => db.users.find((u) => u.factoryId === factoryId)?.phone ?? "",
+  providerName: (providerId) => db.providers.find((p) => p.id === providerId)?.tradeName ?? null,
   fail,
   id,
   now,
