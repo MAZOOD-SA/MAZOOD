@@ -130,7 +130,7 @@ export function Badge({ label, tone, icon: Icon }: { label: string; tone: BadgeT
   const { colors } = useTheme();
   const look: Record<BadgeTone, { bg: string; fg: string }> = {
     ok: { bg: colors.successSoft, fg: colors.success },
-    new: { bg: colors.accentSoft, fg: colors.onAccentSoft },
+    new: { bg: colors.surfaceAlt, fg: colors.ink }, // بدون أصفر (قرار المالك ٢٣ نوفمبر): الجديد يبان من الخط الثقيل مو من اللون
     action: { bg: colors.surfaceAlt, fg: colors.ink },
     muted: { bg: colors.surfaceAlt, fg: colors.inkMuted },
     bad: { bg: colors.surfaceAlt, fg: colors.danger },
