@@ -6,7 +6,7 @@ import { View } from "react-native";
 import { DeleteAccountSection, NotificationPrefsSection, PreferencesSection, SignOutButton } from "@/components/account";
 import { DocSlotCard, dayIso } from "@/components/DocSlotCard";
 import { Stars } from "@/components/flow";
-import { IconUpload } from "@/components/icons";
+import { IconHelpCircle, IconUpload } from "@/components/icons";
 import { Screen, SectionTitle, SkeletonList, TwoColumn } from "@/components/layout";
 import { AppText, Button, Card, Divider, Notice, Row, VerifiedBadge } from "@/components/ui";
 import { categoryById, type CategoryId } from "@/data/categories";
@@ -76,6 +76,7 @@ export default function ProviderAccount() {
 
   const side = (
     <>
+      <Button label={t("help")} icon={IconHelpCircle} variant="secondary" onPress={() => router.push("/help")} />
       <PreferencesSection />
       <NotificationPrefsSection />
       <SignOutButton />

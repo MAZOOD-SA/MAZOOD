@@ -39,9 +39,9 @@ const base = `http://localhost:${server.address().port}`;
 
 // السوق: التصفّح، وصفحة المنتج، وصفحة المصنع، وطلب شراء، و«متجري» ونموذج المنتج والرد على طلب.
 const MARKET = ["/shop", "/market/mp1", "/market/seller/f2", "/purchase/new?product=mp1", "/purchase/pr2", "/store", "/seller/product?id=mp4", "/seller/purchase/pr1"];
-const FACTORY = [...MARKET, "/home", "/requests", "/request/r1", "/request/r2", "/request/r3", "/request/r4", "/request/new", "/account", "/factory-profile", "/invoices", "/notifications"];
+const FACTORY = [...MARKET, "/home", "/requests", "/request/r1", "/request/r2", "/request/r3", "/request/r4", "/request/new", "/account", "/factory-profile", "/invoices", "/notifications", "/help"];
 const INDIVIDUAL = ["/home", "/request/new", "/account", "/factory-profile"];
-const PROVIDER = ["/provider/requests", "/provider/work", "/provider/job/d8", "/provider/request/r5", "/provider/account"];
+const PROVIDER = ["/provider/requests", "/provider/work", "/provider/job/d8", "/provider/request/r5", "/provider/account", "/help"];
 
 const problems = [];
 const browser = await chromium.launch();

@@ -12,10 +12,10 @@ import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { OfflineBanner, PrototypeBanner } from "@/components/layout";
-import { AccountCard, LanguageThemeTools, NavShell, navItemsFor } from "@/components/nav";
+import { AccountCard, LanguageThemeTools, NavShell, SidebarTool, navItemsFor } from "@/components/nav";
 import { useSellerEnabled } from "@/components/market";
 import { Button } from "@/components/ui";
-import { IconPlus } from "@/components/icons";
+import { IconHelpCircle, IconPlus } from "@/components/icons";
 import { useCan } from "@/data/useAdmin";
 import { CATEGORIES, categoryById, type CategoryId } from "@/data/categories";
 import type { ProviderView } from "@/data/provider-types";
@@ -129,7 +129,11 @@ function Shell() {
           action={role === "factory" ? <Button label={t("newRequestShort")} icon={IconPlus} variant="secondary" full onPress={() => router.push("/request/new")} /> : undefined}
           next={next}
           categories={sidebarCategories}
-          tools={<LanguageThemeTools />}
+          tools={
+            <LanguageThemeTools>
+              <SidebarTool icon={IconHelpCircle} label={t("help")} onPress={() => router.navigate("/help")} />
+            </LanguageThemeTools>
+          }
           footer={
             <AccountCard
               title={accountTitle}

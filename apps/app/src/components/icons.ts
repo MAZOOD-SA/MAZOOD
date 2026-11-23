@@ -69,3 +69,5 @@ export { default as IconHelpCircle } from "@tabler/icons-react-native/icons/Icon
 export { default as IconLanguage } from "@tabler/icons-react-native/icons/IconLanguage";
 export { default as IconMoon } from "@tabler/icons-react-native/icons/IconMoon";
 export { default as IconSun } from "@tabler/icons-react-native/icons/IconSun";
+export { default as IconChevronDown } from "@tabler/icons-react-native/icons/IconChevronDown";
+export { default as IconMessageCircle } from "@tabler/icons-react-native/icons/IconMessageCircle";

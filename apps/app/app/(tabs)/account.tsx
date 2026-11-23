@@ -8,7 +8,7 @@ import { ApiClientError, LIVE } from "@/api/client";
 import { errorKey } from "@/api/mapping";
 import { DeleteAccountSection, NotificationPrefsSection, PreferencesSection, SignOutButton } from "@/components/account";
 import { Field } from "@/components/Field";
-import { IconFileInvoice, IconInfoCircle, IconUsers } from "@/components/icons";
+import { IconFileInvoice, IconHelpCircle, IconInfoCircle, IconUsers } from "@/components/icons";
 import { useSellerEnabled } from "@/components/market";
 import { Screen, SectionTitle, TwoColumn } from "@/components/layout";
 import { AppText, Badge, Button, Card, Chips, Divider, Notice, Row } from "@/components/ui";
@@ -75,6 +75,7 @@ export default function Account() {
 
   const side = (
     <>
+      <Button label={t("help")} icon={IconHelpCircle} variant="secondary" onPress={() => router.push("/help")} />
       <PreferencesSection />
       <NotificationPrefsSection />
       {!LIVE && <Notice icon={IconInfoCircle} text={t("prototypeNote")} />}

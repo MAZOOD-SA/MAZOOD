@@ -131,3 +131,28 @@ describe("ألوان الأقسام", () => {
     }
   });
 });
+
+describe("أسئلة صفحة المساعدة", () => {
+  it("لكل نوع ٤ أسئلة أو أكثر، بنص عربي وإنجليزي، وبدون تكرار", async () => {
+    const { FAQ } = await import("@/data/faq");
+    for (const role of ["factory", "provider"] as const) {
+      const list = FAQ[role];
+      expect(list.length, role).toBeGreaterThanOrEqual(4);
+      for (const { q, a } of list) {
+        for (const text of [q.ar, q.en, a.ar, a.en]) expect(text.trim(), `${role}: ${q.ar}`).not.toBe("");
+      }
+      expect(new Set(list.map((x) => x.q.ar)).size).toBe(list.length);
+      expect(new Set(list.map((x) => x.q.en)).size).toBe(list.length);
+    }
+  });
+  it("faqFor: كل نوع يشوف أسئلته، والموظف يشوف الاثنين", async () => {
+    const { FAQ, faqFor } = await import("@/data/faq");
+    expect(faqFor("factory")).toEqual(FAQ.factory);
+    expect(faqFor("provider")).toEqual(FAQ.provider);
+    expect(faqFor("staff")).toEqual([...FAQ.factory, ...FAQ.provider]);
+  });
+  it("سؤال «(حاليًا)» انتقل كما هو من docs/admin/faq.md", async () => {
+    const { FAQ } = await import("@/data/faq");
+    expect(FAQ.provider.some((x) => x.a.ar.startsWith("(حاليًا)"))).toBe(true);
+  });
+});

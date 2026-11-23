@@ -300,8 +300,8 @@ export function SidebarTool({ icon: Icon, label, accessibilityLabel, onPress }: 
 }
 
 /**
- * أدوات القائمة في صف واحد: (أي زر إضافي مثل «مساعدة»)، ثم اللغة، ثم المظهر.
- * المظهر يتبدّل بين الفاتح والداكن حسب الظاهر الحين. صف واحد عشان بطاقة الحساب تبان بدون تمرير.
+ * أدوات القائمة: أي زر إضافي (مثل «مساعدة») في صف لحاله، وتحته اللغة والمظهر جنب بعض.
+ * المظهر يتبدّل بين الفاتح والداكن حسب الظاهر الحين.
  */
 export function LanguageThemeTools({ children }: { children?: ReactNode }) {
   const { t, locale, setLocale } = useI18n();
@@ -309,8 +309,9 @@ export function LanguageThemeTools({ children }: { children?: ReactNode }) {
   const target = name === "dark" ? "light" : "dark";
   const targetLabel = t(target === "dark" ? "themeDark" : "themeLight");
   return (
-    <View style={{ flexDirection: "row", gap: spacing["2"] }}>
-      {children}
+    <View style={{ gap: spacing["2"] }}>
+      {children && <View style={{ flexDirection: "row" }}>{children}</View>}
+      <View style={{ flexDirection: "row", gap: spacing["2"] }}>
       <SidebarTool icon={IconLanguage} label={t("langToggle")} accessibilityLabel={t("langToggleLabel")} onPress={() => setLocale(locale === "ar" ? "en" : "ar")} />
         <SidebarTool
           icon={target === "dark" ? IconMoon : IconSun}
@@ -318,6 +319,7 @@ export function LanguageThemeTools({ children }: { children?: ReactNode }) {
           accessibilityLabel={t("themeToggleLabel", { mode: targetLabel })}
           onPress={() => setMode(target)}
         />
+      </View>
     </View>
   );
 }
