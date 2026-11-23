@@ -95,7 +95,8 @@ export type ErrorKey =
   | "errPriceUnchanged" | "errManagerApproval" | "errProviderUnavailable" | "errChatClosed"
   | "errProfileIncomplete" | "errIdentityUnverified" | "errKindLocked" | "errIndividualNoMembers"
   | "errProductsLimit" | "errImagesLimit" | "errBelowMinOrder" | "errOwnProduct" | "errSellerNotEnabled" | "errProductRemoved"
-  | "errMarketBuyerNotAllowed" | "errSellerBusinessOnly";
+  | "errMarketBuyerNotAllowed" | "errSellerBusinessOnly"
+  | "errOwnerOnly" | "errPermissionLocked" | "errDeletionActive";
 
 export function errorKey(code: string): ErrorKey {
   switch (code) {
@@ -152,6 +153,15 @@ export function errorKey(code: string): ErrorKey {
       return "errInvalidTransition";
     case "deletion_pending":
       return "errDeletionPending";
+    case "owner_only":
+      return "errOwnerOnly";
+    case "permission_locked":
+      return "errPermissionLocked";
+    case "deletion_has_active_orders":
+      return "errDeletionActive";
+    case "deletion_not_pending":
+    case "not_pending":
+      return "errInvalidTransition";
     case "demo_unsupported":
       return "errDemoUnsupported";
     case "photos_limit":

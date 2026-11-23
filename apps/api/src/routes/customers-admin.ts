@@ -66,6 +66,11 @@ export function customerAdminRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       `SELECT u.phone, fm.role, fm.active FROM factory_members fm JOIN users u ON u.id = fm.user_id WHERE fm.factory_id=$1 ORDER BY fm.created_at`,
       [id],
     );
+    // آخر طلباته، عشان خدمة العملاء تشوف وضعه بسرعة لما يتصل.
+    const requests = await db.query(
+      `SELECT id, category, status, created_at AS "createdAt" FROM requests WHERE factory_id=$1 ORDER BY created_at DESC LIMIT 20`,
+      [id],
+    );
     const canSeeId = can(u.staffRole, "customers.identity", u.perms) && !!f.id_number_enc;
     if (canSeeId) await audit(db, actorOf(u), "customer.id_number_viewed", { type: "factory", id });
     return {
@@ -83,6 +88,7 @@ export function customerAdminRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
         members,
         createdAt: f.created_at,
       },
+      requests,
     };
   });
 

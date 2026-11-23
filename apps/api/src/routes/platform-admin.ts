@@ -102,7 +102,7 @@ export function platformAdminRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     if (!(SETTING_KEYS as string[]).includes(key) || NOT_EDITABLE_HERE.includes(key)) throw new ApiError(404, "not_found");
     const { value } = parse(settingBody, req.body);
     const parsed = SETTINGS_SCHEMA.shape[key].safeParse(value);
-    if (!parsed.success) throw new ApiError(400, "validation_failed");
+    if (!parsed.success) throw new ApiError(400, "validation");
     // العمولة قرار المالك بس (CLAUDE.md): أي تغيير فيها، حتى لو جا داخل كائن market كامل، يُرفض لغيره.
     if (key === "market") {
       const before = (await getSettings(db)).market.commissionBps;

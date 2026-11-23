@@ -6,7 +6,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 import { api, ApiClientError, apiUpload, IS_WEB, LIVE } from "@/api/client";
 import { clearDraft } from "@/api/draft";
-import type { FactoryProfileBody, StaffRole } from "@mazood/shared";
+import type { FactoryProfileBody, Permission, StaffRole } from "@mazood/shared";
 import { fromServerNotification, fromServerRequest, type ServerFactory, type ServerNotification, type ServerRequest } from "@/api/mapping";
 import { clearToken, loadSnapshot, loadToken, saveSnapshot, saveToken } from "@/api/session";
 import { reducer, type Action, type NewRequestInput, type State } from "./reducer";
@@ -37,6 +37,8 @@ type StoreValue = {
   role: Role | null;
   /** دور الموظف في الإدارة، لو كان موظف. */
   staffRole: StaffRole | null;
+  /** صلاحيات الموظف الفعلية من الخادم (بعد تعديلات المالك). null = نستخدم الجدول الافتراضي. */
+  staffPermissions: Permission[] | null;
   /** طلب للخادم بتوكن الجلسة الحالية (لشاشات المزوّد والإدارة). */
   authed: <T>(path: string, opts?: { method?: "GET" | "POST" | "PUT"; body?: unknown }) => Promise<T>;
   upload: <T>(path: string, form: FormData) => Promise<T>;
@@ -54,6 +56,7 @@ type Snapshot = {
   phone: string;
   role: Role;
   staffRole: StaffRole | null;
+  staffPermissions?: Permission[] | null;
   factoryRole?: "manager" | "member" | null;
   factory: ServerFactory | null;
   requests: ServerRequest[];
@@ -94,18 +97,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
   const [ready, setReady] = useState(false);
   const [liveFactory, setLiveFactory] = useState<{ factory: Factory; complete: boolean } | null>(null);
-  const [account, setAccount] = useState<{ role: Role; staffRole: StaffRole | null; factoryRole: "manager" | "member" | null } | null>(null);
+  const [account, setAccount] = useState<{ role: Role; staffRole: StaffRole | null; staffPermissions: Permission[] | null; factoryRole: "manager" | "member" | null } | null>(null);
   const token = useRef<string | null>(null);
 
   const applySnapshot = useCallback((snap: Snapshot) => {
-    setAccount({ role: snap.role, staffRole: snap.staffRole, factoryRole: snap.factoryRole ?? null });
+    setAccount({ role: snap.role, staffRole: snap.staffRole, staffPermissions: snap.staffPermissions ?? null, factoryRole: snap.factoryRole ?? null });
     dispatch({ type: "signIn", phone: snap.phone });
     dispatch({ type: "setRequests", requests: snap.requests.map(fromServerRequest) });
     if (snap.factory) setLiveFactory({ factory: toFactory(snap.factory), complete: snap.factory.profileComplete });
   }, []);
 
   const loadAccount = useCallback(async (tk: string | null): Promise<Role> => {
-    const me = await api<{ user: { phone: string; role: Role; staffRole: StaffRole | null; factoryRole: "manager" | "member" | null }; factory: ServerFactory | null }>(
+    const me = await api<{ user: { phone: string; role: Role; staffRole: StaffRole | null; staffPermissions?: Permission[] | null; factoryRole: "manager" | "member" | null }; factory: ServerFactory | null }>(
       "/v1/me",
       { token: tk },
     );
@@ -113,7 +116,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const requests =
       me.user.role === "factory" ? (await api<{ requests: ServerRequest[] }>("/v1/requests", { token: tk })).requests : [];
     token.current = tk;
-    const snap: Snapshot = { phone: me.user.phone, role: me.user.role, staffRole: me.user.staffRole, factoryRole: me.user.factoryRole, factory: me.factory, requests };
+    const snap: Snapshot = { phone: me.user.phone, role: me.user.role, staffRole: me.user.staffRole, staffPermissions: me.user.staffPermissions ?? null, factoryRole: me.user.factoryRole, factory: me.factory, requests };
     applySnapshot(snap);
     await saveSnapshot(snap);
     return me.user.role;
@@ -228,6 +231,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       profileComplete: liveFactory?.complete ?? false,
       role: account?.role ?? null,
       staffRole: account?.staffRole ?? null,
+      staffPermissions: account?.staffPermissions ?? null,
       factoryRole: account?.factoryRole ?? null,
       authed,
       upload,

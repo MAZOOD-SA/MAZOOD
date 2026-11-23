@@ -16,7 +16,7 @@ import { AccountCard, NavShell, navItemsFor } from "@/components/nav";
 import { useSellerEnabled } from "@/components/market";
 import { Button } from "@/components/ui";
 import { IconPlus } from "@/components/icons";
-import { can } from "@mazood/shared";
+import { useCan } from "@/data/useAdmin";
 import { StoreProvider, useStore } from "@/data/store";
 import { I18nProvider, useI18n } from "@/i18n/I18nProvider";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
@@ -58,7 +58,8 @@ function Shell() {
   // جنب «طلباتي»: عدد العروض اللي ما انفتحت والرسائل اللي ما انقرت، عشان المصنع يعرف من أي شاشة إن فيه جديد.
   const newOffers = state.requests.reduce((n, r) => n + (r.newOfferCount ?? 0) + (r.unreadMessages ?? 0), 0);
   const seller = useSellerEnabled();
-  const items = state.signedIn ? navItemsFor(role, t, (p) => can(staffRole, p), { newOffers, seller }) : [];
+  const allowed = useCan();
+  const items = state.signedIn ? navItemsFor(role, t, allowed, { newOffers, seller }) : [];
   const phone = state.phone ? digits(`0${state.phone.slice(4)}`) : "";
   const accountTitle = role === "factory" && profileComplete ? tl(factory.name) : phone;
   const roleLabel = role === "factory" ? t("factory") : role === "provider" ? t("providerAccount") : t("staffAccount");

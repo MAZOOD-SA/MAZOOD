@@ -68,6 +68,8 @@ export function DeleteAccountSection() {
 
   return (
     <>
+      {/* رفضت الإدارة الطلب السابق: السبب يبان هنا عشان يعرف وش يسوي (مثلًا يخلّص طلبه الجاري)، والزر يبقى. */}
+      {request?.status === "rejected" && request.note && <Notice text={t("deletionRejectedNote", { note: request.note })} />}
       <Button label={t("requestDeletion")} icon={IconTrash} variant="ghost" tone="danger" onPress={() => setOpen(true)} />
       <ConfirmDialog
         visible={open}

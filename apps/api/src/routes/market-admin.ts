@@ -154,6 +154,25 @@ export function marketAdminRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
 
   // ───────── المنتجات المخالفة ─────────
 
+  // قائمة المنتجات للمراجعة: بحث بالاسم، والمخالفة (removed) تقدر تطلع لحالها.
+  app.get("/v1/admin/market/products", async (req) => {
+    await g.requireStaff(req, "market.moderate");
+    const q = parse(
+      z.object({ q: z.string().trim().min(2).max(60).optional(), status: z.enum(["active", "hidden", "removed"]).optional() }).strict(),
+      req.query,
+    );
+    const rows = await db.query(
+      `SELECT p.id, p.name, p.status, p.category_id AS "categoryId", p.removed_reason AS "removedReason", p.updated_at AS "updatedAt",
+              f.name AS "sellerName", p.seller_id AS "sellerId"
+         FROM products p JOIN factories f ON f.id = p.seller_id
+        WHERE ($1::text IS NULL OR p.name ILIKE '%' || $1 || '%' OR f.name ILIKE '%' || $1 || '%')
+          AND ($2::text IS NULL OR p.status = $2::text)
+        ORDER BY p.updated_at DESC LIMIT 200`,
+      [q.q ?? null, q.status ?? null],
+    );
+    return { products: rows };
+  });
+
   app.post("/v1/admin/market/products/:id/remove", async (req) => {
     const u = await g.requireStaff(req, "market.moderate");
     const id = idParam(req);

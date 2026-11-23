@@ -72,6 +72,7 @@
 | `src/market.ts` | السوق: شرط ظهور المنتج (`productListedSql`، القرار ٤٤)، والاشتراك الحالي، وحالة البائع كاملة، وتقييمه |
 | `src/routes/market.ts` | مسارات السوق: العامة (المنتجات والصور وصفحة البائع)، والمصنع البائع («متجري»)، والمشتري (طلب السعر وأزراره) |
 | `src/routes/market-admin.ts` | مسارات اللوحة للسوق: توثيق البائعين ورابط السجل المؤقت، وإخفاء المنتج المخالف، والدفعات والباقات، والأرقام شهر بشهر |
+| `src/routes/platform-admin.ts` | مسارات اللوحة (هـ-٢): «بانتظارك»، والإعدادات (العمولة للمالك بس)، والصلاحيات، وتنفيذ طلبات الحذف (`completeDeletion`)، وأرقام الخدمات (`serviceStats`) |
 | `src/routes/customers-admin.ts` | مسارات اللوحة للعملاء: القائمة، والتفاصيل (رقم الهوية كامل لصلاحية `customers.identity` مع السجل)، وتأكيد الهوية يدويًا |
 | `src/staff-cli.ts` | إضافة أول مالك من سطر الأوامر |
 | `src/auth.ts` | الرمز والجلسات (منطق الدخول) |
@@ -122,7 +123,13 @@
 | `PUT /v1/provider/profile` | مزوّد | التسجيل أو تعديل البيانات (قبل الإرسال أو بعد الرفض) |
 | `POST /v1/provider/documents` | مزوّد | رفع مستند (multipart: `docType`, `expiresOn`, `file`) |
 | `POST /v1/provider/submit` | مزوّد | الإرسال للتوثيق |
-| `GET /v1/admin/me` | موظف | دوره وصلاحياته |
+| `GET /v1/admin/me` | موظف | دوره وصلاحياته (الفعلية بعد تعديلات المالك). و`/v1/me` يرجّعها بعد في `user.staffPermissions` |
+| `GET /v1/admin/overview` | موظف | «بانتظارك»: عدد اللي ينتظر في كل قسم يخصه (null للباقي) |
+| `GET /v1/admin/settings`, `PUT /settings/:key` | `settings.manage` | الإعدادات. تغيير `market.commissionBps` يحتاج `settings.commission` (المالك)، وإلا 403 `owner_only` |
+| `GET/PUT /v1/admin/permissions` | `permissions.manage` (المالك) | جدول الصلاحيات: الافتراضي والفعلي والمقفول، وتعديله (إعداد `rolePermissions`) |
+| `GET /v1/admin/deletions`, `POST /deletions/:id/complete\|reject` | `accounts.delete` | طلبات الحذف. التنفيذ يمسح البيانات الشخصية ويبقي الطلبات والفواتير والسجل، وما ينفّذ مع طلب جاري (409 `deletion_has_active_orders`) |
+| `GET /v1/admin/stats` | `reports.view` | أرقام الخدمات آخر ١٢ شهر، والعرض والطلب في كل قسم |
+| `GET /v1/admin/market/products` | `market.moderate` | المنتجات للمراجعة (بحث `?q=` وتصفية `?status=`) |
 | `GET /v1/admin/queue`, `/expiring` | `providers.review` | قائمة التوثيق، والمستندات اللي تنتهي |
 | `GET /v1/admin/providers`, `/providers/:id` | `providers.view` | المزوّدين وتفاصيلهم |
 | `GET /v1/admin/documents/:id/link` | `documents.view` | رابط مؤقت للملف |
@@ -208,7 +215,15 @@
 | `provider/job/[id].tsx` | `/provider/job/:id` | الطلب المنفّذ: بدأت، والصور، وتم التنفيذ، وتعديل السعر، والإلغاء، والاعتذار، والبلاغ |
 | `provider/profile.tsx` | `/provider/profile` | تسجيل بيانات المزوّد |
 | `provider/upload.tsx` | `/provider/upload` | رفع مستند |
-| `admin/index.tsx` | `/admin` | اللوحة: قائمة التوثيق، والمستندات المنتهية، والمزوّدين |
+| `admin/index.tsx` | `/admin` | «بانتظارك»: عدد اللي ينتظر في كل قسم، وفي الجوال قائمة الأقسام |
+| `admin/verification.tsx` | `/admin/verification` | التوثيق: قائمة المزوّدين، والمستندات المنتهية، وكل المزوّدين، والبائعين |
+| `admin/seller/[id].tsx` | `/admin/seller/:id` | مراجعة بائع: السجل وقائمة التحقق، والإيقاف، والدفعات |
+| `admin/customers.tsx`, `admin/customer/[id].tsx` | `/admin/customers`, `/admin/customer/:id` | العملاء: بحث وتصفية، وصفحة العميل وتأكيد الهوية |
+| `admin/disputes.tsx`, `admin/dispute/[id].tsx` | `/admin/disputes`, `/admin/dispute/:id` | البلاغات: الملاحظات، وقراءة المحادثة، والقرار |
+| `admin/market.tsx` | `/admin/market` | السوق: المنتجات، والاشتراكات وتسجيل الدفعة، والباقات |
+| `admin/deletions.tsx` | `/admin/deletions` | طلبات حذف الحساب |
+| `admin/stats.tsx` | `/admin/stats` | الأرقام شهر بشهر |
+| `admin/settings.tsx`, `admin/permissions.tsx` | `/admin/settings`, `/admin/permissions` | الإعدادات، والصلاحيات (المالك) |
 | `admin/provider/[id].tsx` | `/admin/provider/:id` | مراجعة مزوّد وقائمة التحقق |
 | `admin/staff.tsx` | `/admin/staff` | الموظفين |
 | `admin/audit.tsx` | `/admin/audit` | سجل الإجراءات |
@@ -247,7 +262,7 @@
 
 ## قاعدة البيانات
 
-PostgreSQL. الشكل الكامل المخطط في `PLAN.md` (القسم ٣) و`docs/plans/phase-4.md` (القسم ٥). المبني للحين (`migrations/001` إلى `011`):
+PostgreSQL. الشكل الكامل المخطط في `PLAN.md` (القسم ٣) و`docs/plans/phase-4.md` (القسم ٥). المبني للحين (`migrations/001` إلى `016`):
 
 | الجدول | وش يحفظ |
 | --- | --- |
@@ -256,7 +271,7 @@ PostgreSQL. الشكل الكامل المخطط في `PLAN.md` (القسم ٣) 
 | `sessions` | بصمة توكن الجلسة، والانتهاء، والإلغاء |
 | `factories`, `factory_members` | **العميل** (الاسم باقي `factories` عشان ما نكسر شي، القرار ٤١): `kind` (منشأة أو فرد)، وبيانات المنشأة (السجل والرقم الضريبي)، أو بيانات الفرد (نوع الهوية، ورقمها **مشفّر** مع آخر ٤ أرقام، و`identity_verified_at`)، والمدينة. وموظفين المنشأة (مدير أو موظف، فعّال أو موقوف). الفرد ما له موظفين |
 | `requests` | طلبات المصانع: المدينة، والمنطقة (تظهر للمزوّد)، والموقع بالضبط (بعد القبول بس)، والحالة، و`expires_at` |
-| `account_deletion_requests` | طلبات حذف الحساب من «حسابي» (تنتظر موظف ينفّذها، القرار ٣٩) |
+| `account_deletion_requests` | طلبات حذف الحساب من «حسابي»، وسبب الرفض (`handled_note`). التنفيذ (`016`) يخلّي `users.phone` فاضي و`status='deleted'`، ويمسح اسم صاحب المزوّد وهويته، وملف الهوية (`provider_documents.purged_at`) (القرار ٣٩ و٥٣) |
 | `cities`, `provider_cities`, `staff_cities` | المدن (البداية سدير)، ومدن كل مزوّد، وحصر الموظف بمدن (فاضي = كل المدن) |
 | `settings` | إعدادات المنصة (صلاحية العرض، ومدة الطلب، وأقصى عروض، وسياسة الإلغاء...). القيم الافتراضية والتحقق في `packages/shared/src/settings.ts` |
 | `offers`, `offer_revisions` | العروض (سعر المزوّد **بالهللة قبل الضريبة**، والمدة، والصلاحية، والحالة)، ونسخها القديمة. عرض فعّال واحد لكل مزوّد على الطلب (فهرس فريد) |
