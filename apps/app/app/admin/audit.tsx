@@ -48,6 +48,12 @@ export default function AuditScreen() {
               {actor(e)}
             </AppText>
             {typeof e.details.reason === "string" && <AppText variant="bodySm">{e.details.reason}</AppText>}
+            {/* تعديل إعداد: اسم الإعداد، عشان يبان وش اللي تغيّر */}
+            {typeof e.details.key === "string" && (
+              <AppText variant="bodySm" color="inkMuted" style={{ writingDirection: "ltr", textAlign: "auto" }}>
+                {e.details.key}
+              </AppText>
+            )}
             <AppText variant="caption" color="inkMuted">
               {date(e.at)}
             </AppText>

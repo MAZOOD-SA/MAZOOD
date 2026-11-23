@@ -1,113 +1,80 @@
-// الصفحة الرئيسية للوحة الإدارة: قائمة التوثيق (الأقدم أول)، والمستندات اللي تنتهي قريبًا، وكل المزوّدين.
+// «بانتظارك»: أول صفحة في لوحة الإدارة. كل موظف يشوف عدد اللي ينتظره في أقسامه بس (الخادم يرجّع null للباقي).
+// وفي الجوال (بدون قائمة جانبية) تحتها قائمة الأقسام اللي يقدر يفتحها.
 import { spacing } from "@mazood/brand";
-import type { DocType, ProviderStatus } from "@mazood/shared";
-import { router } from "expo-router";
-import { useState } from "react";
+import { router, type Href } from "expo-router";
 import { View } from "react-native";
-import { IconHistory, IconLogout, IconUsers } from "@/components/icons";
-import { dayIso } from "@/components/DocSlotCard";
-import { Screen } from "@/components/layout";
-import { AppText, Badge, Button, Card, Chips, Notice, Row } from "@/components/ui";
-import { categoryById, type CategoryId } from "@/data/categories";
-import { DOC_LABELS, PROVIDER_STATUS, STAFF_ROLE_LABELS } from "@/data/labels";
+import { StatTile } from "@/components/admin";
+import { IconLogout } from "@/components/icons";
+import { Screen, SectionTitle } from "@/components/layout";
+import { navItemsFor } from "@/components/nav";
+import { AppText, Button, Card, Notice, Row } from "@/components/ui";
+import { STAFF_ROLE_LABELS } from "@/data/labels";
 import { useStore } from "@/data/store";
 import { useCan, useLoad } from "@/data/useAdmin";
 import { useI18n } from "@/i18n/I18nProvider";
+import type { StringKey } from "@/i18n/strings";
+import { useLayout } from "@/lib/layout";
+import { useTheme } from "@/theme/ThemeProvider";
 
-type QueueItem = { id: string; tradeName: string; categories: string[]; status: ProviderStatus; waitingSince: string | null; pendingDocs: number };
-type ExpiringItem = { documentId: string; docType: DocType; expiresOn: string; providerId: string; tradeName: string; expired: boolean };
-type ProviderItem = { id: string; tradeName: string; categories: string[]; status: ProviderStatus };
-type Tab = "queue" | "expiring" | "all";
+type Overview = {
+  providersQueue: number | null;
+  sellersQueue: number | null;
+  identityPending: number | null;
+  openDisputes: number | null;
+  pendingDeletions: number | null;
+  subscriptionsDue: number | null;
+};
 
-export default function AdminHome() {
-  const { t, tl, relative, date, num } = useI18n();
+// كل بطاقة: الرقم، وعنوانها، والشاشة اللي تفتحها.
+const CARDS: { key: keyof Overview; label: StringKey; href: Href }[] = [
+  { key: "providersQueue", label: "ovProviders", href: "/admin/verification" },
+  { key: "sellersQueue", label: "ovSellers", href: "/admin/verification" },
+  { key: "identityPending", label: "ovIdentity", href: "/admin/customers?identity=pending" },
+  { key: "openDisputes", label: "ovDisputes", href: "/admin/disputes" },
+  { key: "pendingDeletions", label: "ovDeletions", href: "/admin/deletions" },
+  { key: "subscriptionsDue", label: "ovSubscriptions", href: "/admin/market?tab=subscriptions" },
+];
+
+export default function AdminOverview() {
+  const { t, tl, num } = useI18n();
+  const { colors } = useTheme();
   const { staffRole, signOut } = useStore();
   const allowed = useCan();
-  const canReview = allowed("providers.review");
-  const [tab, setTab] = useState<Tab>(canReview ? "queue" : "all");
-  const queue = useLoad<{ queue: QueueItem[] }>(canReview && tab === "queue" ? "/v1/admin/queue" : null);
-  const expiring = useLoad<{ expiring: ExpiringItem[] }>(canReview && tab === "expiring" ? "/v1/admin/expiring" : null);
-  const all = useLoad<{ providers: ProviderItem[] }>(allowed("providers.view") && tab === "all" ? "/v1/admin/providers" : null);
-  const cats = (cs: string[]) => cs.map((c) => tl(categoryById(c as CategoryId).name)).join(" · ");
-  const open = (id: string) => router.push({ pathname: "/admin/provider/[id]", params: { id } });
-
-  const tabs: { value: Tab; label: string }[] = [
-    ...(canReview ? [{ value: "queue" as const, label: t("queueTitle") }, { value: "expiring" as const, label: t("expiringTitle") }] : []),
-    ...(allowed("providers.view") ? [{ value: "all" as const, label: t("allProviders") }] : []),
-  ];
-  const err = queue.error ?? expiring.error ?? all.error;
+  const { sidebar } = useLayout();
+  const { data, error } = useLoad<Overview>("/v1/admin/overview");
+  const cards = data ? CARDS.filter((c) => data[c.key] !== null) : [];
+  const waiting = cards.some((c) => (data?.[c.key] ?? 0) > 0);
+  // في الجوال: الأقسام نفسها اللي في القائمة الجانبية (ما عدا هذي الصفحة).
+  const sections = navItemsFor("staff", t, allowed).filter((i) => i.href !== "/admin");
 
   return (
-    <Screen title={t("adminTitle")}>
-      <Row style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-        <AppText color="inkMuted">{staffRole ? tl(STAFF_ROLE_LABELS[staffRole]) : ""}</AppText>
-        <Row>
-          {allowed("staff.manage") && <Button label={t("staffTitle")} icon={IconUsers} variant="secondary" onPress={() => router.push("/admin/staff")} />}
-          {allowed("audit.view") && <Button label={t("auditTitle")} icon={IconHistory} variant="secondary" onPress={() => router.push("/admin/audit")} />}
-        </Row>
-      </Row>
+    <Screen title={t("navOverview")}>
+      <AppText color="inkMuted">{staffRole ? tl(STAFF_ROLE_LABELS[staffRole]) : ""}</AppText>
+      {error && <Notice text={t(error)} />}
+      <AppText variant="bodySm" color="inkMuted">
+        {t("overviewHint")}
+      </AppText>
+      {data && !waiting && <Notice text={t("ovAllClear")} />}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing["2"] }}>
+        {cards.map((c) => (
+          <StatTile key={c.key} label={t(c.label)} value={num(data![c.key] ?? 0)} onPress={() => router.push(c.href)} />
+        ))}
+      </View>
 
-      {tabs.length === 0 ? <Notice text={t("noAdminSections")} /> : <Chips value={tab} onChange={setTab} options={tabs} />}
-      {err && <Notice text={t(err)} />}
-
-      {tab === "queue" && queue.data && (
-        <View style={{ gap: spacing["2"] }}>
-          {queue.data.queue.length === 0 && <AppText color="inkMuted">{t("queueEmpty")}</AppText>}
-          {queue.data.queue.map((q) => (
-            <Card key={q.id} onPress={() => open(q.id)} style={{ gap: spacing["1"] }}>
-              <Row style={{ justifyContent: "space-between" }}>
-                <AppText weight={600} style={{ flex: 1 }}>
-                  {q.tradeName}
-                </AppText>
-                <Badge label={q.status === "verified" ? t("renewal") : tl(PROVIDER_STATUS[q.status].label)} tone="new" />
-              </Row>
-              <AppText variant="bodySm" color="inkMuted">
-                {cats(q.categories)}
-              </AppText>
-              <AppText variant="caption" color="inkMuted">
-                {q.waitingSince ? `${t("waitingSince")} ${relative(q.waitingSince)}` : ""} · {t("pendingDocs")}: {num(q.pendingDocs)}
-              </AppText>
-            </Card>
-          ))}
-        </View>
-      )}
-
-      {tab === "expiring" && expiring.data && (
-        <View style={{ gap: spacing["2"] }}>
-          {expiring.data.expiring.length === 0 && <AppText color="inkMuted">{t("expiringEmpty")}</AppText>}
-          {expiring.data.expiring.map((e) => (
-            <Card key={e.documentId} onPress={() => open(e.providerId)} style={{ gap: spacing["1"] }}>
-              <Row style={{ justifyContent: "space-between" }}>
-                <AppText weight={600} style={{ flex: 1 }}>
-                  {e.tradeName}
-                </AppText>
-                <Badge label={e.expired ? t("expired") : t("expiringSoon")} tone={e.expired ? "bad" : "new"} />
-              </Row>
-              <AppText variant="bodySm" color="inkMuted">
-                {tl(DOC_LABELS[e.docType])} · {date(dayIso(e.expiresOn))}
-              </AppText>
-            </Card>
-          ))}
-        </View>
-      )}
-
-      {tab === "all" && all.data && (
-        <View style={{ gap: spacing["2"] }}>
-          {all.data.providers.length === 0 && <AppText color="inkMuted">{t("noProviders")}</AppText>}
-          {all.data.providers.map((p) => (
-            <Card key={p.id} onPress={() => open(p.id)} style={{ gap: spacing["1"] }}>
-              <Row style={{ justifyContent: "space-between" }}>
-                <AppText weight={600} style={{ flex: 1 }}>
-                  {p.tradeName}
-                </AppText>
-                <Badge label={tl(PROVIDER_STATUS[p.status].label)} tone={PROVIDER_STATUS[p.status].tone} />
-              </Row>
-              <AppText variant="bodySm" color="inkMuted">
-                {cats(p.categories)}
-              </AppText>
-            </Card>
-          ))}
-        </View>
+      {!sidebar && sections.length > 0 && (
+        <>
+          <SectionTitle title={t("adminTitle")} />
+          <View style={{ gap: spacing["2"] }}>
+            {sections.map((s) => (
+              <Card key={String(s.href)} onPress={() => router.push(s.href)}>
+                <Row style={{ alignItems: "center" }}>
+                  <s.icon size={20} color={colors.inkMuted} strokeWidth={1.75} />
+                  <AppText weight={600}>{s.label}</AppText>
+                </Row>
+              </Card>
+            ))}
+          </View>
+        </>
       )}
 
       <Button

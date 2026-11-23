@@ -10,7 +10,7 @@ import { z } from "zod";
 import { audit } from "../audit.ts";
 import { ApiError } from "../errors.ts";
 import { FILE_LINK_TTL_SECONDS } from "../files.ts";
-import { actorOf, parse, type Ctx, type Guards } from "../http.ts";
+import { actorOf, parse, permissionMap, type Ctx, type Guards } from "../http.ts";
 import { lastSubscriptionEnd, sellerState } from "../market.ts";
 import { safeEqualHex } from "../security.ts";
 import { getSettings } from "../settings.ts";
@@ -87,7 +87,7 @@ export function marketAdminRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     if (!ok) throw new ApiError(403, "link_invalid_or_expired");
     // الموظف لازم يكون فعّال وعنده الصلاحية لحظة الفتح.
     const [st] = await db.query<{ role: StaffRole }>("SELECT role FROM staff WHERE user_id=$1 AND active", [q.by]);
-    if (!st || !can(st.role, "sellers.review")) throw new ApiError(403, "link_invalid_or_expired");
+    if (!st || !can(st.role, "sellers.review", await permissionMap(db))) throw new ApiError(403, "link_invalid_or_expired");
     const [row] = await db.query<{ storage_key: string; mime_type: string; factory_id: string }>(
       "SELECT storage_key, mime_type, factory_id FROM seller_documents WHERE id=$1",
       [id],
@@ -153,6 +153,25 @@ export function marketAdminRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
   });
 
   // ───────── المنتجات المخالفة ─────────
+
+  // قائمة المنتجات للمراجعة: بحث بالاسم، والمخالفة (removed) تقدر تطلع لحالها.
+  app.get("/v1/admin/market/products", async (req) => {
+    await g.requireStaff(req, "market.moderate");
+    const q = parse(
+      z.object({ q: z.string().trim().min(2).max(60).optional(), status: z.enum(["active", "hidden", "removed"]).optional() }).strict(),
+      req.query,
+    );
+    const rows = await db.query(
+      `SELECT p.id, p.name, p.status, p.category_id AS "categoryId", p.removed_reason AS "removedReason", p.updated_at AS "updatedAt",
+              f.name AS "sellerName", p.seller_id AS "sellerId"
+         FROM products p JOIN factories f ON f.id = p.seller_id
+        WHERE ($1::text IS NULL OR p.name ILIKE '%' || $1 || '%' OR f.name ILIKE '%' || $1 || '%')
+          AND ($2::text IS NULL OR p.status = $2::text)
+        ORDER BY p.updated_at DESC LIMIT 200`,
+      [q.q ?? null, q.status ?? null],
+    );
+    return { products: rows };
+  });
 
   app.post("/v1/admin/market/products/:id/remove", async (req) => {
     const u = await g.requireStaff(req, "market.moderate");

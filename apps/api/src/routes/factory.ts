@@ -18,8 +18,9 @@ import type { Db } from "../db.ts";
 import { ApiError } from "../errors.ts";
 import { activeCities, resolveCityId } from "../cities.ts";
 import { getSettings } from "../settings.ts";
+import { permissionsOf } from "@mazood/shared";
 import { liveOffer, rejectContactInfo } from "./offers.ts";
-import { actorOf, idempotent, parse, type Ctx, type Guards } from "../http.ts";
+import { actorOf, idempotent, parse, permissionMap, type Ctx, type Guards } from "../http.ts";
 import { acceptOffer, effectiveStatus, nominateOffer, providerIsActive, reachFor, withdrawNomination } from "../orders.ts";
 import { cancelBeforeStart, disputeForParty, feeFor, latestCancellationRequest, latestWithdrawal } from "../cancellations.ts";
 import { executionDetails } from "../execution.ts";
@@ -40,7 +41,9 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
   app.get("/v1/me", async (req) => {
     const user = await g.authenticate(req);
     const factory = user.factoryId ? await loadFactory(db, user.factoryId) : null;
-    return { user: publicUser(user), factory };
+    // الموظف: صلاحياته الفعلية (بعد تعديلات المالك) عشان الواجهة تخفي اللي ما يخصه. الخادم يفحص كل طلب بنفسه.
+    const staffPermissions = user.role === "staff" && user.staffRole ? permissionsOf(user.staffRole, await permissionMap(db)) : null;
+    return { user: { ...publicUser(user), staffPermissions }, factory };
   });
 
   // حفظ بيانات العميل حسب نوعه (منشأة أو فرد، القرار ٤١). تغيير النوع مسموح لين يرفع أول طلب.

@@ -5,6 +5,7 @@ import { DEFAULT_MARKET_SETTINGS, marketSettingsSchema } from "./market.ts";
 import { z } from "zod";
 import { cancellationPolicySchema, DEFAULT_CANCELLATION_POLICY, upgradeCancellationPolicy } from "./cancellation.ts";
 import { commitmentSettingsSchema, DEFAULT_COMMITMENT_SETTINGS } from "./commitment.ts";
+import { rolePermissionsSchema } from "./staff.ts";
 
 const hours = (max: number) => z.number().int().min(1).max(max);
 
@@ -38,6 +39,11 @@ export const SETTINGS_SCHEMA = z
     individualRequiresVerifiedIdentity: z.boolean(),
     /** سوق منتجات المصانع: مين يشتري، والفترة المجانية، والعمولة، وفتح الصفحة العامة (market.ts). */
     market: marketSettingsSchema,
+    /**
+     * تعديلات المالك على صلاحيات الأدوار (شاشة «الصلاحيات»، صلاحية permissions.manage).
+     * فاضي = الجدول الافتراضي في staff.ts. المالك عنده كل شي دائمًا، والمقفولة ما تتغيّر (resolvePermissions).
+     */
+    rolePermissions: rolePermissionsSchema,
   })
   .strict();
 
@@ -56,4 +62,5 @@ export const SETTING_DEFAULTS: Settings = {
   commitment: DEFAULT_COMMITMENT_SETTINGS,
   individualRequiresVerifiedIdentity: false,
   market: DEFAULT_MARKET_SETTINGS,
+  rolePermissions: {},
 };

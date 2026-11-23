@@ -4,6 +4,7 @@
 // نصوص شاشات المرحلة ٤ (العروض والتنفيذ) في strings-flow.ts وتندمج هنا.
 import { flowAr, flowEn } from "./strings-flow";
 import { customerAr, customerEn } from "./strings-customer";
+import { adminAr, adminEn } from "./strings-admin";
 
 const ar = {
   appName: "مزوّد",
@@ -259,6 +260,7 @@ const ar = {
   inactive: "موقوف",
   ...flowAr,
   ...customerAr,
+  ...adminAr,
 };
 
 export type StringKey = keyof typeof ar;
@@ -506,6 +508,7 @@ const en: Record<StringKey, string> = {
   inactive: "Inactive",
   ...flowEn,
   ...customerEn,
+  ...adminEn,
 };
 
 export const strings = { ar, en };

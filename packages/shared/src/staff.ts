@@ -35,11 +35,60 @@ export const PERMISSIONS = {
   "market.reports": ["owner", "general_manager", "finance"],
   /** يشوف سجل الإجراءات */
   "audit.view": ["owner", "general_manager"],
+  /** ينفّذ طلب حذف الحساب أو يرفضه */
+  "accounts.delete": ["owner", "general_manager"],
+  /** يعدّل إعدادات المنصة من اللوحة (ما عدا العمولة) */
+  "settings.manage": ["owner", "general_manager"],
+  /** يغيّر نسبة العمولة: قرار المالك بس (CLAUDE.md). مقفولة: ما تتغيّر من شاشة الصلاحيات */
+  "settings.commission": ["owner"],
+  /** يغيّر صلاحيات الأدوار من اللوحة. مقفولة للمالك */
+  "permissions.manage": ["owner"],
+  /** يشوف أرقام المنصة شهر بشهر (الخدمات والسوق). قرار المالك: الثلاثة الحين، وقابل للتغيير */
+  "reports.view": ["owner", "general_manager", "finance"],
 } as const satisfies Record<string, readonly StaffRole[]>;
 export type Permission = keyof typeof PERMISSIONS;
+export const PERMISSION_KEYS = Object.keys(PERMISSIONS) as Permission[];
 
-export function can(role: StaffRole | null | undefined, permission: Permission): boolean {
-  return !!role && (PERMISSIONS[permission] as readonly string[]).includes(role);
+/**
+ * صلاحيات ما تتغيّر من شاشة الصلاحيات أبدًا: قرارات المالك (CLAUDE.md). تبقى على الجدول فوق.
+ * staff.manage مقفولة بعد، لأن إضافة مدير عام وإزالته قرار المالك (canManageRole تحت).
+ */
+export const LOCKED_PERMISSIONS: readonly Permission[] = ["settings.commission", "permissions.manage", "staff.manage"];
+
+/** جدول الصلاحيات الفعلي: مين له كل صلاحية. يبدأ من PERMISSIONS ويتعدّل بإعداد rolePermissions. */
+export type PermissionMap = Record<Permission, readonly StaffRole[]>;
+
+/** تعديلات المالك على الجدول (من شاشة الصلاحيات). أي صلاحية ما تنذكر تبقى على الافتراضي. */
+export const rolePermissionsSchema = z
+  .record(z.string(), z.array(z.enum(STAFF_ROLES)).max(STAFF_ROLES.length))
+  .refine((o) => Object.keys(o).every((k) => (PERMISSION_KEYS as string[]).includes(k)), { message: "permission_unknown" });
+export type RolePermissions = Partial<Record<Permission, StaffRole[]>>;
+
+/**
+ * يركّب الجدول الفعلي: الافتراضي + تعديلات المالك. القواعد الثابتة:
+ * - المالك عنده كل صلاحية دائمًا (ما ينشال منه شي).
+ * - الصلاحيات المقفولة (LOCKED_PERMISSIONS) تبقى على الافتراضي مهما كان المحفوظ.
+ */
+export function resolvePermissions(overrides: RolePermissions | null | undefined): PermissionMap {
+  const out = {} as Record<Permission, StaffRole[]>;
+  for (const p of PERMISSION_KEYS) {
+    const custom = overrides?.[p];
+    const base = (LOCKED_PERMISSIONS.includes(p) || !custom ? PERMISSIONS[p] : custom) as readonly StaffRole[];
+    out[p] = STAFF_ROLES.filter((r) => r === "owner" || base.includes(r));
+  }
+  return out;
+}
+
+export const DEFAULT_PERMISSION_MAP: PermissionMap = resolvePermissions(null);
+
+/** هل الدور عنده الصلاحية؟ بدون جدول: الافتراضي. الخادم يمرّر الجدول الفعلي من الإعدادات. */
+export function can(role: StaffRole | null | undefined, permission: Permission, map: PermissionMap = DEFAULT_PERMISSION_MAP): boolean {
+  return !!role && map[permission].includes(role);
+}
+
+/** صلاحيات دور معيّن كقائمة (للواجهة: تخفي اللي ما يخصك). */
+export function permissionsOf(role: StaffRole, map: PermissionMap = DEFAULT_PERMISSION_MAP): Permission[] {
+  return PERMISSION_KEYS.filter((p) => map[p].includes(role));
 }
 
 /** مين يقدر يضيف أو يوقف أي دور. المالك ما يُضاف من اللوحة (نقل الملكية له خطوات خاصة). */

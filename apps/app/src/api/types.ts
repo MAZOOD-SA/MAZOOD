@@ -174,4 +174,4 @@ export type JobView = JobSummary & {
   dispute: DisputeView | null;
 };
 
-export type DeletionRequest = { id: string; status: "pending" | "done" | "rejected"; requestedAt: string } | null;
+export type DeletionRequest = { id: string; status: "pending" | "done" | "rejected"; requestedAt: string; note?: string | null } | null;

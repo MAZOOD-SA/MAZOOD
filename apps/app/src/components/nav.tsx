@@ -25,6 +25,13 @@ import {
   IconShieldCheck,
   IconUser,
   IconUsers,
+  IconLayoutDashboard,
+  IconBuildingFactory2,
+  IconFlag,
+  IconUserX,
+  IconChartBar,
+  IconSettings,
+  IconKey,
 } from "./icons";
 
 export type NavItem = {
@@ -151,8 +158,21 @@ export function navItemsFor(
     ];
   if (role === "staff")
     return [
-      { href: "/admin", label: t("navVerification"), icon: IconShieldCheck, also: ["/admin/provider"] },
+      // كل قسم يظهر بس لو الدور له صلاحيته (والخادم يفحص كل طلب بنفسه). الترتيب: الشغل اليومي أول، والإعدادات آخر.
+      { href: "/admin", label: t("navOverview"), icon: IconLayoutDashboard },
+      ...(allowed("providers.view") || allowed("sellers.review")
+        ? [{ href: "/admin/verification" as const, label: t("navVerification"), icon: IconShieldCheck, also: ["/admin/provider", "/admin/seller"] }]
+        : []),
+      ...(allowed("customers.view") ? [{ href: "/admin/customers" as const, label: t("navCustomers"), icon: IconBuildingFactory2, also: ["/admin/customer"] }] : []),
+      ...(allowed("disputes.manage") ? [{ href: "/admin/disputes" as const, label: t("navDisputes"), icon: IconFlag, also: ["/admin/dispute"] }] : []),
+      ...(allowed("market.moderate") || allowed("subscriptions.manage")
+        ? [{ href: "/admin/market" as const, label: t("navMarketAdmin"), icon: IconBuildingStore }]
+        : []),
+      ...(allowed("accounts.delete") ? [{ href: "/admin/deletions" as const, label: t("navDeletions"), icon: IconUserX }] : []),
+      ...(allowed("reports.view") ? [{ href: "/admin/stats" as const, label: t("navStats"), icon: IconChartBar }] : []),
       ...(allowed("staff.manage") ? [{ href: "/admin/staff" as const, label: t("staffTitle"), icon: IconUsers }] : []),
+      ...(allowed("settings.manage") ? [{ href: "/admin/settings" as const, label: t("navSettings"), icon: IconSettings }] : []),
+      ...(allowed("permissions.manage") ? [{ href: "/admin/permissions" as const, label: t("navPermissions"), icon: IconKey }] : []),
       ...(allowed("audit.view") ? [{ href: "/admin/audit" as const, label: t("auditTitle"), icon: IconHistory }] : []),
     ];
   return [];
