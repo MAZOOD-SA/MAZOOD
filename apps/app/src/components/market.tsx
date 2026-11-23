@@ -189,7 +189,7 @@ export function useSellerEnabled(): boolean {
   return enabled;
 }
 
-/** اسم نوع المشتري اللي يشوفه البائع قبل الاتفاق: منشأة، أو فرد، أو مزوّد (القرار ٥٦). */
+/** اسم نوع المشتري اللي يشوفه البائع قبل الاتفاق: منشأة، أو فرد، أو مزوّد (القرار ٥٧). */
 export function buyerKindKey(kind: "business" | "individual" | "provider" | undefined) {
   return kind === "individual" ? "customerIndividual" : kind === "provider" ? "buyerProvider" : "customerBusiness";
 }

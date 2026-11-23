@@ -8,7 +8,7 @@ import { ApiClientError } from "@/api/client";
 import type { MarketProduct } from "@/api/market-types";
 import { TwoColumn, Screen, SectionTitle } from "@/components/layout";
 import { PriceText, ProductImage, SellerLine, useUnit } from "@/components/market";
-import { AppText, Button, Card, Divider, Notice, Row } from "@/components/ui";
+import { AppText, Button, Card, Divider, Notice, ReadMore, Row } from "@/components/ui";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
 import { errorKey } from "@/api/mapping";
@@ -40,7 +40,7 @@ export default function ProductPage() {
     );
   }
 
-  // مين يقدر يطلب: العميل الداخل (المنشآت الحين) والمزوّد (القرار ٥٦). الخادم هو اللي يقرر،
+  // مين يقدر يطلب: العميل الداخل (المنشآت الحين) والمزوّد (القرار ٥٧). الخادم هو اللي يقرر،
   // والفرد يشوف السبب. المزوّد اللي ما توثّق يشوف رسالته في شاشة الطلب نفسها، مع زر يكمّل فيه التوثيق.
   const signedIn = state.signedIn && (role === "factory" || role === "provider");
   const individual = state.signedIn && role === "factory" && factory.kind === "individual";
@@ -68,7 +68,7 @@ export default function ProductPage() {
           {tl(product.category.name)}
         </AppText>
       )}
-      <AppText>{product.description}</AppText>
+      <ReadMore text={product.description} variant="body" />
     </>
   );
 

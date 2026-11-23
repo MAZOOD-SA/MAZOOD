@@ -2,16 +2,16 @@
 // الإجراء الأهم «اطلب عرض» هو زر accent الوحيد في الشاشة.
 // الرأس أزرق هادئ مسطّح (hero-surface) بدل الكحلي المليان: بدون تدرّج ولا حركة، حسب brand/BRAND.md.
 import { radius, spacing } from "@mazood/brand";
-import { IconBell, IconBuildingStore, IconChevronLeft, IconChevronRight, IconPlus } from "@/components/icons";
+import { IconBell, IconBuildingStore, IconRosetteDiscountCheck, IconChevronLeft, IconChevronRight, IconPlus } from "@/components/icons";
 import { router } from "expo-router";
 import { Pressable, ScrollView, View } from "react-native";
-import { CategoryGrid, EmptyRequests, ListFrame, ListRow, RequestCard, sortRequests } from "@/components/domain";
+import { CategoryGrid, EmptyRequests, ListFrame, ListRow, NeedSearch, RequestCard, sortRequests } from "@/components/domain";
 import { SectionTitle, useContentFrame } from "@/components/layout";
 import { useAutoRefresh } from "@/components/flow";
 import { isolate } from "@/lib/format";
 import { useLayout } from "@/lib/layout";
 import { LogoMark } from "@/components/Logo";
-import { AppText, Button, Card, Row } from "@/components/ui";
+import { AppText, Button, Card, PromiseStrip, Row } from "@/components/ui";
 import { CATEGORIES } from "@/data/categories";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -61,6 +61,10 @@ export default function Home() {
           <AppText variant="h1" style={{ color: colors.ink, marginTop: 2 }}>
             {t("homeQuestion")}
           </AppText>
+          {/* كبسولة البحث (فكرة ايكيا): أقصر طريق للحلقة الأساسية. محايدة، والكهرماني للزر تحتها بس. */}
+          <View style={{ marginTop: 14, maxWidth: split ? 560 : undefined }}>
+            <NeedSearch />
+          </View>
           {/* في الجوال الزر بعرض الشاشة (قريب من الإبهام)، وفي الكمبيوتر على قد نصه: زر بعرض ١١٠٠px شكل قالب جاهز. */}
           <Button
             label={t("requestOffer")}
@@ -75,6 +79,8 @@ export default function Home() {
       </View>
 
       <View style={[width, { paddingVertical: spacing["4"], gap: spacing["3"] }]}>
+        {/* شريط الوعد (فكرة ايكيا): معلومة وحدة صادقة. المزوّد ما يرسل عرض قبل ما يتوثّق. */}
+        <PromiseStrip icon={IconRosetteDiscountCheck} text={t("promiseVerified")} />
         {!profileComplete && (
           // ولا مرة طريق مسدود: قبل أول طلب، العميل يشوف وش ناقصه وزر يوديه له.
           <Card onPress={() => router.push("/factory-profile")} style={{ gap: spacing["1"] }}>

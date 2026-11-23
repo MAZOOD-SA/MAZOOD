@@ -229,7 +229,7 @@ export default function ProviderJob() {
         <Fact label={t("locationLabel")} value={job.location} />
         {!!job.area && <Fact label={t("areaLabel")} value={job.area} />}
         <Fact label={t("whenLabel")} value={t(job.when === "today" ? "whenToday" : job.when === "tomorrow" ? "whenTomorrow" : "whenThisWeek")} />
-        <Fact label={t("detailsLabel")} value={job.details} />
+        <Fact label={t("detailsLabel")} value={job.details} long />
       </SideCard>
       <SideCard title={t("timeline")}>
         <Timeline events={ex.timeline} />

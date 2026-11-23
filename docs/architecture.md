@@ -152,7 +152,7 @@
 | `GET/POST /v1/market/seller/products`, `PUT /seller/products/:id`, `POST /:id/hide\|show` | البائع (الكتابة للمدير) | المنتجات. أقصى عدد حسب الباقة (`409 products_limit`) |
 | `POST /v1/market/seller/products/:id/images`, `/images/:imageId/delete` | مدير البائع | صور المنتج (JPEG أو PNG، ٣ ميجا، حتى ٥) |
 | `GET /v1/market/seller/purchase-requests[/:id]`, `POST /:id/quote\|decline` | البائع (الرد للمدير) | طلبات الشراء الواصلة، والرد بسعر ومدة وتوصيل وصلاحية، أو الاعتذار |
-| `POST /v1/market/products/:id/purchase-requests` | عميل نوعه في `market.buyerKinds` وبياناته مكتملة، أو مزوّد موثّق لو `provider` في الإعداد (القرار ٥٦) | طلب سعر بكمية. الرد فيه `estimateHalalas` من السعر المعلن |
+| `POST /v1/market/products/:id/purchase-requests` | عميل نوعه في `market.buyerKinds` وبياناته مكتملة، أو مزوّد موثّق لو `provider` في الإعداد (القرار ٥٧) | طلب سعر بكمية. الرد فيه `estimateHalalas` من السعر المعلن |
 | `GET /v1/market/purchase-requests[/:id]` | العميل أو المزوّد | طلبات الشراء حقته، مع `actions` (أزرار المشتري) و`contact` بعد الاتفاق |
 | `POST /v1/market/purchase-requests/:id/accept\|reject\|revision\|cancel\|received\|rating` | المشتري صاحب الطلب (عميل أو مزوّد، حتى لو انوقف بعد الطلب) | أزرار المشتري. أي زر مو في `actions` يرجّع 409 |
 | `GET /v1/admin/market/sellers[/:id]`, `POST /sellers/:id/decision` | `sellers.review` | قائمة البائعين (اللي ينتظر أول)، وتفاصيله ودفعاته، والقرار |
@@ -210,7 +210,7 @@
 | `provider/index.tsx` | `/provider` | المزوّد قبل التوثيق: حالة التوثيق ومستنداته (بعد التوثيق يحوّل للطلبات المتاحة) |
 | `provider/(tabs)/requests.tsx` | `/provider/requests` | الطلبات المتاحة. في الكمبيوتر: القائمة ونموذج العرض جنب بعض |
 | `provider/(tabs)/work.tsx` | `/provider/work` | شغلي: الشغل الجاري، وعروضي الفعّالة، والمنتهية، وحركة «انقبل عرضك» |
-| `provider/(tabs)/market.tsx` | `/provider/market` | السوق للمزوّد (نفس `MarketBrowse`) مع زر «طلباتي من السوق» (القرار ٥٦) |
+| `provider/(tabs)/market.tsx` | `/provider/market` | السوق للمزوّد (نفس `MarketBrowse`) مع زر «طلباتي من السوق» (القرار ٥٧) |
 | `provider/purchases.tsx` | `/provider/purchases` | طلبات المزوّد من السوق. كل طلب يفتح `/purchase/:id` |
 | `provider/(tabs)/account.tsx` | `/provider/account` | حسابي للمزوّد: التقييم ورقم الالتزام، والمستندات، والتفضيلات، وطلب الحذف |
 | `provider/request/[id].tsx` | `/provider/request/:id` | الطلب المتاح ونموذج العرض (الجوال) |
@@ -295,7 +295,7 @@ PostgreSQL. الشكل الكامل المخطط في `PLAN.md` (القسم ٣) 
 | `subscription_plans`, `subscriptions`, `subscription_payments` | الباقات (السعر بالهللة وحد المنتجات)، وفترات الاشتراك (تجريبي أو مدفوع، عام للمصنع والمزوّد)، والدفعات اليدوية (**إضافة فقط**) |
 | `sellers`, `seller_documents` | المصنع البائع وحالة توثيقه، وسجله التجاري في التخزين الخاص |
 | `products`, `product_images` | المنتجات (سعر معلن بشرائح، أو «اطلب سعر»، وفعّال أو مخفي أو مشال من الإدارة مع السبب)، وصورها |
-| `purchase_requests`, `purchase_quotes`, `seller_ratings` | طلبات الشراء وحالتها، وردود المصنع (رد فعّال واحد، والقديم «superseded»)، وتقييم البائع بالنجوم. المشتري واحد بالضبط: `buyer_factory_id` (عميل) أو `buyer_provider_id` (مزوّد، القرار ٥٦) |
+| `purchase_requests`, `purchase_quotes`, `seller_ratings` | طلبات الشراء وحالتها، وردود المصنع (رد فعّال واحد، والقديم «superseded»)، وتقييم البائع بالنجوم. المشتري واحد بالضبط: `buyer_factory_id` (عميل) أو `buyer_provider_id` (مزوّد، القرار ٥٧) |
 | `order_messages`, `order_message_reads` | غرفة الصفقة: الرسائل **مشفّرة** و**إضافة فقط**، وآخر رسالة قرأها كل مستخدم |
 | `notifications`, `notification_prefs`, `push_tokens` | التنبيهات (الحدث، وبياناته، وحالة كل قناة، والمحاولات، ومنع التكرار)، وتفضيلات كل مستخدم، ورموز أجهزته |
 | `staff` | موظفين الإدارة ودورهم وهل هم فعّالين. مالك واحد فعّال (فهرس فريد) |

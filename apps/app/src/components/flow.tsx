@@ -12,7 +12,7 @@ import { formatNumber } from "@/lib/format";
 import { useReducedMotion } from "@/lib/motion";
 import { useTheme } from "@/theme/ThemeProvider";
 import { IconStar } from "./icons";
-import { AppText, focusRing, Row, VerifiedBadge } from "./ui";
+import { AppText, focusRing, ReadMore, Row, VerifiedBadge } from "./ui";
 
 /** كل كم ثانية تسأل الشاشة المفتوحة الخادم (بدون التنبيهات، الخطوة ١٠). */
 export const REFRESH_EVERY_MS = 20_000;
@@ -270,16 +270,17 @@ export function SideCard({ title, children }: { title: string; children: ReactNo
 }
 
 /** سطر معلومة: تسمية وقيمة. */
-export function Fact({ label, value, ltr }: { label: string; value: string; ltr?: boolean }) {
+export function Fact({ label, value, ltr, long }: { label: string; value: string; ltr?: boolean; long?: boolean }) {
   const { isRTL } = useI18n();
   return (
     <View style={{ gap: 2 }}>
       <AppText variant="caption" color="inkMuted">
         {label}
       </AppText>
-      <AppText variant="bodySm" style={ltr ? { writingDirection: "ltr", alignSelf: "flex-start" } : { writingDirection: isRTL ? "rtl" : "ltr" }}>
+      {/* long: نص ممكن يطول (تفاصيل الطلب)، فينطوي بـ«اقرأ الباقي» (فكرة ايكيا، المهمة ٣). */}
+      {long ? <ReadMore text={value} style={{ writingDirection: isRTL ? "rtl" : "ltr" }} /> : <AppText variant="bodySm" style={ltr ? { writingDirection: "ltr", alignSelf: "flex-start" } : { writingDirection: isRTL ? "rtl" : "ltr" }}>
         {value}
-      </AppText>
+      </AppText>}
     </View>
   );
 }

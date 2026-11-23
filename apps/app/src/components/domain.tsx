@@ -1,9 +1,10 @@
 // مكوّنات خاصة بمزوّد: مربع القسم، وبطاقة الطلب، وشارة الحالة.
-import { radius, spacing } from "@mazood/brand";
+import { fontFamilyByWeight, radius, spacing, typography } from "@mazood/brand";
 import type { RequestStatus } from "@mazood/shared";
-import type { ReactNode } from "react";
-import { Pressable, View } from "react-native";
-import { categoryById, type Category } from "@/data/categories";
+import { useMemo, useState, type ReactNode } from "react";
+import { Pressable, TextInput, View } from "react-native";
+import { categoryById, searchEntries, type Category, type CategoryId } from "@/data/categories";
+import { searchNeeds } from "@/lib/search";
 import type { ServiceRequest } from "@/data/types";
 import { useI18n } from "@/i18n/I18nProvider";
 import { arabicCountForm } from "@/lib/format";
@@ -11,8 +12,8 @@ import type { StringKey } from "@/i18n/strings";
 import { useTheme } from "@/theme/ThemeProvider";
 import { CategoryIcon } from "./CategoryIcon";
 import { router } from "expo-router";
-import { IconClipboardList, IconPlus } from "./icons";
-import { AppText, Badge, Button, Card, Row, focusRing, type BadgeTone } from "./ui";
+import { IconClipboardList, IconPlus, IconSearch } from "./icons";
+import { AppText, Badge, Button, Card, Row, StatusDot, focusRing, type BadgeTone, type DotTone } from "./ui";
 
 export function CategoryTile({ category, onPress, compact }: { category: Category; onPress: () => void; compact?: boolean }) {
   const { colors } = useTheme();
@@ -197,6 +198,30 @@ export function RequestStatusBadge({ status, offerCount = 0, viewer = "factory" 
   return <Badge label={t(statusKey(status, viewer))} tone={STATUS_TONE[status]} />;
 }
 
+const STATUS_DOT: Record<RequestStatus, DotTone> = {
+  awaiting_offers: "wait",
+  pending_approval: "info",
+  accepted: "info",
+  in_progress: "info",
+  delivered: "info",
+  completed: "ok",
+  expired: "wait",
+  cancelled: "bad",
+  disputed: "bad",
+};
+
+/** الحالة بنقطة وكلمة لصفوف القوائم. «بانتظار العروض» تصير «٣ عروض» أول ما توصل عروض، بنقطة info. */
+export function RequestStatusDot({ status, offerCount = 0, viewer = "factory" }: { status: RequestStatus; offerCount?: number; viewer?: "factory" | "provider" }) {
+  const { t, num } = useI18n();
+  if (status === "awaiting_offers" && offerCount > 0) {
+    const form = arabicCountForm(offerCount);
+    const label =
+      form === "one" ? t("oneOffer") : form === "two" ? t("twoOffers") : t(form === "few" ? "offersCount" : "offersCountMany", { n: num(offerCount) });
+    return <StatusDot label={label} tone="info" />;
+  }
+  return <StatusDot label={t(statusKey(status, viewer))} tone={STATUS_DOT[status]} />;
+}
+
 /**
  * صف الطلب في الرئيسية و«طلباتي» (داخل ListFrame). الطلب اللي فيه عروض ما انفتحت يبان عليه رقمها.
  * الجديد يبان من الشارة والسطر الثاني (أغمق وأثقل)، مو من لون.
@@ -222,8 +247,9 @@ export function RequestCard({ request, onPress }: { request: ServiceRequest; onP
                 : `${tl(cat.name)} · ${relative(request.createdAt)}`}
           </AppText>
         </View>
+        {/* في القوائم الحالة نقطة وكلمة (فكرة ايكيا، المهمة ٦). صفحة الطلب تبقى بالشارة. */}
         <View style={{ flexShrink: 0 }}>
-          <RequestStatusBadge status={request.status} offerCount={request.offerCount ?? 0} />
+          <RequestStatusDot status={request.status} offerCount={request.offerCount ?? 0} />
         </View>
       </Row>
     </ListRow>
@@ -256,5 +282,94 @@ export function EmptyRequests() {
       </AppText>
       <Button label={t("requestOffer")} icon={IconPlus} variant="secondary" style={{ marginTop: spacing["2"], alignSelf: "center" }} onPress={() => router.push("/request/new")} />
     </Card>
+  );
+}
+
+/**
+ * كبسولة «وش تحتاج؟» في رأس الرئيسية (فكرة ايكيا، المهمة ١).
+ * العميل يكتب «سطحة» أو «ونش»، وتطلع تحتها الأنواع المطابقة. يختار وحدة فيروح لرفع الطلب على القسم والنوع.
+ * محايدة بالكامل: الكهرماني لزر «اطلب عرض» بس (القاعدة ٣).
+ */
+export function NeedSearch() {
+  const { t, tl, isRTL } = useI18n();
+  const { colors } = useTheme();
+  const [q, setQ] = useState("");
+  const entries = useMemo(() => searchEntries(), []);
+  const hits = useMemo(() => searchNeeds(q, entries), [q, entries]);
+  const typed = q.trim().length >= 2;
+  const go = (category?: string, typeId?: string | null) => {
+    setQ("");
+    router.push(category ? { pathname: "/request/new", params: { category, ...(typeId ? { typeId } : null) } } : "/request/new");
+  };
+  return (
+    <View style={{ gap: spacing["2"] }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: spacing["2"],
+          backgroundColor: colors.surfaceRaised,
+          borderWidth: 1,
+          borderColor: colors.lineStrong,
+          borderRadius: radius.full,
+          paddingHorizontal: spacing["4"],
+          minHeight: 48,
+        }}
+      >
+        <IconSearch size={20} color={colors.inkMuted} strokeWidth={1.75} />
+        <TextInput
+          value={q}
+          onChangeText={setQ}
+          accessibilityLabel={t("needSearchLabel")}
+          placeholder={t("needSearchPlaceholder")}
+          placeholderTextColor={colors.inkMuted}
+          returnKeyType="search"
+          onSubmitEditing={() => hits[0] && go(hits[0].categoryId, hits[0].typeId)}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            paddingVertical: spacing["3"],
+            fontFamily: fontFamilyByWeight[400],
+            fontSize: typography.body.fontSize,
+            color: colors.ink,
+            textAlign: isRTL ? "right" : "left",
+            outlineStyle: "none",
+          } as object}
+        />
+      </View>
+      {typed && hits.length > 0 && (
+        <ListFrame>
+          {hits.map((h) => {
+            const cat = categoryById(h.categoryId as CategoryId);
+            const type = h.typeId ? cat.types.find((x) => x.id === h.typeId) : undefined;
+            const name = type ? tl(type.name) : tl(cat.name);
+            return (
+              <ListRow key={`${h.categoryId}:${h.typeId ?? ""}`} onPress={() => go(h.categoryId, h.typeId)} label={name}>
+                <Row gap="3">
+                  <CategoryIcon category={cat} size={20} muted />
+                  <AppText variant="bodySm" weight={600} style={{ flex: 1 }} numberOfLines={1}>
+                    {name}
+                  </AppText>
+                  {type && (
+                    <AppText variant="caption" color="inkMuted" numberOfLines={1}>
+                      {tl(cat.name)}
+                    </AppText>
+                  )}
+                </Row>
+              </ListRow>
+            );
+          })}
+        </ListFrame>
+      )}
+      {/* ولا مرة طريق مسدود: ما لقى شي، فيه زر يفتح رفع الطلب على اختيار القسم. */}
+      {typed && hits.length === 0 && (
+        <Row gap="2" style={{ flexWrap: "wrap" }}>
+          <AppText variant="bodySm" color="inkMuted" style={{ flexShrink: 1 }}>
+            {t("needNoMatch", { q: q.trim() })}
+          </AppText>
+          <Button label={t("needPickCategory")} variant="ghost" onPress={() => go()} style={{ paddingVertical: 4, paddingHorizontal: 8 }} />
+        </Row>
+      )}
+    </View>
   );
 }

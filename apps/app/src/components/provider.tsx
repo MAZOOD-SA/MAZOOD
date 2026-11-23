@@ -13,11 +13,11 @@ import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
 import { isolate } from "@/lib/format";
 import { useTheme } from "@/theme/ThemeProvider";
-import { RequestStatusBadge } from "./domain";
+import { RequestStatusDot } from "./domain";
 import { Field } from "./Field";
 import { Fact, RewardCheck, SideCard } from "./flow";
 import { IconAlertTriangle, IconCircleCheck, IconSend } from "./icons";
-import { AppText, Badge, Button, Card, Chips, Notice, Row } from "./ui";
+import { AppText, Badge, Button, Card, Chips, Notice, ReadMore, Row } from "./ui";
 
 /** المدد الجاهزة (بالساعات) عشان العرض ينرسل بضغطتين. */
 const DURATIONS = [2, 4, 8, 24, 48, 72] as const;
@@ -112,7 +112,7 @@ export function ProviderRequestPanel({ requestId, onChanged }: { requestId: stri
     <View style={{ gap: spacing["4"] }}>
       <SideCard title={tl(cat.name)}>
         <AppText variant="h2">{type ? tl(type.name) : tl(cat.name)}</AppText>
-        <AppText variant="body">{req.details}</AppText>
+        <ReadMore text={req.details} variant="body" />
         {!!req.area && <Fact label={t("areaLabel")} value={req.area} />}
         <Fact label={t("whenLabel")} value={t(req.when === "today" ? "whenToday" : req.when === "tomorrow" ? "whenTomorrow" : "whenThisWeek")} />
         <Fact label={t("openUntil")} value={until(req.expiresAt)} />
@@ -275,7 +275,7 @@ export function JobCard({ job, newlyAccepted, onPress }: { job: JobSummary; newl
             </AppText>
           )}
         </View>
-        <RequestStatusBadge status={job.status} viewer="provider" />
+        <RequestStatusDot status={job.status} viewer="provider" />
       </Row>
     </Card>
   );

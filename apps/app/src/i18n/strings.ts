@@ -32,6 +32,13 @@ const ar = {
 
   // الرئيسية
   homeQuestion: "وش تحتاج اليوم؟",
+  needSearchLabel: "ابحث عن الخدمة",
+  needSearchPlaceholder: "سطحة، سبّاك، رمل دفان...",
+  needNoMatch: "ما لقينا «{q}». اختر القسم بنفسك.",
+  needPickCategory: "اختر القسم",
+  promiseVerified: "كل المزوّدين موثّقين بالهوية والسجل التجاري",
+  readMore: "اقرأ الباقي",
+  readLess: "أخفِ",
   requestOffer: "اطلب عرض",
   categories: "الأقسام",
   yourRequests: "طلباتك",
@@ -316,6 +323,13 @@ const en: Record<StringKey, string> = {
   tabAccount: "Account",
 
   homeQuestion: "What do you need today?",
+  needSearchLabel: "Search for a service",
+  needSearchPlaceholder: "Flatbed, plumber, fill sand...",
+  needNoMatch: "No match for \u201c{q}\u201d. Pick the category yourself.",
+  needPickCategory: "Pick a category",
+  promiseVerified: "Every provider is verified by ID and commercial register",
+  readMore: "Read more",
+  readLess: "Show less",
   requestOffer: "Request a quote",
   categories: "Categories",
   yourRequests: "Your requests",

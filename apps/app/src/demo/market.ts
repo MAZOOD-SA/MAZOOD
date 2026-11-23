@@ -38,7 +38,7 @@ export type DemoPurchase = {
   id: string;
   productId: string;
   sellerId: string;
-  /** عميل (factory) أو مزوّد (provider، القرار ٥٦). بدون قيمة = عميل. */
+  /** عميل (factory) أو مزوّد (provider، القرار ٥٧). بدون قيمة = عميل. */
   buyerType?: "factory" | "provider";
   buyerId: string;
   buyerPhone: string;

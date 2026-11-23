@@ -1,6 +1,6 @@
 // «اطلب سعر» على منتج (/purchase/new?product=ID): الكمية والموعد وملاحظة. والتقدير من السعر المعلن يتحدّث مع الكمية.
 // المكافأة: بعد الإرسال تنفتح تفاصيل الطلب ومعها «وصل طلبك للمصنع».
-// المشتري عميل أو مزوّد (القرار ٥٦). العميل يكمّل بياناته أول، والمزوّد لازم يكون موثّق (والخادم يتأكد بنفسه).
+// المشتري عميل أو مزوّد (القرار ٥٧). العميل يكمّل بياناته أول، والمزوّد لازم يكون موثّق (والخادم يتأكد بنفسه).
 import { spacing } from "@mazood/brand";
 import { containsContactInfo, purchaseRequestBody, unitPriceFor } from "@mazood/shared";
 import { router, useLocalSearchParams } from "expo-router";

@@ -68,7 +68,7 @@ export const customerAr = {
   purchasesTab: "الشراء",
   servicesTab: "الخدمات",
   noPurchases: "ما عندك طلبات شراء للحين.",
-  // المزوّد يشتري من السوق (القرار ٥٦)
+  // المزوّد يشتري من السوق (القرار ٥٧)
   myPurchases: "طلباتي من السوق",
   providerVerifyToBuy: "تقدر تطلب من السوق بعد توثيق حسابك.",
   finishVerification: "كمّل التوثيق",

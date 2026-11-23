@@ -1,5 +1,5 @@
 // تصفّح السوق: البحث والتصنيفات والمنتجات. نفس الشاشة في تبويب «السوق» (/shop) وفي الصفحة العامة (/market)
-// اللي تنفتح بدون دخول (للتسويق والظهور في محركات البحث)، وفي تبويب «السوق» للمزوّد (القرار ٥٦).
+// اللي تنفتح بدون دخول (للتسويق والظهور في محركات البحث)، وفي تبويب «السوق» للمزوّد (القرار ٥٧).
 import { spacing } from "@mazood/brand";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
