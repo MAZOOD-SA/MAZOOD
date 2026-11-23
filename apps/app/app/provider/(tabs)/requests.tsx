@@ -51,10 +51,8 @@ export default function AvailableRequests() {
       {categories.length > 1 && (
         <Chips<"all" | CategoryId>
           value={category}
-          onChange={(v) => {
-            setCategory(v);
-            setList(null);
-          }}
+          // القسم يتكتب في الرابط، فالرابط هو المرجع الوحيد: الضغط على نفس القسم في القائمة الجانبية بعدين يشتغل.
+          onChange={(v) => router.setParams({ category: v === "all" ? undefined : v })}
           options={[{ value: "all", label: t("filterAll") }, ...categories.map((c) => ({ value: c, label: tl(categoryById(c).name) }))]}
         />
       )}

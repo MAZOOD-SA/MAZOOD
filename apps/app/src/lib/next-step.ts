@@ -51,3 +51,22 @@ export function nextStep(i: NextStepInput): NextStep | null {
   }
   return null;
 }
+
+/**
+ * أي نص نستخدم لـ«ينتهي بعد كم يوم» عشان العدد يطلع بعربي صحيح:
+ * ٠ اليوم، ١ بكرة، ٢ يومين، ٣–١٠ «أيام»، ١١ وفوق «يوم». (الإنجليزي: today وtomorrow وin n days.)
+ */
+export type ExpiringCopy =
+  | { key: "nextDocExpiringToday" }
+  | { key: "nextDocExpiringTomorrow" }
+  | { key: "nextDocExpiringTwo"; n: 2 }
+  | { key: "nextDocExpiringFew"; n: number }
+  | { key: "nextDocExpiring"; n: number };
+
+export function expiringCopy(daysLeft: number): ExpiringCopy {
+  if (daysLeft <= 0) return { key: "nextDocExpiringToday" };
+  if (daysLeft === 1) return { key: "nextDocExpiringTomorrow" };
+  if (daysLeft === 2) return { key: "nextDocExpiringTwo", n: 2 };
+  if (daysLeft <= 10) return { key: "nextDocExpiringFew", n: daysLeft };
+  return { key: "nextDocExpiring", n: daysLeft };
+}

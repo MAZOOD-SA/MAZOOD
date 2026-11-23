@@ -37,3 +37,16 @@ describe("خطوتك الجاية", () => {
     expect(r).toMatchObject({ kind: "docExpiring", docType: "id", daysLeft: 5 });
   });
 });
+
+describe("نص «ينتهي بعد كم يوم» (عربي صحيح للعدد)", () => {
+  it("اليوم، وبكرة، ويومين، و٣–١٠ أيام، و١١+ يوم", async () => {
+    const { expiringCopy } = await import("./next-step");
+    expect(expiringCopy(0)).toEqual({ key: "nextDocExpiringToday" });
+    expect(expiringCopy(1)).toEqual({ key: "nextDocExpiringTomorrow" });
+    expect(expiringCopy(2)).toEqual({ key: "nextDocExpiringTwo", n: 2 });
+    expect(expiringCopy(3)).toEqual({ key: "nextDocExpiringFew", n: 3 });
+    expect(expiringCopy(10)).toEqual({ key: "nextDocExpiringFew", n: 10 });
+    expect(expiringCopy(11)).toEqual({ key: "nextDocExpiring", n: 11 });
+    expect(expiringCopy(30)).toEqual({ key: "nextDocExpiring", n: 30 });
+  });
+});
