@@ -6,6 +6,7 @@
 //  - قبل القبول: القسم والنوع والتفاصيل والمدينة والمنطقة والموعد. **ما يطلع اسم المصنع ولا الموقع بالضبط**.
 //  - يشوف **عدد** العروض بس، مو أسعار غيره (سؤال ٤-٢).
 import { CATEGORY_IDS, containsContactInfo, offerBody, uuidSchema, type OfferStatus } from "@mazood/shared";
+import { events } from "../events.ts";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { audit } from "../audit.ts";
@@ -17,9 +18,13 @@ import { getSettings } from "../settings.ts";
 
 const listQuery = z.object({ category: z.enum(CATEGORY_IDS as [string, ...string[]]).optional() }).strict();
 
-/** الأعمدة اللي تطلع للمزوّد قبل القبول. ممنوع نضيف هنا factory_id أو location. */
+/**
+ * الأعمدة اللي تطلع للمزوّد قبل القبول. ممنوع نضيف هنا factory_id أو location أو اسم العميل.
+ * customerKind: «منشأة» أو «فرد» بس (القرار ٤١)، عشان المزوّد يعرف وين بيشتغل (موقع شغل أو بيت).
+ */
 const OPEN_REQUEST_COLUMNS = `r.id, r.category, r.type_id AS "typeId", r.details, r.area, r.city_id AS "cityId",
-  r.needed_when AS "when", r.created_at AS "createdAt", r.expires_at AS "expiresAt"`;
+  r.needed_when AS "when", r.created_at AS "createdAt", r.expires_at AS "expiresAt",
+  COALESCE((SELECT f.kind FROM factories f WHERE f.id = r.factory_id), 'business') AS "customerKind"`;
 
 /** شرط SQL للعروض اللي تنحسب: فعّالة وصلاحيتها ما انتهت. nowParam: رقم المعامل اللي فيه الوقت (مثل $1). */
 export const liveOffer = (nowParam: string) => `o.status = 'active' AND o.valid_until > ${nowParam}`;
@@ -169,6 +174,7 @@ export function offerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       await audit(t, actorOf(user), "offer.submitted", { type: "offer", id: o.id }, { requestId: id });
       return o;
     });
+    await events.offerSent(db, id, now);
     return reply.status(201).send({ offer: offerView(row, now) });
   });
 
@@ -245,11 +251,11 @@ export function offerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const user = await g.requireProviderUser(req);
     const [p] = await db.query<{ id: string }>("SELECT id FROM providers WHERE user_id=$1", [user.id]);
     if (!p) return { jobs: [] };
-    const rows = await db.query<Record<string, unknown> & { price_halalas: string; factory_name: string | null; factory_phone: string }>(
+    const rows = await db.query<Record<string, unknown> & { price_halalas: string; factory_name: string | null; factory_kind: string; factory_phone: string }>(
       `SELECT o.id AS "orderId", o.request_id AS "requestId", r.status, r.category, r.type_id AS "typeId", r.details, r.area,
               r.location, r.needed_when AS "when", o.price_halalas, o.accepted_at AS "acceptedAt", o.started_at AS "startedAt",
               o.delivered_at AS "deliveredAt", o.cancellation_policy AS "cancellationPolicy",
-              f.name AS factory_name, u.phone AS factory_phone
+              f.name AS factory_name, COALESCE(f.kind, 'business') AS factory_kind, u.phone AS factory_phone
          FROM orders o
          JOIN requests r ON r.id = o.request_id
          JOIN factories f ON f.id = o.factory_id
@@ -259,10 +265,10 @@ export function offerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       [p.id],
     );
     return {
-      jobs: rows.map(({ price_halalas, factory_name, factory_phone, ...j }) => ({
+      jobs: rows.map(({ price_halalas, factory_name, factory_kind, factory_phone, ...j }) => ({
         ...j,
         priceHalalas: Number(price_halalas),
-        factory: { name: factory_name, contactPhone: factory_phone },
+        factory: { name: factory_name, kind: factory_kind, contactPhone: factory_phone },
       })),
     };
   });

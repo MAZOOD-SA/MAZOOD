@@ -75,15 +75,55 @@ export const republishBody = z
 /** السجل التجاري السعودي: ١٠ أرقام. الرقم الضريبي: ١٥ رقم ويبدأ وينتهي بـ ٣. */
 const digits = (n: number, msg: string) => z.string().regex(new RegExp(`^\\d{${n}}$`), msg);
 
+/**
+ * نوع العميل (خطة العميل الفرد والسوق، القرار ٤١): منشأة (مصنع أو شركة أو مقاول) أو فرد.
+ * الطلب والعروض والقبول والتنفيذ نفسها للنوعين، والفرق في بيانات التسجيل بس.
+ */
+export const CUSTOMER_KINDS = ["business", "individual"] as const;
+export type CustomerKind = (typeof CUSTOMER_KINDS)[number];
+
+/** نوع الهوية: هوية وطنية (تبدأ بـ ١) أو إقامة (تبدأ بـ ٢). نفس قاعدة المزوّد. */
+export const ID_TYPES = ["national_id", "iqama"] as const;
+export type IdType = (typeof ID_TYPES)[number];
+export const idNumberSchema = z.string().regex(/^\d{10}$/, "id_invalid");
+/** أول رقم في الهوية يطابق نوعها. الفحص الحين بالصيغة بس، والتحقق الفعلي من نفاذ لاحقًا (القرار ٤٢). */
+export const idMatchesType = (idType: IdType, idNumber: string) => idNumber[0] === (idType === "national_id" ? "1" : "2");
+
 /** cityId اختياري: لو فيه مدينة وحدة فعّالة بس، تنحط تلقائيًا (والواجهة ما تبيّن الخانة). */
-export const factoryProfileBody = z
+const businessProfileBody = z
   .object({
+    kind: z.literal("business"),
     name: freeText(2, 120),
     cityId: cityIdSchema.optional(),
     commercialRegister: digits(10, "cr_invalid"),
     vatNumber: z.string().regex(/^3\d{13}3$/, "vat_invalid"),
   })
   .strict();
+
+/** الفرد يسجّل رسميًا (قرار المالك): الاسم الكامل والهوية أو الإقامة والمدينة. الجوال من الدخول نفسه. */
+const individualProfileBody = z
+  .object({
+    kind: z.literal("individual"),
+    name: freeText(5, 120),
+    cityId: cityIdSchema.optional(),
+    idType: z.enum(ID_TYPES),
+    idNumber: idNumberSchema,
+  })
+  .strict();
+
+/**
+ * بيانات العميل. بدون kind = منشأة (الشكل القديم قبل الخطوة أ، عشان التطبيقات القديمة تشتغل).
+ */
+export const factoryProfileBody = z
+  .preprocess(
+    (v) => (v && typeof v === "object" && !("kind" in v) ? { ...v, kind: "business" } : v),
+    z.discriminatedUnion("kind", [businessProfileBody, individualProfileBody]),
+  )
+  .superRefine((v, ctx) => {
+    if (v.kind === "individual" && !idMatchesType(v.idType, v.idNumber)) {
+      ctx.addIssue({ code: "custom", path: ["idNumber"], message: "id_type_mismatch" });
+    }
+  });
 export type FactoryProfileBody = z.infer<typeof factoryProfileBody>;
 
 export const uuidSchema = z.string().uuid();

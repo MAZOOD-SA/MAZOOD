@@ -1,6 +1,7 @@
 // تحويل شكل الطلب من الخادم لشكل الواجهة.
 import { categoryById, type CategoryId } from "@/data/categories";
-import type { RequestStatus, ServiceRequest, When } from "@/data/types";
+import type { AppNotification, RequestStatus, ServiceRequest, When } from "@/data/types";
+import { notificationText, type NotificationEvent, type NotificationLink } from "@mazood/shared";
 
 export type ServerRequest = {
   id: string;
@@ -38,13 +39,46 @@ export function fromServerRequest(r: ServerRequest): ServiceRequest {
   };
 }
 
+/** تنبيه من الخادم (/v1/notifications). النص من @mazood/shared بنفس بيانات الحدث. */
+export type ServerNotification = { id: string; event: NotificationEvent; data: { title?: string; n?: number; link?: NotificationLink }; readAt: string | null; createdAt: string };
+
+/** الرابط داخل التطبيق لكل شاشة يودّي لها التنبيه. */
+export function notificationHref(link: NotificationLink | undefined): string | undefined {
+  if (!link) return undefined;
+  switch (link.screen) {
+    case "request": return `/request/${link.id}`;
+    case "provider_request": return `/provider/request/${link.id}`;
+    case "provider_job": return `/provider/job/${link.id}`;
+    case "purchase": return `/purchase/${link.id}`;
+    case "seller_purchase": return `/seller/purchase/${link.id}`;
+    case "store": return "/store";
+    case "provider_account": return "/provider/account";
+  }
+}
+
+export function fromServerNotification(n: ServerNotification): AppNotification {
+  return {
+    id: n.id,
+    text: { ar: notificationText(n.event, n.data, "ar"), en: notificationText(n.event, n.data, "en") },
+    createdAt: n.createdAt,
+    read: !!n.readAt,
+    href: notificationHref(n.data.link),
+  };
+}
+
 export type ServerFactory = {
   id: string;
+  /** منشأة أو فرد (القرار ٤١). فاضي = ما اختار للحين. */
+  kind: "business" | "individual" | null;
   name: string | null;
   cityId: string | null;
   city: { ar: string; en: string } | null;
   commercialRegister: string | null;
   vatNumber: string | null;
+  idType?: "national_id" | "iqama" | null;
+  /** آخر ٤ أرقام من الهوية بس (******1234). الرقم الكامل ما يطلع من الخادم. */
+  idNumberMasked?: string | null;
+  identity?: { status: "not_required" | "pending" | "verified"; verifiedAt: string | null };
   profileComplete: boolean;
 };
 
@@ -56,7 +90,10 @@ export type ErrorKey =
   | "errContactInfo" | "errOfferExists" | "errOffersFull" | "errOfferNotActive" | "errOfferLocked" | "errValidityTooLong"
   | "errPriceChangePending" | "errCancellationPending" | "errAlreadyRated" | "errInvalidTransition" | "errDeletionPending"
   | "errDemoUnsupported" | "errPhotosLimit" | "errPhotoNotAllowed" | "errPhoneInUse" | "errProviderNotVerified" | "errNotFound"
-  | "errPriceUnchanged" | "errManagerApproval" | "errProviderUnavailable";
+  | "errPriceUnchanged" | "errManagerApproval" | "errProviderUnavailable"
+  | "errProfileIncomplete" | "errIdentityUnverified" | "errKindLocked" | "errIndividualNoMembers"
+  | "errProductsLimit" | "errImagesLimit" | "errBelowMinOrder" | "errOwnProduct" | "errSellerNotEnabled" | "errProductRemoved"
+  | "errMarketBuyerNotAllowed" | "errSellerBusinessOnly";
 
 export function errorKey(code: string): ErrorKey {
   switch (code) {
@@ -132,6 +169,30 @@ export function errorKey(code: string): ErrorKey {
       return "errManagerApproval";
     case "provider_unavailable":
       return "errProviderUnavailable";
+    case "profile_incomplete":
+      return "errProfileIncomplete";
+    case "identity_unverified":
+      return "errIdentityUnverified";
+    case "kind_locked":
+      return "errKindLocked";
+    case "individual_no_members":
+      return "errIndividualNoMembers";
+    case "products_limit":
+      return "errProductsLimit";
+    case "images_limit":
+      return "errImagesLimit";
+    case "below_min_order":
+      return "errBelowMinOrder";
+    case "own_product":
+      return "errOwnProduct";
+    case "seller_not_enabled":
+      return "errSellerNotEnabled";
+    case "product_removed":
+      return "errProductRemoved";
+    case "market_buyer_not_allowed":
+      return "errMarketBuyerNotAllowed";
+    case "seller_business_only":
+      return "errSellerBusinessOnly";
     case "network":
       return "networkError";
     case "request_not_cancellable":

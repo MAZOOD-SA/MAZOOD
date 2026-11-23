@@ -13,7 +13,7 @@ export default function Invoices() {
   const { state } = useStore();
 
   return (
-    <Screen title={t("invoicesTitle")}>
+    <Screen title={t("invoicesTitle")} back>
       {state.invoices.length === 0 ? (
         <AppText variant="bodySm" color="inkMuted">
           {t("noInvoices")}

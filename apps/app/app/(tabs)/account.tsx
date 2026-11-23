@@ -1,4 +1,4 @@
-// حسابي (للمصنع): بيانات المصنع، وموظفين المصنع (المدير يضيف ويوقف)، واللغة، والمظهر، وطلب حذف الحساب، والخروج.
+// حسابي (للعميل): بيانات الحساب (منشأة أو فرد)، وموظفين المنشأة (المدير يضيف ويوقف، والفرد ما عنده موظفين)، واللغة، والمظهر، وطلب حذف الحساب، والخروج.
 import { spacing } from "@mazood/brand";
 import { normalizeSaudiMobile } from "@mazood/shared";
 import { router } from "expo-router";
@@ -6,9 +6,10 @@ import { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
 import { ApiClientError, LIVE } from "@/api/client";
 import { errorKey } from "@/api/mapping";
-import { DeleteAccountSection, PreferencesSection, SignOutButton } from "@/components/account";
+import { DeleteAccountSection, NotificationPrefsSection, PreferencesSection, SignOutButton } from "@/components/account";
 import { Field } from "@/components/Field";
-import { IconInfoCircle, IconUsers } from "@/components/icons";
+import { IconFileInvoice, IconInfoCircle, IconUsers } from "@/components/icons";
+import { useSellerEnabled } from "@/components/market";
 import { Screen, SectionTitle, TwoColumn } from "@/components/layout";
 import { AppText, Badge, Button, Card, Chips, Divider, Notice, Row } from "@/components/ui";
 import { useStore } from "@/data/store";
@@ -19,34 +20,63 @@ type Member = { userId: string; phone: string; role: "manager" | "member"; activ
 export default function Account() {
   const { t, tl, locale, digits, code } = useI18n();
   const { state, factory: FACTORY, profileComplete, factoryRole } = useStore();
+  const seller = useSellerEnabled();
   const phone = state.phone ? `0${state.phone.slice(4)}` : "";
 
   const main = (
     <>
       <Card style={{ gap: spacing["2"] }}>
         <AppText variant="caption" color="inkMuted">
-          {t("factory")}
+          {FACTORY.kind === "individual" ? t("customerIndividual") : FACTORY.kind === "business" ? t("customerBusiness") : t("factory")}
         </AppText>
         <AppText variant="h2">{profileComplete ? tl(FACTORY.name) : t("profileMissingName")}</AppText>
         <AppText variant="bodySm" color="inkMuted" style={{ writingDirection: "ltr", textAlign: locale === "ar" ? "right" : "left" }}>
           {digits(phone)}
         </AppText>
         <Divider />
-        <InfoRow label={t("commercialRegister")} value={code(FACTORY.commercialRegister)} />
-        <InfoRow label={t("vatNumber")} value={code(FACTORY.vatNumber)} />
+        {FACTORY.kind === "individual" ? (
+          <>
+            <InfoRow label={t("idMasked")} value={code(FACTORY.idNumberMasked ?? "")} />
+            <Badge
+              label={t(FACTORY.identityStatus === "verified" ? "identityVerified" : "identityPending")}
+              tone={FACTORY.identityStatus === "verified" ? "ok" : "muted"}
+            />
+            {FACTORY.identityStatus === "pending" && (
+              <AppText variant="caption" color="inkMuted">
+                {t("identityPendingHint")}
+              </AppText>
+            )}
+          </>
+        ) : (
+          <>
+            <InfoRow label={t("commercialRegister")} value={code(FACTORY.commercialRegister)} />
+            <InfoRow label={t("vatNumber")} value={code(FACTORY.vatNumber)} />
+          </>
+        )}
       </Card>
       <Button
         label={profileComplete ? t("editProfile") : t("completeProfile")}
         variant={profileComplete ? "secondary" : "primary"}
         onPress={() => router.push("/factory-profile")}
       />
-      <Members manager={factoryRole !== "member"} />
+      <Button label={t("tabInvoices")} icon={IconFileInvoice} variant="secondary" onPress={() => router.push("/invoices")} />
+      {FACTORY.kind === "business" && !seller && (
+        // مدخل «متجري» للمنشأة اللي ما فعّلت البيع (التبويب يظهر بعد التفعيل).
+        <Card onPress={() => router.push("/store")} style={{ gap: spacing["1"] }}>
+          <AppText weight={700}>{t("storeEnableTitle")}</AppText>
+          <AppText variant="bodySm" color="inkMuted">
+            {t("storeEnableHint")}
+          </AppText>
+        </Card>
+      )}
+      {FACTORY.kind === "business" && <Members manager={factoryRole !== "member"} />}
     </>
   );
 
   const side = (
     <>
       <PreferencesSection />
+      <NotificationPrefsSection />
       {!LIVE && <Notice icon={IconInfoCircle} text={t("prototypeNote")} />}
       <SignOutButton />
       <DeleteAccountSection />

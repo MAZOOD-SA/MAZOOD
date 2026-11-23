@@ -6,8 +6,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 import { api, ApiClientError, apiUpload, IS_WEB, LIVE } from "@/api/client";
 import { clearDraft } from "@/api/draft";
-import type { StaffRole } from "@mazood/shared";
-import { fromServerRequest, type ServerFactory, type ServerRequest } from "@/api/mapping";
+import type { FactoryProfileBody, StaffRole } from "@mazood/shared";
+import { fromServerNotification, fromServerRequest, type ServerFactory, type ServerNotification, type ServerRequest } from "@/api/mapping";
 import { clearToken, loadSnapshot, loadToken, saveSnapshot, saveToken } from "@/api/session";
 import { reducer, type Action, type NewRequestInput, type State } from "./reducer";
 import { seedInvoices, seedNotifications } from "./seed";
@@ -15,7 +15,8 @@ import type { Factory } from "./types";
 
 export type Role = "factory" | "provider" | "staff";
 
-export type FactoryProfileInput = { name: string; cityId?: string; commercialRegister: string; vatNumber: string };
+/** بيانات العميل كما يرسلها نموذج «بيانات الحساب» (نفس قاعدة الخادم factoryProfileBody). */
+export type FactoryProfileInput = FactoryProfileBody;
 
 type StoreValue = {
   state: State;
@@ -64,10 +65,24 @@ function initialState(): State {
     : { signedIn: false, phone: null, requests: [], offers: [], invoices: seedInvoices(), notifications: seedNotifications(), invoiceCounter: 127 };
 }
 
-const EMPTY: Factory = { name: { ar: "", en: "" }, city: { ar: "", en: "" }, commercialRegister: "", vatNumber: "" };
+const EMPTY: Factory = {
+  kind: null,
+  name: { ar: "", en: "" },
+  city: { ar: "", en: "" },
+  commercialRegister: "",
+  vatNumber: "",
+  idType: null,
+  idNumberMasked: null,
+  identityStatus: "not_required",
+};
 
 function toFactory(f: ServerFactory): Factory {
   return {
+    // نسخ محفوظة على الجهاز قبل الخطوة أ ما فيها kind: كانت كلها منشآت.
+    kind: f.kind === undefined ? "business" : f.kind,
+    idType: f.idType ?? null,
+    idNumberMasked: f.idNumberMasked ?? null,
+    identityStatus: f.identity?.status ?? "not_required",
     name: { ar: f.name ?? "", en: f.name ?? "" },
     city: f.city ?? { ar: "", en: "" },
     commercialRegister: f.commercialRegister ?? "",
@@ -160,6 +175,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshRequests = useCallback(async () => {
+    // التنبيهات من الخادم في الوضع الحقيقي (في التجريبي تبقى الوهمية المحلية).
+    if (LIVE && account) {
+      api<{ notifications: ServerNotification[] }>("/v1/notifications", { token: token.current })
+        .then((r) => dispatch({ type: "setNotifications", notifications: r.notifications.map(fromServerNotification) }))
+        .catch(() => {});
+    }
     if (account?.role !== "factory") return;
     try {
       const r = await api<{ requests: ServerRequest[] }>("/v1/requests", { token: token.current });
@@ -167,7 +188,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch {
       // بدون اتصال: تبقى آخر نسخة، وشريط «لا يوجد اتصال» يوضّح.
     }
-  }, [account?.role]);
+  }, [account]);
 
   const startSession = useCallback<StoreValue["startSession"]>(
     async (tk) => {

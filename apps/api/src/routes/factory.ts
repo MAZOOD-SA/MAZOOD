@@ -10,6 +10,7 @@ import {
   uuidSchema,
   type RequestStatus,
 } from "@mazood/shared";
+import { events } from "../events.ts";
 import type { FastifyInstance } from "fastify";
 import { audit } from "../audit.ts";
 import type { Db } from "../db.ts";
@@ -22,6 +23,7 @@ import { acceptOffer, effectiveStatus, nominateOffer, providerIsActive, reachFor
 import { cancelBeforeStart, disputeForParty, feeFor, latestCancellationRequest, latestWithdrawal } from "../cancellations.ts";
 import { executionDetails } from "../execution.ts";
 import { publicUser } from "./auth.ts";
+import { identityStatus, profileComplete, type CustomerRow } from "../identity.ts";
 import { providerRating, rateOrder, ratingForRequest } from "../ratings.ts";
 import { providerCommitment } from "../commitment.ts";
 
@@ -40,22 +42,50 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     return { user: publicUser(user), factory };
   });
 
+  // حفظ بيانات العميل حسب نوعه (منشأة أو فرد، القرار ٤١). تغيير النوع مسموح لين يرفع أول طلب.
   app.put("/v1/factory", async (req) => {
-    const { user, factoryId } = await g.requireFactory(req);
+    const { user, factoryId, factoryRole } = await g.requireFactory(req);
+    if (factoryRole !== "manager") throw new ApiError(403, "forbidden");
     const body = parse(factoryProfileBody, req.body);
     const cityId = await resolveCityId(db, body.cityId);
-    await db.query(
-      `UPDATE factories SET name=$2, city_id=$3, commercial_register=$4, vat_number=$5, updated_at=now() WHERE id=$1`,
-      [factoryId, body.name, cityId, body.commercialRegister, body.vatNumber],
-    );
-    // في السجل نكتب أن الحساب تحدّث، بدون أرقام السجل والضريبة.
-    await audit(db, actorOf(user), "factory.profile_updated", { type: "factory", id: factoryId });
+    await db.tx(async (t) => {
+      const [cur] = await t.query<CustomerRow & { has_requests: boolean }>(
+        `SELECT f.*, EXISTS (SELECT 1 FROM requests r WHERE r.factory_id=f.id) AS has_requests FROM factories f WHERE f.id=$1 FOR UPDATE`,
+        [factoryId],
+      );
+      if (cur.kind && cur.kind !== body.kind && cur.has_requests) throw new ApiError(409, "kind_locked");
+      if (body.kind === "individual") {
+        // فرد بموظفين ما يصير: الموظفين للمنشأة بس.
+        const [m] = await t.query<{ n: number }>("SELECT count(*)::int AS n FROM factory_members WHERE factory_id=$1", [factoryId]);
+        if (m.n > 1) throw new ApiError(409, "individual_no_members");
+        // رقم الهوية ينحفظ مشفّر. لو تغيّر الرقم، التحقق السابق ينلغي (لازم يتأكد من جديد).
+        const sameId = cur.id_number_enc && cur.id_type === body.idType && ctx.box.decrypt(cur.id_number_enc) === body.idNumber;
+        await t.query(
+          `UPDATE factories SET kind='individual', name=$2, city_id=$3, commercial_register=NULL, vat_number=NULL,
+             id_type=$4, id_number_enc=$5, id_number_last4=$6,
+             identity_verified_at=CASE WHEN $7 THEN identity_verified_at END,
+             identity_method=CASE WHEN $7 THEN identity_method END,
+             updated_at=now() WHERE id=$1`,
+          [factoryId, body.name, cityId, body.idType, sameId ? cur.id_number_enc : ctx.box.encrypt(body.idNumber), body.idNumber.slice(-4), !!sameId],
+        );
+      } else {
+        await t.query(
+          `UPDATE factories SET kind='business', name=$2, city_id=$3, commercial_register=$4, vat_number=$5,
+             id_type=NULL, id_number_enc=NULL, id_number_last4=NULL, identity_verified_at=NULL, identity_method=NULL,
+             updated_at=now() WHERE id=$1`,
+          [factoryId, body.name, cityId, body.commercialRegister, body.vatNumber],
+        );
+      }
+      // في السجل نكتب أن الحساب تحدّث ونوعه، بدون أرقام السجل والضريبة والهوية.
+      await audit(t, actorOf(user), "factory.profile_updated", { type: "factory", id: factoryId }, { kind: body.kind });
+    });
     return { factory: await loadFactory(db, factoryId) };
   });
 
   app.post("/v1/requests", async (req, reply) => {
     const { user, factoryId } = await g.requireFactory(req);
     const body = parse(createRequestBody, req.body);
+    await assertCanRequest(db, factoryId);
     // التفاصيل والمنطقة تظهر للمزوّدين قبل القبول: ممنوع فيها أرقام أو روابط (الإضافة ٨).
     rejectContactInfo({ details: body.details, area: body.area });
     // المدينة: المطلوبة، أو مدينة المصنع، أو المدينة الوحيدة الفعّالة.
@@ -70,6 +100,7 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       [factoryId, body.category, body.typeId, body.details, body.area, body.location, body.when, cityId, expiresAt, ctx.now()],
     );
     await audit(db, actorOf(user), "request.created", { type: "request", id: String(row.id) }, { category: body.category });
+    await events.requestCreated(db, String(row.id), ctx.now());
     // المكافأة الفورية: كم مزوّد موثّق وصله الطلب (رقم حقيقي، docs/product.md القسم ٢).
     return reply.status(201).send({ request: row, reach: await reachFor(db, body.category, cityId, ctx.now()) });
   });
@@ -105,6 +136,7 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const { id, offerId } = params2(req);
     return idempotent(ctx, req, `accept:${id}`, async () => {
       await acceptOffer(db, user, factoryId, id, offerId, ctx.now());
+      await events.accepted(db, id, ctx.now());
       return factoryRequestView(ctx, factoryId, id, user.id);
     });
   });
@@ -114,6 +146,7 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const { user, factoryId } = await g.requireFactory(req);
     const { id, offerId } = params2(req);
     await nominateOffer(db, user, factoryId, id, offerId, ctx.now());
+    await events.nominated(db, id, ctx.now());
     return factoryRequestView(ctx, factoryId, id, user.id);
   });
 
@@ -142,6 +175,9 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const { user, factoryId, factoryRole } = await g.requireFactory(req);
     if (factoryRole !== "manager") throw new ApiError(403, "forbidden");
     const body = parse(addFactoryMemberBody, req.body);
+    // الموظفين للمنشأة بس. الفرد حسابه شخصي.
+    const [k] = await db.query<{ kind: string | null }>("SELECT kind FROM factories WHERE id=$1", [factoryId]);
+    if (k.kind !== "business") throw new ApiError(409, "individual_no_members");
     const member = await db.tx(async (t) => {
       // رقم مسجّل من قبل (مصنع ثاني، أو مزوّد، أو موظف إدارة) ما ينضاف: كل رقم لحساب واحد.
       const existing = await t.query("SELECT 1 FROM users WHERE phone=$1", [body.phone]);
@@ -176,32 +212,41 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     await ownRequest(db, factoryId, id);
     return idempotent(ctx, req, `cancel:${id}`, async () => {
       await cancelBeforeStart(db, user, factoryId, id, ctx.now());
+      await events.toProvider(db, id, "order_cancelled", ctx.now());
       return { request: withStatus(await ownRequest(db, factoryId, id), ctx.now()) };
     });
   });
 }
 
-async function loadFactory(db: Db, factoryId: string) {
-  const [f] = await db.query<{
-    id: string;
-    name: string | null;
-    cityId: string | null;
-    cityAr: string | null;
-    cityEn: string | null;
-    commercialRegister: string | null;
-    vatNumber: string | null;
-  }>(
-    `SELECT f.id, f.name, f.city_id AS "cityId", c.name_ar AS "cityAr", c.name_en AS "cityEn",
-            f.commercial_register AS "commercialRegister", f.vat_number AS "vatNumber"
-       FROM factories f LEFT JOIN cities c ON c.id = f.city_id WHERE f.id=$1`,
+/** بيانات العميل كما تطلع له في /v1/me. رقم الهوية ما يطلع كامل أبدًا: آخر ٤ أرقام بس. */
+export async function loadFactory(db: Db, factoryId: string) {
+  const [f] = await db.query<CustomerRow & { city_ar: string | null; city_en: string | null }>(
+    `SELECT f.*, c.name_ar AS city_ar, c.name_en AS city_en FROM factories f LEFT JOIN cities c ON c.id = f.city_id WHERE f.id=$1`,
     [factoryId],
   );
-  const { cityAr, cityEn, ...rest } = f;
   return {
-    ...rest,
-    city: f.cityId ? { ar: cityAr!, en: cityEn! } : null,
-    profileComplete: !!(f.name && f.cityId && f.commercialRegister && f.vatNumber),
+    id: f.id,
+    kind: f.kind,
+    name: f.name,
+    cityId: f.city_id,
+    city: f.city_id ? { ar: f.city_ar!, en: f.city_en! } : null,
+    commercialRegister: f.commercial_register,
+    vatNumber: f.vat_number,
+    idType: f.id_type,
+    idNumberMasked: f.id_number_last4 ? `******${f.id_number_last4}` : null,
+    identity: { status: identityStatus(f), verifiedAt: f.identity_verified_at },
+    profileComplete: profileComplete(f),
   };
+}
+
+/** يرفع طلب بس العميل اللي كمّل بياناته، والفرد بعد التحقق لو الإعداد مفعّل (القرار ٤٢). */
+async function assertCanRequest(db: Db, factoryId: string) {
+  const [f] = await db.query<CustomerRow>("SELECT * FROM factories WHERE id=$1", [factoryId]);
+  if (!profileComplete(f)) throw new ApiError(409, "profile_incomplete");
+  if (f.kind === "individual" && identityStatus(f) !== "verified") {
+    const { individualRequiresVerifiedIdentity } = await getSettings(db);
+    if (individualRequiresVerifiedIdentity) throw new ApiError(409, "identity_unverified");
+  }
 }
 
 type RequestRow = Record<string, unknown> & { status: string; expiresAt: Date };

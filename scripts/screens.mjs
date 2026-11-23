@@ -37,7 +37,10 @@ const server = createServer((req, res) => {
 }).listen(0);
 const base = `http://localhost:${server.address().port}`;
 
-const FACTORY = ["/home", "/requests", "/request/r1", "/request/r2", "/request/r3", "/request/r4", "/request/new", "/account", "/factory-profile", "/invoices", "/notifications"];
+// السوق: التصفّح، وصفحة المنتج، وصفحة المصنع، وطلب شراء، و«متجري» ونموذج المنتج والرد على طلب.
+const MARKET = ["/shop", "/market/mp1", "/market/seller/f2", "/purchase/new?product=mp1", "/purchase/pr2", "/store", "/seller/product?id=mp4", "/seller/purchase/pr1"];
+const FACTORY = [...MARKET, "/home", "/requests", "/request/r1", "/request/r2", "/request/r3", "/request/r4", "/request/new", "/account", "/factory-profile", "/invoices", "/notifications"];
+const INDIVIDUAL = ["/home", "/request/new", "/account", "/factory-profile"];
 const PROVIDER = ["/provider/requests", "/provider/work", "/provider/job/d8", "/provider/request/r5", "/provider/account"];
 
 const problems = [];
@@ -46,7 +49,7 @@ const browser = await chromium.launch();
 async function shoot(page, size, route, label) {
   await page.goto(`${base}${route}`);
   await page.waitForTimeout(1200);
-  const name = `${label}-${route.replace(/\//g, "_").replace(/^_/, "") || "root"}-${size.name}`;
+  const name = `${label}-${route.replace(/[\/?=]/g, "_").replace(/^_/, "") || "root"}-${size.name}`;
   await page.screenshot({ path: join(OUT, `${name}.png`), fullPage: true });
   const r = await page.evaluate(() => ({
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -65,7 +68,8 @@ async function signIn(page, buttonText) {
 
 for (const size of WIDTHS) {
   for (const [label, button, routes, scheme] of [
-    ["factory", "ادخل كمصنع", FACTORY, "light"],
+    ["factory", "ادخل كمنشأة", FACTORY, "light"],
+    ["individual", "ادخل كفرد", INDIVIDUAL, "light"],
     ["provider", "ادخل كمزوّد", PROVIDER, "light"],
   ]) {
     const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, colorScheme: scheme });
@@ -78,14 +82,25 @@ for (const size of WIDTHS) {
   }
 }
 
+// الصفحة العامة للسوق بدون دخول.
+for (const size of [WIDTHS[0], WIDTHS[2]]) {
+  const context = await browser.newContext({ viewport: { width: size.width, height: size.height } });
+  const page = await context.newPage();
+  page.on("pageerror", (e) => problems.push(`public ${size.name}: خطأ في الصفحة: ${e.message}`));
+  await shoot(page, size, "/market", "public");
+  await shoot(page, size, "/market/mp1", "public");
+  await context.close();
+}
+
 // الوضع الداكن والإنجليزي: عيّنة على الكمبيوتر والجوال.
 for (const size of [WIDTHS[0], WIDTHS[2]]) {
   const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, colorScheme: "dark" });
   await context.addInitScript(() => localStorage.setItem("mazood.locale", "en"));
   const page = await context.newPage();
-  await signIn(page, "Sign in as factory");
+  await signIn(page, "Sign in as business");
   await shoot(page, size, "/request/r1", "factory-dark-en");
   await shoot(page, size, "/home", "factory-dark-en");
+  await shoot(page, size, "/market/mp1", "factory-dark-en");
   await context.close();
 }
 

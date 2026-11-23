@@ -47,3 +47,10 @@ export { default as IconCamera } from "@tabler/icons-react-native/icons/IconCame
 export { default as IconPencil } from "@tabler/icons-react-native/icons/IconPencil";
 export { default as IconArrowBackUp } from "@tabler/icons-react-native/icons/IconArrowBackUp";
 export { default as IconChartBar } from "@tabler/icons-react-native/icons/IconChartBar";
+export { default as IconPackage } from "@tabler/icons-react-native/icons/IconPackage";
+export { default as IconBuildingStore } from "@tabler/icons-react-native/icons/IconBuildingStore";
+export { default as IconShoppingBag } from "@tabler/icons-react-native/icons/IconShoppingBag";
+export { default as IconSearch } from "@tabler/icons-react-native/icons/IconSearch";
+export { default as IconPhoto } from "@tabler/icons-react-native/icons/IconPhoto";
+export { default as IconEye } from "@tabler/icons-react-native/icons/IconEye";
+export { default as IconEyeOff } from "@tabler/icons-react-native/icons/IconEyeOff";

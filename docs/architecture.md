@@ -1,6 +1,6 @@
 # البنية التقنية
 
-**آخر تحديث:** 22 نوفمبر 2026 (المرحلة ٣)
+**آخر تحديث:** 22 نوفمبر 2026 (خطة العميل الفرد والسوق)
 
 ## الصورة العامة
 
@@ -65,6 +65,13 @@
 | `src/providers.ts` | منطق حالة المزوّد: المستندات المطلوبة، و«موثّق» فعليًا، والانتهاء |
 | `src/storage.ts`, `src/files.ts` | التخزين الخاص للمستندات، والروابط المؤقتة الموقّعة |
 | `src/crypto-box.ts` | تشفير رقم الهوية (AES-256-GCM) |
+| `src/identity.ts` | العميل منشأة أو فرد: اكتمال البيانات حسب النوع، وحالة التحقق من هوية الفرد، وخطوات ربط نفاذ (القرارين ٤١ و٤٢) |
+| `src/notify.ts`, `src/events.ts`, `src/reminders.ts` | التنبيهات (القرار ٤٩): الكتابة والإرسال مع إعادة المحاولة وإشعارات Expo، وربط كل حدث بمين يوصله، والتذكيرات بالوقت |
+| `src/routes/notifications.ts` | التنبيهات للمستخدم الداخل: القائمة، و«قرأت»، والتفضيلات، ورمز إشعارات الجهاز |
+| `src/market.ts` | السوق: شرط ظهور المنتج (`productListedSql`، القرار ٤٤)، والاشتراك الحالي، وحالة البائع كاملة، وتقييمه |
+| `src/routes/market.ts` | مسارات السوق: العامة (المنتجات والصور وصفحة البائع)، والمصنع البائع («متجري»)، والمشتري (طلب السعر وأزراره) |
+| `src/routes/market-admin.ts` | مسارات اللوحة للسوق: توثيق البائعين ورابط السجل المؤقت، وإخفاء المنتج المخالف، والدفعات والباقات، والأرقام شهر بشهر |
+| `src/routes/customers-admin.ts` | مسارات اللوحة للعملاء: القائمة، والتفاصيل (رقم الهوية كامل لصلاحية `customers.identity` مع السجل)، وتأكيد الهوية يدويًا |
 | `src/staff-cli.ts` | إضافة أول مالك من سطر الأوامر |
 | `src/auth.ts` | الرمز والجلسات (منطق الدخول) |
 | `src/security.ts` | توليد الرموز والتوكنات وبصماتها |
@@ -80,9 +87,9 @@
 | `POST /v1/auth/otp/request` | أي أحد | يرسل رمز تحقق للجوال |
 | `POST /v1/auth/otp/verify` | أي أحد | يتحقق من الرمز ويرجّع توكن الجلسة |
 | `POST /v1/auth/logout` | داخل | يلغي الجلسة |
-| `GET /v1/me` | داخل | المستخدم ومصنعه |
-| `PUT /v1/factory` | مصنع | يحفظ بيانات الشركة |
-| `POST /v1/requests` | مصنع | يرفع طلب. الرد فيه `reach`: كم مزوّد موثّق وصله (القرار ٤٠) |
+| `GET /v1/me` | داخل | المستخدم وحساب العميل: `kind` (منشأة أو فرد أو فاضي)، و`idNumberMasked` (آخر ٤ أرقام)، و`identity.status`، و`profileComplete` |
+| `PUT /v1/factory` | مدير حساب العميل | يحفظ البيانات حسب النوع: `{ kind: "business", name, commercialRegister, vatNumber }` أو `{ kind: "individual", name, idType, idNumber }`. بدون `kind` = منشأة. تغيير النوع بعد أول طلب `409 kind_locked` |
+| `POST /v1/requests` | عميل بياناته مكتملة | يرفع طلب (`409 profile_incomplete` قبل اكتمال البيانات، و`identity_unverified` لو الإعداد مفعّل). الرد فيه `reach`: كم مزوّد موثّق وصله (القرار ٤٠) |
 | `GET /v1/requests`, `GET /v1/requests/:id` | مصنع | طلبات مصنعه فقط. القائمة فيها `offerCount` و`newOfferCount`، والتفاصيل فيها `reach` |
 | `GET /v1/account/deletion`, `POST /v1/account/deletion` | مصنع أو مزوّد | حالة «طلب حذف الحساب»، وإرساله (السبب اختياري). ما ينمسح شي تلقائيًا (القرار ٣٩) |
 | `POST /v1/requests/:id/cancel` | مصنع | الإلغاء المباشر في أي حالة قبل ما يبدأ المزوّد. قبل القبول مجاني دائمًا، وبعده تنحسب الرسوم من السياسة المحفوظة (صفر الحين). يقبل `Idempotency-Key` |
@@ -124,8 +131,32 @@
 | `POST /v1/admin/providers/:id/suspend`, `/reinstate` | `providers.suspend` | الإيقاف ورفعه |
 | `GET/POST /v1/admin/staff`, `POST /staff/:id/deactivate` | `staff.manage` | الموظفين |
 | `GET /v1/admin/audit` | `audit.view` | سجل الإجراءات |
+| `GET /v1/admin/customers`, `/customers/:id` | `customers.view` | العملاء (تصفية `?kind=` و`?identity=`). رقم هوية الفرد كامل لصلاحية `customers.identity` بس، والاطلاع ينكتب في السجل |
+| `POST /v1/admin/customers/:id/verify-identity` | `customers.identity` | تأكيد هوية الفرد يدويًا لين يجهز نفاذ |
 | `GET /v1/admin/disputes`, `/disputes/:id` | `disputes.manage` | البلاغات (المفتوحة أول) وتفاصيلها: كل الملاحظات، وطلب الإلغاء المرتبط، والخط الزمني، وبيانات تواصل الطرفين |
 | `POST /v1/admin/disputes/:id/notes`, `/disputes/:id/resolve` | `disputes.manage` | ملاحظة (داخلية أو للطرفين)، والقرار: `complete` أو `cancel` أو `resume` مع السبب |
+| `GET /v1/market/categories` | أي أحد | تصنيفات المنتجات |
+| `GET /v1/market/products?q=&category=&seller=&page=` | أي أحد | المنتجات الظاهرة (القرار ٤٤)، المميزة أول، ٣٠ في الصفحة. لو `publicMinProducts` ما اكتمل: الزائر يشوف `comingSoon: true` |
+| `GET /v1/market/products/:id`, `/v1/market/sellers/:id` | أي أحد | صفحة المنتج، وصفحة المصنع البائع بمنتجاته وتقييمه |
+| `GET /v1/market/images/:id` | أي أحد | صورة منتج (القرار ٤٦) |
+| `GET/POST /v1/market/seller` | منشأة (التفعيل للمدير) | حالة البائع (التوثيق، والسجل، والاشتراك، و`listed`، والتنبيهات قبل الانتهاء)، أو تفعيل البيع |
+| `POST /v1/market/seller/documents`, `/seller/submit` | مدير المنشأة البائعة | رفع السجل التجاري (multipart: `expiresOn`, `file`)، والإرسال للتوثيق |
+| `GET/POST /v1/market/seller/products`, `PUT /seller/products/:id`, `POST /:id/hide\|show` | البائع (الكتابة للمدير) | المنتجات. أقصى عدد حسب الباقة (`409 products_limit`) |
+| `POST /v1/market/seller/products/:id/images`, `/images/:imageId/delete` | مدير البائع | صور المنتج (JPEG أو PNG، ٣ ميجا، حتى ٥) |
+| `GET /v1/market/seller/purchase-requests[/:id]`, `POST /:id/quote\|decline` | البائع (الرد للمدير) | طلبات الشراء الواصلة، والرد بسعر ومدة وتوصيل وصلاحية، أو الاعتذار |
+| `POST /v1/market/products/:id/purchase-requests` | عميل نوعه في `market.buyerKinds` وبياناته مكتملة | طلب سعر بكمية. الرد فيه `estimateHalalas` من السعر المعلن |
+| `GET /v1/market/purchase-requests[/:id]` | العميل | طلبات الشراء حقته، مع `actions` (أزرار المشتري) و`contact` بعد الاتفاق |
+| `POST /v1/market/purchase-requests/:id/accept\|reject\|revision\|cancel\|received\|rating` | العميل صاحب الطلب | أزرار المشتري. أي زر مو في `actions` يرجّع 409 |
+| `GET /v1/admin/market/sellers[/:id]`, `POST /sellers/:id/decision` | `sellers.review` | قائمة البائعين (اللي ينتظر أول)، وتفاصيله ودفعاته، والقرار |
+| `GET /v1/admin/market/seller-documents/:id/link`, `GET /v1/seller-files/:id` | `sellers.review` | رابط مؤقت لسجل البائع، والملف نفسه (الفتح في السجل) |
+| `POST /v1/admin/market/sellers/:id/suspend\|reinstate` | `providers.suspend` | إيقاف بائع مع السبب، ورفعه |
+| `POST /v1/admin/market/products/:id/remove\|restore` | `market.moderate` | إخفاء منتج مخالف مع السبب، أو إرجاعه (يرجع مخفي) |
+| `GET /v1/admin/market/subscriptions`, `POST /sellers/:id/payments` | `subscriptions.manage` | الاشتراكات، وتسجيل دفعة يدوية (القرار ٤٥) |
+| `GET /v1/admin/market/plans`, `PUT /plans/:id` | `subscriptions.manage` / `plans.manage` | الباقات وتعديل سعرها وحدها |
+| `GET /v1/admin/market/stats` | `market.reports` | آخر ١٢ شهر: دخل الاشتراكات، والبائعين المشتركين، وطلبات الشراء، والمتفق عليها وقيمتها |
+| `GET /v1/notifications`, `POST /v1/notifications/read` | داخل | تنبيهاتي (آخر ١٠٠ وعدد غير المقروء)، وتعليمها مقروءة (`ids` أو كلها) |
+| `GET/PUT /v1/notifications/prefs` | داخل | الرسائل النصية، وإشعارات الجوال، والأحداث المكتومة |
+| `POST /v1/push-tokens`, `/push-tokens/revoke` | داخل | رمز إشعارات Expo للجهاز |
 | `GET /health` | أي أحد | فحص إن الخادم شغّال |
 
 جدول الصلاحيات لكل دور في `packages/shared/src/staff.ts`، وبالكلام في `docs/admin/admin-guide.md`.
@@ -153,9 +184,18 @@
 | `verify.tsx` | `/verify` | رمز التحقق |
 | `(tabs)/home.tsx` | `/home` | الرئيسية |
 | `(tabs)/requests.tsx` | `/requests` | طلباتي |
-| `(tabs)/invoices.tsx` | `/invoices` | الفواتير |
+| `(tabs)/invoices.tsx` | `/invoices` | الفواتير (زرّها مخفي من الشريط، وتنفتح من «حسابي») |
+| `(tabs)/shop.tsx` | `/shop` | تبويب «السوق» للعميل الداخل (نفس `src/screens/MarketBrowse.tsx`) |
+| `(tabs)/store.tsx` | `/store` | «متجري»: التفعيل، وخطوات الظهور، والسجل، والاشتراك، وطلبات الشراء الواصلة، ومنتجاتي. التبويب يظهر بس للمنشأة اللي فعّلت البيع |
+| `market/index.tsx` | `/market` | **الصفحة العامة للسوق** (بدون دخول): البحث والتصنيفات والمنتجات |
+| `market/[id].tsx` | `/market/:id` | صفحة المنتج (بدون دخول). «اطلب سعر» هو الزر الكهرماني |
+| `market/seller/[id].tsx` | `/market/seller/:id` | صفحة المصنع البائع (بدون دخول) |
+| `purchase/new.tsx` | `/purchase/new?product=ID` | «اطلب سعر»: الكمية والموعد والملاحظة، مع تقدير من السعر المعلن |
+| `purchase/[id].tsx` | `/purchase/:id` | طلب الشراء للمشتري: رد المصنع والأزرار من الخادم (`actions`) والتواصل بعد الاتفاق |
+| `seller/product.tsx` | `/seller/product[?id=]` | إضافة منتج أو تعديله وصوره وإخفاؤه |
+| `seller/purchase/[id].tsx` | `/seller/purchase/:id` | طلب شراء واصل للبائع: الرد بسعر ومدة وتوصيل، أو الاعتذار |
 | `(tabs)/account.tsx` | `/account` | حسابي: بيانات المصنع، وموظفين المصنع، واللغة والمظهر، وطلب حذف الحساب |
-| `factory-profile.tsx` | `/factory-profile` | بيانات المصنع (الوضع الحقيقي) |
+| `factory-profile.tsx` | `/factory-profile` | بيانات الحساب: «أنت منشأة أو فرد؟» أول مرة، وبعدها النموذج حسب النوع |
 | `provider/index.tsx` | `/provider` | المزوّد قبل التوثيق: حالة التوثيق ومستنداته (بعد التوثيق يحوّل للطلبات المتاحة) |
 | `provider/(tabs)/requests.tsx` | `/provider/requests` | الطلبات المتاحة. في الكمبيوتر: القائمة ونموذج العرض جنب بعض |
 | `provider/(tabs)/work.tsx` | `/provider/work` | شغلي: الشغل الجاري، وعروضي الفعّالة، والمنتهية، وحركة «انقبل عرضك» |
@@ -186,6 +226,13 @@
 - `src/components/provider.tsx`: بطاقة الطلب المتاح، ونموذج العرض، وبطاقة الشغل.
 - `src/components/account.tsx`: التفضيلات، وطلب حذف الحساب، والخروج.
 - `src/i18n/strings-flow.ts`: نصوص شاشات المرحلة ٤.
+- `src/i18n/strings-customer.ts`: نصوص العميل الفرد والسوق.
+- `src/api/market-types.ts`: شكل ردود الخادم لشاشات السوق.
+- `src/components/market.tsx` و`src/components/purchase.tsx`: بطاقة المنتج والسعر والصورة، وبطاقة طلب الشراء وتفاصيله، و`useSellerEnabled()` (يظهر تبويب «متجري»).
+- `src/demo/market.ts`: السوق في الخادم التجريبي (البائعين التجريبيين موثّقين ومشتركين من البداية).
+- `src/lib/image.ts`: تصغير صورة المنتج في الموقع قبل الرفع (القرار ٤٦).
+
+**ملاحظة على التبويبات:** التبويب المخفي يُخفى بـ `tabBarButton: () => null` مو `href: null`، لأن `href: null` يكسر الرابط المباشر (مثل `/invoices` بعد تحديث الصفحة يفتح الرئيسية).
 
 ## كيف تتواصل الأجزاء
 
@@ -203,7 +250,7 @@ PostgreSQL. الشكل الكامل المخطط في `PLAN.md` (القسم ٣) 
 | `users` | رقم الجوال (بصيغة `+9665XXXXXXXX`)، والدور (مصنع / مزوّد / إدارة)، والحالة (فعّال / موقوف) |
 | `otp_codes` | بصمة رمز التحقق (مو الرمز)، وعدد المحاولات، والانتهاء |
 | `sessions` | بصمة توكن الجلسة، والانتهاء، والإلغاء |
-| `factories`, `factory_members` | المصنع وبياناته ومدينته، وموظفينه (مدير أو موظف، فعّال أو موقوف) |
+| `factories`, `factory_members` | **العميل** (الاسم باقي `factories` عشان ما نكسر شي، القرار ٤١): `kind` (منشأة أو فرد)، وبيانات المنشأة (السجل والرقم الضريبي)، أو بيانات الفرد (نوع الهوية، ورقمها **مشفّر** مع آخر ٤ أرقام، و`identity_verified_at`)، والمدينة. وموظفين المنشأة (مدير أو موظف، فعّال أو موقوف). الفرد ما له موظفين |
 | `requests` | طلبات المصانع: المدينة، والمنطقة (تظهر للمزوّد)، والموقع بالضبط (بعد القبول بس)، والحالة، و`expires_at` |
 | `account_deletion_requests` | طلبات حذف الحساب من «حسابي» (تنتظر موظف ينفّذها، القرار ٣٩) |
 | `cities`, `provider_cities`, `staff_cities` | المدن (البداية سدير)، ومدن كل مزوّد، وحصر الموظف بمدن (فاضي = كل المدن) |
@@ -219,6 +266,12 @@ PostgreSQL. الشكل الكامل المخطط في `PLAN.md` (القسم ٣) 
 | `dispute_notes` | ملاحظات البلاغ من الطرفين وخدمة العملاء (منها الداخلية للإدارة بس). **إضافة فقط** |
 | `approvals_internal` | ترشيح موظف المصنع لعرض، وقرار المدير |
 | `idempotency_keys` | ردود العمليات اللي انرسلت بمفتاح عملية، عشان الضغطة المكررة ما تتكرر |
+| `product_categories` | تصنيفات المنتجات (٨ مقترحة، تتعدّل من اللوحة لاحقًا) |
+| `subscription_plans`, `subscriptions`, `subscription_payments` | الباقات (السعر بالهللة وحد المنتجات)، وفترات الاشتراك (تجريبي أو مدفوع، عام للمصنع والمزوّد)، والدفعات اليدوية (**إضافة فقط**) |
+| `sellers`, `seller_documents` | المصنع البائع وحالة توثيقه، وسجله التجاري في التخزين الخاص |
+| `products`, `product_images` | المنتجات (سعر معلن بشرائح، أو «اطلب سعر»، وفعّال أو مخفي أو مشال من الإدارة مع السبب)، وصورها |
+| `purchase_requests`, `purchase_quotes`, `seller_ratings` | طلبات الشراء وحالتها، وردود المصنع (رد فعّال واحد، والقديم «superseded»)، وتقييم البائع بالنجوم |
+| `notifications`, `notification_prefs`, `push_tokens` | التنبيهات (الحدث، وبياناته، وحالة كل قناة، والمحاولات، ومنع التكرار)، وتفضيلات كل مستخدم، ورموز أجهزته |
 | `staff` | موظفين الإدارة ودورهم وهل هم فعّالين. مالك واحد فعّال (فهرس فريد) |
 | `providers` | المزوّد: الاسم، ورقم الهوية **مشفّر** مع آخر ٤ أرقام، والسجل، والأقسام، والحالة |
 | `provider_documents` | المستندات: النوع، ومكان الملف في التخزين الخاص، والنوع الفعلي، وتاريخ الانتهاء، والحالة، وقائمة التحقق، وسبب الرفض |

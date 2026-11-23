@@ -8,12 +8,14 @@
 //
 // اللي ما يسويه الخادم التجريبي (قصدًا): رسائل نصية، وتوثيق المزوّد (المزوّد التجريبي موثّق من البداية)،
 // ولوحة الإدارة، والمهام في الخلفية (التأكيد التلقائي وانتهاء الطلب).
+import { demoProductImage, registerMarketDemo, seedMarket, type DemoHost, type MarketState } from "./market";
 import {
   cancellationFee,
   CATEGORY_IDS,
   commitmentView,
   containsContactInfo,
   createRequestBody,
+  factoryProfileBody,
   DEFAULT_CANCELLATION_POLICY,
   DEFAULT_COMMITMENT_SETTINGS,
   factoryActions,
@@ -36,7 +38,17 @@ import { ApiClientError } from "@/api/errors";
 
 type Role = "factory" | "provider";
 type User = { id: string; phone: string; role: Role; factoryId: string | null; providerId: string | null };
-type Factory = { id: string; name: string | null; cityId: string | null; commercialRegister: string | null; vatNumber: string | null };
+/** العميل (منشأة أو فرد). الهوية هنا وهمية، ونحفظ آخر ٤ أرقام بس مثل الخادم الحقيقي. */
+type Factory = {
+  id: string;
+  kind?: "business" | "individual" | null;
+  name: string | null;
+  cityId: string | null;
+  commercialRegister: string | null;
+  vatNumber: string | null;
+  idType?: "national_id" | "iqama" | null;
+  idLast4?: string | null;
+};
 type Provider = { id: string; userId: string | null; tradeName: string; categories: string[]; withdrawals: number; history: number };
 type Req = {
   id: string;
@@ -102,17 +114,20 @@ type Db = {
   disputes: Dispute[];
   ratings: Rating[];
   deletions: { userId: string; requestedAt: string }[];
+  /** السوق (src/demo/market.ts). */
+  market: MarketState;
   /** جلسة «الكوكي» في الموقع (الخادم الحقيقي يحطها في كوكي محمي). */
   session: string | null;
 };
 
 const CITY = "sudair";
 const HOUR = 3600_000;
-const STORAGE_KEY = "mazood.demo.v1";
+// v2: نوع العميل والسوق (خطة العميل الفرد والسوق). النسخة القديمة المحفوظة تنتهي وتبدأ من جديد.
+const STORAGE_KEY = "mazood.demo.v2";
 /** كم ثانية بعد رفع الطلب توصل العروض الوهمية من مزوّدين ثانيين. */
 const SIMULATED_OFFER_DELAY_MS = 5000;
 /** أرقام جاهزة للتجربة: تظهر في شاشة الدخول. */
-export const DEMO_PHONES = { factory: "0500000001", provider: "0500000002" } as const;
+export const DEMO_PHONES = { factory: "0500000001", provider: "0500000002", individual: "0500000004" } as const;
 
 const iso = (ms: number) => new Date(ms).toISOString();
 const now = () => Date.now();
@@ -124,7 +139,7 @@ function seed(): Db {
   const db: Db = {
     seq: 100,
     users: [],
-    factories: [{ id: "f1", name: "مصنع سدير للبلاستيك", cityId: CITY, commercialRegister: "1010123456", vatNumber: "300123456700003" }],
+    factories: [{ id: "f1", kind: "business", name: "مصنع سدير للبلاستيك", cityId: CITY, commercialRegister: "1010123456", vatNumber: "300123456700003" }],
     providers: [
       { id: "p1", userId: null, tradeName: "مؤسسة الثويرات للنقل", categories: [...CATEGORY_IDS], withdrawals: 0, history: 32 },
       { id: "p2", userId: null, tradeName: "شركة سدير للخدمات اللوجستية", categories: [...CATEGORY_IDS], withdrawals: 1, history: 57 },
@@ -142,13 +157,17 @@ function seed(): Db {
     disputes: [],
     ratings: [],
     deletions: [],
+    market: seedMarket(t, iso),
     session: null,
   };
   db.users.push({ id: "u1", phone: "+966500000001", role: "factory", factoryId: "f1", providerId: null });
   db.users.push({ id: "u2", phone: "+966500000002", role: "provider", factoryId: null, providerId: "pme" });
   // مصنع ثاني (طلباته تظهر للمزوّد التجريبي في «الطلبات المتاحة»).
-  db.factories.push({ id: "f2", name: "مصنع الخليج للحديد", cityId: CITY, commercialRegister: null, vatNumber: null });
+  db.factories.push({ id: "f2", kind: "business", name: "مصنع الخليج للحديد", cityId: CITY, commercialRegister: null, vatNumber: null });
   db.users.push({ id: "u3", phone: "+966500000003", role: "factory", factoryId: "f2", providerId: null });
+  // عميل فرد (القرار ٤١): الاسم والهوية وهمية، وبياناته مكتملة عشان يرفع طلب مباشرة.
+  db.factories.push({ id: "f3", kind: "individual", name: "عميل فرد تجريبي", cityId: CITY, commercialRegister: null, vatNumber: null, idType: "national_id", idLast4: "4821" });
+  db.users.push({ id: "u4", phone: "+966500000004", role: "factory", factoryId: "f3", providerId: null });
   // تقييمات سابقة للمزوّدين الوهميين (عشان النجوم تظهر في بطاقة العرض).
   for (const [providerId, stars] of [["p1", [5, 5, 4, 5]], ["p2", [4, 5, 4]], ["p4", [5, 5, 5, 4, 5]], ["pme", [5, 4]]] as const) {
     for (const s of stars) db.ratings.push({ requestId: "old", providerId, stars: s, createdAt: iso(t - 30 * 24 * HOUR) });
@@ -421,7 +440,8 @@ function openRequests(p: Provider, onlyId?: string, category?: string) {
     .map((r) => {
       const offerCount = db.offers.filter((o) => o.requestId === r.id && live(o, t)).length;
       const mine = db.offers.find((o) => o.requestId === r.id && o.providerId === p.id && o.status === "active");
-      return { id: r.id, category: r.category, typeId: r.typeId, details: r.details, area: r.area, cityId: r.cityId, when: r.when, createdAt: r.createdAt, expiresAt: r.expiresAt, offerCount, myOffer: mine ? { id: mine.id } : null };
+      const customerKind = db.factories.find((f) => f.id === r.factoryId)?.kind ?? "business";
+      return { id: r.id, category: r.category, typeId: r.typeId, details: r.details, area: r.area, cityId: r.cityId, when: r.when, createdAt: r.createdAt, expiresAt: r.expiresAt, customerKind, offerCount, myOffer: mine ? { id: mine.id } : null };
     })
     .filter((r) => r.offerCount < SETTING_DEFAULTS.maxOffersPerRequest || r.myOffer);
 }
@@ -463,7 +483,7 @@ function jobSummary(o: Order) {
     acceptedAt: o.acceptedAt,
     startedAt: o.startedAt,
     deliveredAt: o.deliveredAt,
-    factory: { name: f.name, contactPhone: acceptedBy.phone },
+    factory: { name: f.name, kind: f.kind ?? "business", contactPhone: acceptedBy.phone },
   };
 }
 
@@ -559,7 +579,7 @@ on("POST", "/v1/auth/otp/verify", ({ body }) => {
       u = { id: uid, phone, role: "provider", factoryId: null, providerId: pid };
     } else {
       const fid = id("f");
-      db.factories.push({ id: fid, name: null, cityId: null, commercialRegister: null, vatNumber: null });
+      db.factories.push({ id: fid, kind: null, name: null, cityId: null, commercialRegister: null, vatNumber: null });
       u = { id: uid, phone, role: "factory", factoryId: fid, providerId: null };
     }
     db.users.push(u);
@@ -578,27 +598,51 @@ on("POST", "/v1/auth/logout", () => {
 });
 
 on("GET", "/v1/cities", () => ({ cities: [{ id: CITY, name: { ar: "سدير", en: "Sudair" } }] }));
+/** نفس شكل loadFactory في الخادم الحقيقي. */
+function customerView(f: Factory) {
+  const kind = f.kind ?? null;
+  const complete =
+    kind === "business" ? !!(f.name && f.cityId && f.commercialRegister && f.vatNumber) : kind === "individual" ? !!(f.name && f.cityId && f.idLast4) : false;
+  return {
+    id: f.id,
+    kind,
+    name: f.name,
+    cityId: f.cityId,
+    city: f.cityId ? { ar: "سدير", en: "Sudair" } : null,
+    commercialRegister: f.commercialRegister,
+    vatNumber: f.vatNumber,
+    idType: f.idType ?? null,
+    idNumberMasked: f.idLast4 ? `******${f.idLast4}` : null,
+    identity: { status: kind === "individual" ? "pending" : "not_required", verifiedAt: null },
+    profileComplete: complete,
+  };
+}
+
 on("GET", "/v1/me", ({ u }) => {
   const user = u();
   const f = user.factoryId ? db.factories.find((x) => x.id === user.factoryId)! : null;
   return {
     user: { id: user.id, phone: user.phone, role: user.role, staffRole: null, factoryRole: user.role === "factory" ? "manager" : null, hasFactory: !!f, hasProvider: !!user.providerId },
-    factory: f
-      ? { ...f, city: f.cityId ? { ar: "سدير", en: "Sudair" } : null, profileComplete: !!(f.name && f.cityId && f.commercialRegister && f.vatNumber) }
-      : null,
+    factory: f ? customerView(f) : null,
   };
 });
 on("PUT", "/v1/factory", ({ u, body }) => {
   const f = db.factories.find((x) => x.id === factoryOf(u()))!;
-  const b = body as { name: string; cityId?: string; commercialRegister: string; vatNumber: string };
-  if (!/^\d{10}$/.test(b.commercialRegister) || !/^3\d{13}3$/.test(b.vatNumber) || (b.name ?? "").trim().length < 2) fail(400, "validation");
-  Object.assign(f, { name: b.name.trim(), cityId: CITY, commercialRegister: b.commercialRegister, vatNumber: b.vatNumber });
-  return { factory: { ...f, city: { ar: "سدير", en: "Sudair" }, profileComplete: true } };
+  const b = parseBody(factoryProfileBody, body);
+  if (f.kind && f.kind !== b.kind && db.requests.some((r) => r.factoryId === f.id)) fail(409, "kind_locked");
+  if (b.kind === "business") {
+    Object.assign(f, { kind: "business", name: b.name, cityId: CITY, commercialRegister: b.commercialRegister, vatNumber: b.vatNumber, idType: null, idLast4: null });
+  } else {
+    // الرقم الكامل ما ينحفظ حتى في النسخة التجريبية: آخر ٤ أرقام بس.
+    Object.assign(f, { kind: "individual", name: b.name, cityId: CITY, commercialRegister: null, vatNumber: null, idType: b.idType, idLast4: b.idNumber.slice(-4) });
+  }
+  return { factory: customerView(f) };
 });
 
 on("POST", "/v1/requests", ({ u, body }) => {
   const f = factoryOf(u());
   const b = parseBody(createRequestBody, body);
+  if (!customerView(db.factories.find((x) => x.id === f)!).profileComplete) fail(409, "profile_incomplete");
   noContact(b.details, b.area);
   const t = now();
   const r: Req = { id: id("r"), factoryId: f, category: b.category, typeId: b.typeId, details: b.details, area: b.area, location: b.location, cityId: CITY, when: b.when, status: "awaiting_offers", createdAt: iso(t), expiresAt: iso(t + SETTING_DEFAULTS.requestOpenDays * 24 * HOUR) };
@@ -884,6 +928,19 @@ on("POST", "/v1/account/deletion", ({ u, body }) => {
 });
 
 /** الطلب للخادم التجريبي. يرمي ApiClientError مثل الخادم الحقيقي بالضبط. */
+// السوق: مسارات منفصلة في src/demo/market.ts.
+const marketHost: DemoHost = {
+  on: (method, pattern, h) => on(method, pattern, h as Handler),
+  market: () => db.market,
+  factories: () => db.factories,
+  phoneOf: (factoryId) => db.users.find((u) => u.factoryId === factoryId)?.phone ?? "",
+  fail,
+  id,
+  now,
+  iso,
+};
+registerMarketDemo(marketHost);
+
 export async function demoApi<T>(method: string, path: string, body: unknown, token: string | null): Promise<T> {
   const [pathname, qs] = path.split("?");
   for (const [m, re, h] of routes) {
@@ -900,6 +957,13 @@ export async function demoApi<T>(method: string, path: string, body: unknown, to
 
 /** رفع صور التنفيذ في الوضع التجريبي: الصورة تبقى في المتصفح نفسه (رابط blob). */
 export async function demoUpload<T>(path: string, form: FormData, token: string | null): Promise<T> {
+  const img = path.match(/^\/v1\/market\/seller\/products\/([^/]+)\/images$/);
+  if (img) {
+    const file = form.get("file");
+    const r = demoProductImage(marketHost, userFrom(token), img[1], file && typeof file !== "string" ? file : null);
+    persist();
+    return JSON.parse(JSON.stringify(r)) as T;
+  }
   const m = path.match(/^\/v1\/provider\/jobs\/([^/]+)\/photos$/);
   if (!m) return fail(501, "demo_unsupported");
   const user = userFrom(token);

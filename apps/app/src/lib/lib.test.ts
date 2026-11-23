@@ -107,3 +107,12 @@ describe("سعر العرض بالريال", () => {
     expect(parseRiyals("abc")).toBeNull();
   });
 });
+
+describe("تصغير صورة المنتج", () => {
+  it("يحافظ على النسبة، وما يكبّر الصورة الصغيرة", async () => {
+    const { fitWithin } = await import("./image");
+    expect(fitWithin(4000, 3000)).toEqual({ width: 1600, height: 1200 });
+    expect(fitWithin(1000, 3200)).toEqual({ width: 500, height: 1600 });
+    expect(fitWithin(800, 600)).toEqual({ width: 800, height: 600 });
+  });
+});

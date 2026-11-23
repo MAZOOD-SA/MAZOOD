@@ -3,6 +3,7 @@
 // المزوّد: بدأت، والصور، وتم التنفيذ، وطلب تعديل السعر أو سحبه. على طلباته المنفّذة بس.
 // المصنع: تأكيد الاستلام، والتقييم بعد الاكتمال (الخطوة ٩)، والموافقة على تعديل السعر أو رفضه. على طلباته بس.
 // الصور: تنفتح برابط مؤقت موقّع باسم المستخدم، والخادم يتأكد لحظة الفتح إن له حق يشوفها.
+import { events, requestOfOrder } from "../events.ts";
 import { ORDER_PHOTO_STAGES, ORDER_PHOTOS_PER_STAGE, parseCancellationPolicy, priceChangeBody, rateOrderBody, UPLOAD_MAX_BYTES, uuidSchema } from "@mazood/shared";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -50,6 +51,7 @@ export function executionRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const orderId = uuidParam(req, "orderId");
     return idempotent(ctx, req, `start:${orderId}`, async () => {
       await startJob(db, user, orderId, ctx.now());
+      await events.toCustomer(db, await requestOfOrder(db, orderId), "job_started", ctx.now());
       return providerJob(user.id, orderId);
     });
   });
@@ -59,6 +61,7 @@ export function executionRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const orderId = uuidParam(req, "orderId");
     return idempotent(ctx, req, `deliver:${orderId}`, async () => {
       await deliverJob(db, user, orderId, ctx.now());
+      await events.toCustomer(db, await requestOfOrder(db, orderId), "job_delivered", ctx.now());
       return providerJob(user.id, orderId);
     });
   });
@@ -92,6 +95,7 @@ export function executionRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     // السبب يظهر للمصنع: نفس قاعدة النصوص قبل القبول، بدون أرقام أو روابط (التواصل داخل المنصة).
     rejectContactInfo({ reason: body.reason });
     await requestPriceChange(db, user, orderId, body, ctx.now());
+    await events.toCustomer(db, await requestOfOrder(db, orderId), "price_change_requested", ctx.now());
     return reply.status(201).send(await providerJob(user.id, orderId));
   });
 
@@ -108,6 +112,7 @@ export function executionRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const id = uuidParam(req, "id");
     return idempotent(ctx, req, `confirm:${id}`, async () => {
       await confirmReceipt(db, user, factoryId, id, ctx.now());
+      await events.toCustomer(db, id, "rate_provider", ctx.now());
       return factoryRequestView(ctx, factoryId, id, user.id);
     });
   });
@@ -159,24 +164,24 @@ export function executionRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
 export async function providerJobView(ctx: Ctx, userId: string, orderId: string) {
   const { db } = ctx;
   const providerId = await providerIdFor(db, userId);
-  const [j] = await db.query<Record<string, unknown> & { status: string; price_halalas: string; factory_name: string | null; factory_phone: string; cancellationPolicy: unknown }>(
+  const [j] = await db.query<Record<string, unknown> & { status: string; price_halalas: string; factory_name: string | null; factory_kind: string; factory_phone: string; cancellationPolicy: unknown }>(
     `SELECT o.id AS "orderId", o.request_id AS "requestId", r.status, r.category, r.type_id AS "typeId", r.details, r.area,
             r.location, r.needed_when AS "when", o.price_halalas, o.accepted_at AS "acceptedAt", o.started_at AS "startedAt",
             o.delivered_at AS "deliveredAt", o.confirmed_at AS "confirmedAt", o.cancellation_policy AS "cancellationPolicy",
-            f.name AS factory_name, u.phone AS factory_phone
+            f.name AS factory_name, COALESCE(f.kind, 'business') AS factory_kind, u.phone AS factory_phone
        FROM orders o JOIN requests r ON r.id = o.request_id JOIN factories f ON f.id = o.factory_id JOIN users u ON u.id = o.accepted_by
       WHERE o.id=$1 AND o.provider_id=$2 AND o.state <> 'withdrawn'`,
     [orderId, providerId],
   );
   if (!j) throw new ApiError(404, "not_found");
-  const { price_halalas, factory_name, factory_phone, cancellationPolicy, ...rest } = j;
+  const { price_halalas, factory_name, factory_kind, factory_phone, cancellationPolicy, ...rest } = j;
   const now = ctx.now();
   return {
     job: {
       ...rest,
       priceHalalas: Number(price_halalas),
       cancellationPolicy: parseCancellationPolicy(cancellationPolicy),
-      factory: { name: factory_name, contactPhone: factory_phone },
+      factory: { name: factory_name, kind: factory_kind, contactPhone: factory_phone },
       execution: await executionDetails(db, ctx.config.authSecret, orderId, userId, now),
       cancellationRequest: await latestCancellationRequest(db, orderId),
       // قبل البدء يقدر يعتذر: نبيّن له الرسوم بالضبط قبل ما يضغط (صفر الحين).

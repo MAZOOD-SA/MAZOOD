@@ -3,7 +3,7 @@
 import { spacing } from "@mazood/brand";
 import { router } from "expo-router";
 import { View } from "react-native";
-import { DeleteAccountSection, PreferencesSection, SignOutButton } from "@/components/account";
+import { DeleteAccountSection, NotificationPrefsSection, PreferencesSection, SignOutButton } from "@/components/account";
 import { DocSlotCard, dayIso } from "@/components/DocSlotCard";
 import { Stars } from "@/components/flow";
 import { IconUpload } from "@/components/icons";
@@ -77,6 +77,7 @@ export default function ProviderAccount() {
   const side = (
     <>
       <PreferencesSection />
+      <NotificationPrefsSection />
       <SignOutButton />
       <DeleteAccountSection />
     </>

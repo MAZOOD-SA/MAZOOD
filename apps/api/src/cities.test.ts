@@ -39,7 +39,7 @@ describe("المدن والقسم السابع", () => {
   });
 
   it("طلب في قسم المكافحة ينحفظ، ومعه المدينة والمنطقة", async () => {
-    const { token } = await ctx.signIn("0513000001");
+    const { token } = await ctx.factory("0513000001");
     const r = await ctx.app.inject({
       method: "POST",
       url: "/v1/requests",
@@ -64,7 +64,7 @@ describe("المدن والقسم السابع", () => {
   });
 
   it("مدينة غير موجودة أو موقوفة ترجع خطأ واضح", async () => {
-    const { token } = await ctx.signIn("0513000003");
+    const { token } = await ctx.factory("0513000003");
     const r = await ctx.app.inject({ method: "POST", url: "/v1/requests", headers: auth(token), payload: { ...validRequest, cityId: "riyadh" } });
     expect(r.statusCode).toBe(400);
     expect(r.json().error.code).toBe("city_unavailable");

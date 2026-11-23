@@ -19,6 +19,20 @@ export const PERMISSIONS = {
   "staff.manage": ["owner", "general_manager"],
   /** يتابع البلاغات: يقرأها، ويكتب ملاحظات (منها الداخلية)، ويقرر فيها (المرحلة ٤، نسخة أولى) */
   "disputes.manage": ["owner", "general_manager", "support"],
+  /** يشوف العملاء (المنشآت والأفراد) وبياناتهم، بدون رقم الهوية كامل (القرار ٤١) */
+  "customers.view": ["owner", "general_manager", "verification", "support"],
+  /** يشوف رقم هوية الفرد كامل (الاطلاع ينكتب في السجل)، ويأكّد الهوية يدويًا لين يجهز نفاذ */
+  "customers.identity": ["owner", "general_manager", "verification"],
+  /** يراجع سجل المصنع البائع ويوثّقه أو يرفضه (سوق المنتجات) */
+  "sellers.review": ["owner", "general_manager", "verification"],
+  /** يخفي منتج مخالف مع السبب، أو يرجّعه */
+  "market.moderate": ["owner", "general_manager", "support"],
+  /** يسجّل دفعات الاشتراك ويشوف الاشتراكات */
+  "subscriptions.manage": ["owner", "general_manager", "finance"],
+  /** يعدّل سعر الباقات وحدودها */
+  "plans.manage": ["owner", "general_manager"],
+  /** يشوف أرقام السوق والاشتراكات شهر بشهر */
+  "market.reports": ["owner", "general_manager", "finance"],
   /** يشوف سجل الإجراءات */
   "audit.view": ["owner", "general_manager"],
 } as const satisfies Record<string, readonly StaffRole[]>;

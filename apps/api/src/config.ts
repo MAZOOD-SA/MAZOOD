@@ -14,6 +14,10 @@ const schema = z.object({
   SMS_PROVIDER: z.enum(["console", "none"]).default("console"),
   DATA_ENCRYPTION_KEY: z.string().optional(),
   STORAGE_DIR: z.string().optional(),
+  /** إشعارات الجوال عن طريق Expo (القرار ٤٩). مقفولة لين ينفتح حساب Expo وFirebase باسم الشركة. */
+  PUSH_PROVIDER: z.enum(["expo", "none"]).default("none"),
+  /** اختياري: رمز وصول Expo لو فعّلنا «Enhanced Security for Push» في حساب Expo. سرّي. */
+  EXPO_ACCESS_TOKEN: z.string().optional(),
 });
 
 export type Config = {
@@ -29,6 +33,8 @@ export type Config = {
   dataEncryptionKey: string;
   /** مجلد التخزين الخاص للمستندات. فاضي في التطوير = في الذاكرة (ينمسح مع كل تشغيل). */
   storageDir?: string;
+  pushProvider: "expo" | "none";
+  expoAccessToken?: string;
 };
 
 const DEV_SECRET = "dev-only-secret-do-not-use-in-production-0000";
@@ -61,5 +67,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     smsProvider: e.SMS_PROVIDER,
     dataEncryptionKey: e.DATA_ENCRYPTION_KEY ?? DEV_DATA_KEY,
     storageDir: e.STORAGE_DIR,
+    pushProvider: e.PUSH_PROVIDER,
+    expoAccessToken: e.EXPO_ACCESS_TOKEN,
   };
 }

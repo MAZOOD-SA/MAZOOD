@@ -3,6 +3,7 @@
 // لاحقًا (المرحلة 6) تنتقل النصوص القابلة للتعديل إلى لوحة الإدارة.
 // نصوص شاشات المرحلة ٤ (العروض والتنفيذ) في strings-flow.ts وتندمج هنا.
 import { flowAr, flowEn } from "./strings-flow";
+import { customerAr, customerEn } from "./strings-customer";
 
 const ar = {
   appName: "مزوّد",
@@ -29,7 +30,7 @@ const ar = {
   tabAccount: "حسابي",
 
   // الرئيسية
-  homeQuestion: "وش يحتاج مصنعك اليوم؟",
+  homeQuestion: "وش تحتاج اليوم؟",
   requestOffer: "اطلب عرض",
   categories: "الأقسام",
   yourRequests: "طلباتك",
@@ -118,7 +119,7 @@ const ar = {
 
   // الحساب
   accountTitle: "حسابي",
-  factory: "المصنع",
+  factory: "العميل",
   commercialRegister: "السجل التجاري",
   language: "اللغة",
   appearance: "المظهر",
@@ -143,25 +144,25 @@ const ar = {
   networkError: "ما قدرنا نتصل بالخادم. تأكد من الإنترنت وحاول مرة ثانية.",
   serverError: "صار خطأ من عندنا. حاول مرة ثانية بعد شوي.",
   notCancellable: "ما يمكن إلغاء هذا الطلب الحين لأنه انقبل فيه عرض.",
-  completeProfile: "أكمل بيانات المصنع",
-  editProfile: "عدّل بيانات المصنع",
-  profileTitle: "بيانات المصنع",
+  completeProfile: "أكمل بيانات حسابك",
+  editProfile: "عدّل بيانات الحساب",
+  profileTitle: "بيانات الحساب",
   profileHint: "نحتاجها لإصدار الفواتير. تقدر ترفع الطلبات قبل ما تكملها.",
-  profileMissingName: "أكمل بيانات مصنعك",
-  factoryNameLabel: "اسم المصنع",
+  profileMissingName: "أكمل بيانات حسابك",
+  factoryNameLabel: "اسم المنشأة",
   cityLabel: "المدينة",
   crLabel: "السجل التجاري (١٠ أرقام)",
   vatLabel: "الرقم الضريبي (١٥ رقم)",
   saveProfile: "احفظ البيانات",
   crInvalid: "السجل التجاري ١٠ أرقام.",
   vatInvalid: "الرقم الضريبي ١٥ رقم، يبدأ وينتهي بـ 3.",
-  nameRequired: "اكتب اسم المصنع.",
+  nameRequired: "اكتب اسم المنشأة.",
   cityRequired: "اكتب المدينة.",
 
   // المرحلة ٣: المزوّدين ولوحة الإدارة
   loginProviderTitle: "سجّل كمزوّد خدمة",
   iAmProvider: "مزوّد خدمة؟ سجّل من هنا",
-  iAmFactory: "صاحب مصنع؟ ادخل من هنا",
+  iAmFactory: "تبي تطلب خدمة؟ ادخل من هنا",
   loading: "جاري التحميل…",
   errFileType: "الملف لازم يكون PDF أو صورة (JPG أو PNG).",
   errFileTooLarge: "الملف أكبر من ١٠ ميجا.",
@@ -171,7 +172,7 @@ const ar = {
   errChecklistIncomplete: "أشّر على كل بنود قائمة التحقق قبل القبول.",
   errReasonRequired: "اكتب السبب (٥ أحرف على الأقل).",
   errForbidden: "ما عندك صلاحية لهذا الإجراء.",
-  errPhoneUsed: "الرقم مسجّل كمصنع أو مزوّد. استخدم رقم ثاني للموظف.",
+  errPhoneUsed: "الرقم مسجّل كعميل أو مزوّد. استخدم رقم ثاني للموظف.",
   errNotApproved: "اقبل كل المستندات المطلوبة قبل التوثيق.",
   errValidation: "تأكد من البيانات المدخلة.",
   providerHomeTitle: "حسابي كمزوّد",
@@ -257,6 +258,7 @@ const ar = {
   deactivate: "أوقف الحساب",
   inactive: "موقوف",
   ...flowAr,
+  ...customerAr,
 };
 
 export type StringKey = keyof typeof ar;
@@ -283,7 +285,7 @@ const en: Record<StringKey, string> = {
   tabInvoices: "Invoices",
   tabAccount: "Account",
 
-  homeQuestion: "What does your factory need today?",
+  homeQuestion: "What do you need today?",
   requestOffer: "Request a quote",
   categories: "Categories",
   yourRequests: "Your requests",
@@ -367,7 +369,7 @@ const en: Record<StringKey, string> = {
     "Sample for display only. This is not a tax invoice. ZATCA-compliant e-invoicing is built in phase 5.",
 
   accountTitle: "Account",
-  factory: "Factory",
+  factory: "Customer",
   commercialRegister: "Commercial registration",
   language: "Language",
   appearance: "Appearance",
@@ -391,23 +393,23 @@ const en: Record<StringKey, string> = {
   networkError: "Can't reach the server. Check your connection and try again.",
   serverError: "Something went wrong on our side. Try again shortly.",
   notCancellable: "This request can't be cancelled now because an offer was accepted.",
-  completeProfile: "Complete factory details",
-  editProfile: "Edit factory details",
-  profileTitle: "Factory details",
+  completeProfile: "Complete your account details",
+  editProfile: "Edit account details",
+  profileTitle: "Account details",
   profileHint: "Needed to issue invoices. You can submit requests before completing it.",
-  profileMissingName: "Complete your factory details",
-  factoryNameLabel: "Factory name",
+  profileMissingName: "Complete your account details",
+  factoryNameLabel: "Business name",
   cityLabel: "City",
   crLabel: "Commercial registration (10 digits)",
   vatLabel: "VAT number (15 digits)",
   saveProfile: "Save details",
   crInvalid: "Commercial registration is 10 digits.",
   vatInvalid: "VAT number is 15 digits, starting and ending with 3.",
-  nameRequired: "Enter the factory name.",
+  nameRequired: "Enter the business name.",
   cityRequired: "Enter the city.",
   loginProviderTitle: "Sign in as a service provider",
   iAmProvider: "Service provider? Sign in here",
-  iAmFactory: "Factory? Sign in here",
+  iAmFactory: "Need a service? Sign in here",
   loading: "Loading…",
   errFileType: "The file must be a PDF or an image (JPG or PNG).",
   errFileTooLarge: "The file is larger than 10 MB.",
@@ -503,6 +505,7 @@ const en: Record<StringKey, string> = {
   deactivate: "Deactivate",
   inactive: "Inactive",
   ...flowEn,
+  ...customerEn,
 };
 
 export const strings = { ar, en };

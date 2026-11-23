@@ -2,6 +2,7 @@
 import { normalizeSaudiMobile } from "@mazood/shared";
 import { buildApp } from "./app.ts";
 import { startScheduledJobs } from "./jobs.ts";
+import { expoPush, noPush } from "./notify.ts";
 import { loadConfig } from "./config.ts";
 import { migrate } from "./migrate.ts";
 import { openDb } from "./open-db.ts";
@@ -38,4 +39,6 @@ if (!config.databaseUrl) {
 }
 await app.listen({ port: config.port, host: config.host });
 // المهام الدورية (التأكيد التلقائي، وانتهاء الطلبات): كل دقيقة. شرحها في jobs.ts.
-startScheduledJobs(db, () => new Date(), app.log);
+// والتنبيهات: الرسائل النصية من نفس مزوّد رمز الدخول، وإشعارات الجوال من Expo لو مفعّلة (PUSH_PROVIDER).
+const push = config.pushProvider === "expo" ? expoPush(config.expoAccessToken) : noPush;
+startScheduledJobs(db, () => new Date(), app.log, { sms, push });

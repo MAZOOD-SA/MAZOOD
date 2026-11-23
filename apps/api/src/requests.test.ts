@@ -7,8 +7,8 @@ let a: { token: string; userId: string };
 let b: { token: string; userId: string };
 beforeAll(async () => {
   ctx = await createTestCtx();
-  a = await ctx.signIn("0511111111");
-  b = await ctx.signIn("0522222222");
+  a = await ctx.factory("0511111111");
+  b = await ctx.factory("0522222222");
 });
 afterAll(async () => { await ctx.close(); });
 
