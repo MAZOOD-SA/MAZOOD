@@ -29,6 +29,8 @@
   --success: #176B47;
   --success-soft: #E3F4EC;
   --danger: #B93A26;
+  /* خلفية رأس الرئيسية: أزرق هادئ مشتق من الكحلي، مسطّحة */
+  --hero-surface: #EAF1F8;
   /* ألوان الأقسام: للأيقونة ودائرتها بس، وما تعني حالة أبد */
   --cat-transport: #1D63A8;
   --cat-transport-soft: #E3EEF9;
@@ -64,6 +66,7 @@
   --success: #4CC38A;
   --success-soft: #12352A;
   --danger: #F08A73;
+  --hero-surface: #15304A;
   --cat-transport: #7DB4EC;
   --cat-transport-soft: #14304D;
   --cat-maintenance: #C39BEA;
@@ -99,6 +102,7 @@
     --success: #4CC38A;
     --success-soft: #12352A;
     --danger: #F08A73;
+    --hero-surface: #15304A;
     --cat-transport: #7DB4EC;
     --cat-transport-soft: #14304D;
     --cat-maintenance: #C39BEA;

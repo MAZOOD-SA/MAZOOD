@@ -89,7 +89,10 @@ export function RequestStatusBadge({ status, offerCount = 0, viewer = "factory" 
   return <Badge label={t(statusKey(status, viewer))} tone={STATUS_TONE[status]} />;
 }
 
-/** بطاقة الطلب في الرئيسية و«طلباتي». الطلب اللي فيه عروض ما انفتحت يبان عليه رقمها. */
+/**
+ * بطاقة الطلب في الرئيسية و«طلباتي». الطلب اللي فيه عروض ما انفتحت يبان عليه رقمها.
+ * الجديد يبان من الشارة والسطر الثاني (أغمق وأثقل)، مو من إطار ملوّن: الإطار يبقى line دائمًا.
+ */
 export function RequestCard({ request, onPress }: { request: ServiceRequest; onPress: () => void }) {
   const { t, tl, relative, num } = useI18n();
   const { colors } = useTheme();
@@ -97,14 +100,14 @@ export function RequestCard({ request, onPress }: { request: ServiceRequest; onP
   const fresh = request.newOfferCount ?? 0;
   const unread = request.unreadMessages ?? 0;
   return (
-    <Card onPress={onPress} style={{ paddingVertical: spacing["3"], paddingHorizontal: spacing["4"], borderColor: fresh || unread ? colors.accent : colors.line }}>
+    <Card onPress={onPress} style={{ paddingVertical: spacing["3"], paddingHorizontal: spacing["4"], borderColor: colors.line }}>
       <Row gap="3" style={{ justifyContent: "space-between" }}>
         <CategoryIcon category={cat} size={36} />
         <View style={{ flex: 1, gap: 2 }}>
           <AppText variant="bodySm" weight={600} numberOfLines={1}>
             {tl(request.title)}
           </AppText>
-          <AppText variant="caption" color="inkMuted" numberOfLines={1}>
+          <AppText variant="caption" color={fresh || unread ? "ink" : "inkMuted"} weight={fresh || unread ? 600 : undefined} numberOfLines={1}>
             {fresh
               ? t("newOffersCount", { n: num(fresh) })
               : unread

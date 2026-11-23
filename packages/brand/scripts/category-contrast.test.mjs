@@ -38,3 +38,15 @@ describe("ألوان الأقسام", () => {
     }
   }
 });
+
+describe("خلفية رأس الرئيسية", () => {
+  for (const theme of ["light", "dark"]) {
+    it(`hero-surface (${theme}): النص الأساسي والثانوي يقرى عليها (٤٫٥ أو أكثر)`, () => {
+      const colors = resolveColors(json.color.tokens, theme);
+      if (!colors.heroSurface) throw new Error("توكن غير موجود: hero-surface");
+      expect(contrast(colors.ink, colors.heroSurface)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(colors.inkMuted, colors.heroSurface)).toBeGreaterThanOrEqual(4.5);
+      expect(colors.heroSurface).not.toBe(colors.surface);
+    });
+  }
+});

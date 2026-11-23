@@ -1,6 +1,6 @@
 // الشاشة الرئيسية للمصنع، مطابقة لـ «الشاشة الرئيسية في التطبيق» في brand/reference.html.
 // الإجراء الأهم «اطلب عرض» هو زر accent الوحيد في الشاشة.
-// الرأس فاتح بتدرّج متحرّك بدل الكحلي المليان (docs/plans/design-phase.md).
+// الرأس أزرق هادئ مسطّح (hero-surface) بدل الكحلي المليان: بدون تدرّج ولا حركة، حسب brand/BRAND.md.
 import { radius, spacing } from "@mazood/brand";
 import { IconBell, IconPlus } from "@/components/icons";
 import { router } from "expo-router";
@@ -10,7 +10,6 @@ import { Grid, SectionTitle, useContentFrame } from "@/components/layout";
 import { useAutoRefresh } from "@/components/flow";
 import { useLayout } from "@/lib/layout";
 import { LogoMark } from "@/components/Logo";
-import { HeroGradient } from "@/components/HeroGradient";
 import { AppText, Button, Card } from "@/components/ui";
 import { CATEGORIES } from "@/data/categories";
 import { useStore } from "@/data/store";
@@ -30,8 +29,8 @@ export default function Home() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.surface }}>
-      {/* الرأس فاتح بتدرّج متحرّك (مرحلة التصميم و). الكحلي يبقى في النص والشعار بس. */}
-      <HeroGradient>
+      {/* الرأس أزرق هادئ مسطّح، والكحلي يبقى في النص والشعار بس (مرحلة التصميم و). */}
+      <View style={{ backgroundColor: colors.heroSurface, borderBottomWidth: 1, borderBottomColor: colors.line }}>
         <View style={[width, { paddingTop: 20, paddingBottom: 22 }]}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing["2"] }}>
@@ -63,7 +62,7 @@ export default function Home() {
             onPress={() => router.push("/request/new")}
           />
         </View>
-      </HeroGradient>
+      </View>
 
       <View style={[width, { paddingVertical: spacing["4"], gap: spacing["3"] }]}>
         {!profileComplete && (
