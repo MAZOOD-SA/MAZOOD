@@ -63,3 +63,9 @@ export { default as IconLayoutDashboard } from "@tabler/icons-react-native/icons
 export { default as IconUserX } from "@tabler/icons-react-native/icons/IconUserX";
 export { default as IconCash } from "@tabler/icons-react-native/icons/IconCash";
 export { default as IconGavel } from "@tabler/icons-react-native/icons/IconGavel";
+export { default as IconChevronLeft } from "@tabler/icons-react-native/icons/IconChevronLeft";
+export { default as IconChevronRight } from "@tabler/icons-react-native/icons/IconChevronRight";
+export { default as IconHelpCircle } from "@tabler/icons-react-native/icons/IconHelpCircle";
+export { default as IconLanguage } from "@tabler/icons-react-native/icons/IconLanguage";
+export { default as IconMoon } from "@tabler/icons-react-native/icons/IconMoon";
+export { default as IconSun } from "@tabler/icons-react-native/icons/IconSun";

@@ -4,7 +4,10 @@ import { layout, radius, spacing } from "@mazood/brand";
 import { router, usePathname, type Href } from "expo-router";
 import type { ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import type { IconComponent } from "@/data/categories";
+import type { Category, IconComponent } from "@/data/categories";
+import { DOC_LABELS } from "@/data/labels";
+import type { NextStep } from "@/lib/next-step";
+import { CategoryIcon } from "./CategoryIcon";
 import { useLayout } from "@/lib/layout";
 import { useTheme } from "@/theme/ThemeProvider";
 import { LogoMark } from "./Logo";
@@ -32,7 +35,14 @@ import {
   IconChartBar,
   IconSettings,
   IconKey,
+  IconBell,
+  IconChevronLeft,
+  IconChevronRight,
+  IconLanguage,
+  IconMoon,
+  IconSun,
 } from "./icons";
+import type { DocType } from "@mazood/shared";
 
 export type NavItem = {
   href: Href & string;
@@ -51,22 +61,36 @@ export function isActive(pathname: string, item: NavItem): boolean {
 }
 
 /** الغلاف: قائمة جانبية + المحتوى في التابلت والكمبيوتر، والمحتوى بس في الجوال. */
-export function NavShell({ items, action, footer, children }: { items: NavItem[]; action?: ReactNode; footer?: ReactNode; children: ReactNode }) {
+export function NavShell({ items, children, ...extras }: SidebarExtras & { items: NavItem[]; children: ReactNode }) {
   const { sidebar } = useLayout();
   if (!sidebar || items.length === 0) return <>{children}</>;
   return (
     <View style={{ flex: 1, flexDirection: "row" }}>
-      <Sidebar items={items} action={action} footer={footer} />
+      <Sidebar items={items} {...extras} />
       <View style={{ flex: 1 }}>{children}</View>
     </View>
   );
 }
 
+/** الإضافات الاختيارية في القائمة الجانبية (docs/plans/design-phase.md، القسم ٢). */
+export type SidebarExtras = {
+  /** إجراء سريع تحت الشعار (مثل «طلب جديد» للعميل). */
+  action?: ReactNode;
+  /** بطاقة «خطوتك الجاية»: تطلع بس إذا فيه شي ينتظر. */
+  next?: NextStep | null;
+  /** قائمة الأقسام: كل الأقسام للعميل، وأقسام المزوّد بس للمزوّد. */
+  categories?: { category: Category; onPress: () => void }[];
+  /** أدوات تحت: المساعدة واللغة والمظهر. */
+  tools?: ReactNode;
+  /** بطاقة الحساب مع الخروج. */
+  footer?: ReactNode;
+};
+
 /**
- * القائمة الجانبية: الشعار، وإجراء سريع (مثل «طلب جديد» للمصنع)، والروابط مع أرقام اللي ينتظر
- * (مثل العروض الجديدة)، وبطاقة الحساب تحت مع الخروج.
+ * القائمة الجانبية، بالترتيب: الشعار، والإجراء، وبطاقة «خطوتك الجاية»، والروابط مع أرقام اللي ينتظر،
+ * والأقسام، وتحت: الأدوات وبطاقة الحساب. الروابط تبقى فوق عشان «طلباتي» تبان من أول نظرة.
  */
-export function Sidebar({ items, action, footer }: { items: NavItem[]; action?: ReactNode; footer?: ReactNode }) {
+export function Sidebar({ items, action, next, categories, tools, footer }: SidebarExtras & { items: NavItem[] }) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const pathname = usePathname();
@@ -82,12 +106,33 @@ export function Sidebar({ items, action, footer }: { items: NavItem[]; action?: 
             {t("appName")}
           </AppText>
         </View>
-        {action && <View style={{ paddingBottom: spacing["4"] }}>{action}</View>}
+        {action && <View style={{ paddingBottom: spacing["3"] }}>{action}</View>}
+        {next && (
+          <View style={{ paddingBottom: spacing["3"] }}>
+            <NextStepCard step={next} />
+          </View>
+        )}
         {items.map((item) => (
           <SidebarLink key={item.href} item={item} active={isActive(pathname, item)} />
         ))}
-        {footer && <View style={{ marginTop: "auto", paddingTop: spacing["4"] }}>{footer}</View>}
+        {!!categories?.length && (
+          <View style={{ paddingTop: spacing["4"], gap: 2 }}>
+            <AppText variant="caption" weight={600} color="inkMuted" style={{ paddingHorizontal: spacing["2"], paddingBottom: spacing["1"] }}>
+              {t("categories")}
+            </AppText>
+            {categories.map(({ category, onPress }) => (
+              <SidebarCategory key={category.id} category={category} onPress={onPress} />
+            ))}
+          </View>
+        )}
       </ScrollView>
+      {/* الأدوات وبطاقة الحساب ثابتة تحت دائمًا، والجزء اللي فوقها يتمرّر لو ما كفّت الشاشة. */}
+      {(tools || footer) && (
+        <View style={{ padding: spacing["4"], paddingTop: spacing["3"], gap: spacing["2"], borderTopWidth: 1, borderTopColor: colors.line }}>
+          {tools}
+          {footer}
+        </View>
+      )}
     </View>
   );
 }
@@ -129,6 +174,151 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
         </View>
       )}
     </Pressable>
+  );
+}
+
+/** نص بطاقة «خطوتك الجاية» حسب نوعها. */
+function nextStepText(step: NextStep, t: (k: StringKey, v?: Record<string, string>) => string, tl: (l: { ar: string; en: string }) => string, num: (n: number) => string) {
+  switch (step.kind) {
+    case "completeProfile":
+      return { title: t("nextCompleteProfile"), hint: t("nextCompleteProfileHint") };
+    case "offers":
+      return { title: t("nextOffers", { n: num(step.count) }), hint: t("nextOffersHint") };
+    case "docExpired":
+      return { title: t("nextDocExpired", { doc: tl(DOC_LABELS[step.docType as DocType]) }), hint: t("nextDocExpiredHint") };
+    case "docExpiring": {
+      const doc = tl(DOC_LABELS[step.docType as DocType]);
+      return { title: step.daysLeft === 0 ? t("nextDocExpiringToday", { doc }) : t("nextDocExpiring", { doc, n: num(step.daysLeft) }), hint: t("nextDocExpiringHint") };
+    }
+    case "newRequests":
+      return { title: t("nextNewRequests", { n: num(step.count) }), hint: t("nextNewRequestsHint") };
+  }
+}
+
+/** بطاقة «خطوتك الجاية»: خلفية accentSoft (تنبيه، مو زر كهرماني)، والضغط يوديه للشاشة اللي فيها الشي. */
+function NextStepCard({ step }: { step: NextStep }) {
+  const { colors } = useTheme();
+  const { t, tl, num, isRTL } = useI18n();
+  const { title, hint } = nextStepText(step, t, tl, num);
+  const Forward = isRTL ? IconChevronLeft : IconChevronRight;
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={`${t("nextStepTitle")}: ${title}. ${hint}`}
+      onPress={() => router.navigate(step.href)}
+      style={(state) => [
+        {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: spacing["3"],
+          padding: spacing["3"],
+          borderRadius: radius.md,
+          backgroundColor: colors.accentSoft,
+          opacity: state.pressed ? 0.85 : 1,
+        },
+        focusRing(state, colors),
+      ]}
+    >
+      <IconBell size={20} color={colors.onAccentSoft} strokeWidth={1.75} />
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <AppText variant="caption" weight={600} style={{ color: colors.onAccentSoft }}>
+          {t("nextStepTitle")}
+        </AppText>
+        <AppText variant="label" weight={700} style={{ color: colors.onAccentSoft }}>
+          {title}
+        </AppText>
+        <AppText variant="caption" style={{ color: colors.onAccentSoft }}>
+          {hint}
+        </AppText>
+      </View>
+      <Forward size={18} color={colors.onAccentSoft} strokeWidth={1.75} />
+    </Pressable>
+  );
+}
+
+/** صف قسم في القائمة: دائرة القسم بلونه مع الاسم. ارتفاعه ٣٦ (حسب الخطة) ومساحة اللمس ٤٤ بالـhitSlop. */
+function SidebarCategory({ category, onPress }: { category: Category; onPress: () => void }) {
+  const { colors } = useTheme();
+  const { tl } = useI18n();
+  return (
+    <Pressable
+      accessibilityRole="menuitem"
+      accessibilityLabel={tl(category.name)}
+      onPress={onPress}
+      hitSlop={{ top: 4, bottom: 4 }}
+      style={(state) => [
+        {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: spacing["3"],
+          minHeight: 36,
+          paddingHorizontal: spacing["2"],
+          borderRadius: radius.md,
+          backgroundColor: (state as { hovered?: boolean }).hovered ? colors.line : "transparent",
+        },
+        focusRing(state, colors),
+      ]}
+    >
+      <CategoryIcon category={category} size={26} />
+      <AppText variant="label" weight={500} color="ink" numberOfLines={1} style={{ flex: 1 }}>
+        {tl(category.name)}
+      </AppText>
+    </Pressable>
+  );
+}
+
+/** زر صغير في أدوات القائمة (مساعدة، اللغة، المظهر). */
+export function SidebarTool({ icon: Icon, label, accessibilityLabel, onPress }: { icon: IconComponent; label: string; accessibilityLabel?: string; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      onPress={onPress}
+      style={(state) => [
+        {
+          flex: 1,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: spacing["2"],
+          minHeight: layout.touchMin,
+          paddingHorizontal: spacing["2"],
+          borderRadius: radius.md,
+          borderWidth: 1,
+          borderColor: (state as { hovered?: boolean }).hovered ? colors.lineStrong : colors.line,
+        },
+        focusRing(state, colors),
+      ]}
+    >
+      <Icon size={18} color={colors.inkMuted} strokeWidth={1.75} />
+      <AppText variant="caption" weight={500} color="ink" numberOfLines={1}>
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+/**
+ * أدوات القائمة في صف واحد: (أي زر إضافي مثل «مساعدة»)، ثم اللغة، ثم المظهر.
+ * المظهر يتبدّل بين الفاتح والداكن حسب الظاهر الحين. صف واحد عشان بطاقة الحساب تبان بدون تمرير.
+ */
+export function LanguageThemeTools({ children }: { children?: ReactNode }) {
+  const { t, locale, setLocale } = useI18n();
+  const { name, setMode } = useTheme();
+  const target = name === "dark" ? "light" : "dark";
+  const targetLabel = t(target === "dark" ? "themeDark" : "themeLight");
+  return (
+    <View style={{ flexDirection: "row", gap: spacing["2"] }}>
+      {children}
+      <SidebarTool icon={IconLanguage} label={t("langToggle")} accessibilityLabel={t("langToggleLabel")} onPress={() => setLocale(locale === "ar" ? "en" : "ar")} />
+        <SidebarTool
+          icon={target === "dark" ? IconMoon : IconSun}
+          label={targetLabel}
+          accessibilityLabel={t("themeToggleLabel", { mode: targetLabel })}
+          onPress={() => setMode(target)}
+        />
+    </View>
   );
 }
 
