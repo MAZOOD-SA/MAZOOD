@@ -123,13 +123,15 @@ export function Button({ label, variant = "primary", icon: Icon, full, size = "m
 
 // ───────── الشارات ─────────
 
-export type BadgeTone = "ok" | "new" | "muted" | "bad";
+/** action: ينتظر إجراء من المستخدم، بدون لون كهرماني (سطح محايد وخط داكن). */
+export type BadgeTone = "ok" | "new" | "action" | "muted" | "bad";
 
 export function Badge({ label, tone, icon: Icon }: { label: string; tone: BadgeTone; icon?: IconComponent }) {
   const { colors } = useTheme();
   const look: Record<BadgeTone, { bg: string; fg: string }> = {
     ok: { bg: colors.successSoft, fg: colors.success },
     new: { bg: colors.accentSoft, fg: colors.onAccentSoft },
+    action: { bg: colors.surfaceAlt, fg: colors.ink },
     muted: { bg: colors.surfaceAlt, fg: colors.inkMuted },
     bad: { bg: colors.surfaceAlt, fg: colors.danger },
   };
@@ -235,6 +237,7 @@ export function Chips<T extends string>({
             key={o.value}
             accessibilityRole="radio"
             accessibilityState={{ selected }}
+            aria-checked={selected}
             onPress={() => onChange(o.value)}
             style={(state) => [{
               minHeight: layout.touchMin,

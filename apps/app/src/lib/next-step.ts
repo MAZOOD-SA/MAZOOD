@@ -27,6 +27,16 @@ export const EXPIRY_WARNING_DAYS = 30;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * «اليوم» بتاريخ جهاز المستخدم (YYYY-MM-DD)، مو بغرينتش.
+ * toISOString() يرجّع تاريخ غرينتش، وبين ١٢ و٣ الفجر بتوقيت السعودية يطلع يوم قبل،
+ * فعدّ الأيام في البطاقة يغلط يوم.
+ */
+export function localIso(d: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 /** عدد الأيام الكاملة من today لين expiresOn (تاريخين بدون وقت)، مقرّب لتحت. */
 export function daysBetween(today: string, expiresOn: string): number {
   const a = Date.parse(today.slice(0, 10));

@@ -1,6 +1,7 @@
 // صور تلقائية لكل شاشة بثلاث مقاسات (٣٩٠ و٧٦٨ و١٤٤٠)، مع فحصين لكل صورة:
 //   ١. الصفحة ما فيها تمرير أفقي.
 //   ٢. الزر الكهرماني واحد بالكثير (قاعدة ٣ في CLAUDE.md).
+// وفحص سلوك: فلتر أقسام المزوّد يتبع الضغط على القسم في القائمة الجانبية (آخر السكربت).
 // يشتغل على النسخة التجريبية (بدون خادم) بعد البناء:
 //   pnpm build:web && node scripts/screens.mjs [مجلد الصور]
 // يستخدم Playwright (لازم يكون مثبّت على الجهاز: npx playwright install chromium).
@@ -120,6 +121,40 @@ for (const size of [WIDTHS[0], WIDTHS[2]]) {
     for (const route of routes) await shoot(page, size, route, label);
     await context.close();
   }
+}
+
+// فلتر الأقسام عند المزوّد يتبع الرابط: يغيّر الفلتر بنفسه، ثم يضغط نفس القسم من القائمة الجانبية، لازم يتحدّث الفلتر.
+// (خلل سابق: الضغط الثاني ما يسوي شي لأن الفلتر كان حالة محلية.) القائمة الجانبية تظهر على الكمبيوتر بس.
+{
+  const size = WIDTHS[2];
+  const context = await browser.newContext({ viewport: { width: size.width, height: size.height } });
+  const page = await context.newPage();
+  page.on("pageerror", (e) => problems.push(`provider-filter ${size.name}: خطأ في الصفحة: ${e.message}`));
+  await page.goto(`${base}/login`);
+  await page.getByRole("button", { name: "ادخل كمزوّد" }).click();
+  await page.waitForTimeout(1500);
+  await page.goto(`${base}/provider/requests`);
+  await page.waitForTimeout(1200);
+  // الفلتر المختار = الـradio اللي خطه وزنه ٦٠٠ (نقرأه من الـDOM، مو من حالة التطبيق).
+  // الوزن في التطبيق يجي من اسم الخط (IBMPlexSansArabic_600SemiBold) مو من font-weight.
+  const selectedChips = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('[role="radio"]')]
+        .filter((el) => [el, ...el.querySelectorAll("*")].some((n) => getComputedStyle(n).fontFamily.includes("600") && n.textContent?.trim()))
+        .map((el) => el.textContent?.trim()),
+    );
+  const CATEGORY = "نقل ومعدات";
+  await page.getByRole("menuitem", { name: CATEGORY }).click();
+  await page.waitForTimeout(600);
+  await page.getByRole("radio", { name: "الكل" }).click();
+  await page.waitForTimeout(600);
+  await page.getByRole("menuitem", { name: CATEGORY }).click();
+  await page.waitForTimeout(600);
+  const selected = await selectedChips();
+  const ok = selected.length === 1 && selected[0] === CATEGORY;
+  if (!ok) problems.push(`provider-filter ${size.name}: بعد الضغط على «${CATEGORY}» من القائمة مرتين، الفلتر المختار [${selected.join("، ")}] بدل «${CATEGORY}»`);
+  console.log(`${ok ? "✓" : "✗"} provider-filter-sidebar-${size.name}`);
+  await context.close();
 }
 
 await browser.close();

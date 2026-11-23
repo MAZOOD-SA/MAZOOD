@@ -11,6 +11,7 @@ import type { JobSummary, MyOffer, OpenRequest } from "@/api/types";
 import { categoryById } from "@/data/categories";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
+import { isolate } from "@/lib/format";
 import { useTheme } from "@/theme/ThemeProvider";
 import { RequestStatusBadge } from "./domain";
 import { Field } from "./Field";
@@ -239,7 +240,7 @@ export function OfferComposer({
 
 /** بطاقة طلب منفّذ في «شغلي». newlyAccepted: انقبل عرضه وما شافه للحين (لحظة المكافأة). */
 export function JobCard({ job, newlyAccepted, onPress }: { job: JobSummary; newlyAccepted?: boolean; onPress: () => void }) {
-  const { t, tl, money, num } = useI18n();
+  const { t, tl, money, num, isRTL } = useI18n();
   const { colors } = useTheme();
   const cat = categoryById(job.category);
   const type = cat.types.find((x) => x.id === job.typeId);
@@ -252,9 +253,9 @@ export function JobCard({ job, newlyAccepted, onPress }: { job: JobSummary; newl
           <AppText variant="body" weight={600}>
             {newlyAccepted ? t("offerAcceptedTitle") : type ? tl(type.name) : tl(cat.name)}
           </AppText>
-          <AppText variant="caption" color="inkMuted" numberOfLines={1}>
+          <AppText variant="caption" color="inkMuted" numberOfLines={1} style={{ writingDirection: isRTL ? "rtl" : "ltr" }}>
             {newlyAccepted ? `${type ? tl(type.name) : tl(cat.name)} · ` : ""}
-            {job.factory.name ?? t("factory")} · {money(job.priceHalalas)}
+            {isolate(job.factory.name ?? t("factory"))} · {money(job.priceHalalas)}
           </AppText>
           {unread > 0 && (
             <AppText variant="caption" weight={600}>

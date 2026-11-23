@@ -155,6 +155,7 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
     <Pressable
       accessibilityRole="menuitem"
       accessibilityState={{ selected: active }}
+      aria-current={active ? "page" : undefined}
       accessibilityLabel={item.label}
       onPress={() => router.navigate(item.href)}
       style={(state) => [
@@ -218,7 +219,7 @@ function NextStepAppear({ step }: { step: NextStep }) {
   );
 }
 
-/** بطاقة «خطوتك الجاية»: خلفية accentSoft (تنبيه، مو زر كهرماني)، والضغط يوديه للشاشة اللي فيها الشي. */
+/** بطاقة «خطوتك الجاية»: سطح محايد بإطار line (بدون أصفر، قرار المالك ٢٣ نوفمبر)، والضغط يوديه للشاشة اللي فيها الشي. */
 function NextStepCard({ step }: { step: NextStep }) {
   const { colors } = useTheme();
   const { t, tl, num, isRTL } = useI18n();
@@ -236,25 +237,27 @@ function NextStepCard({ step }: { step: NextStep }) {
           gap: spacing["3"],
           padding: spacing["3"],
           borderRadius: radius.md,
-          backgroundColor: colors.accentSoft,
+          backgroundColor: colors.surfaceAlt,
+          borderWidth: 1,
+          borderColor: colors.line,
           opacity: state.pressed ? 0.85 : 1,
         },
         focusRing(state, colors),
       ]}
     >
-      <IconBell size={20} color={colors.onAccentSoft} strokeWidth={1.75} />
+      <IconBell size={20} color={colors.ink} strokeWidth={1.75} />
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-        <AppText variant="caption" weight={600} style={{ color: colors.onAccentSoft }}>
+        <AppText variant="caption" weight={600} color="ink">
           {t("nextStepTitle")}
         </AppText>
-        <AppText variant="label" weight={700} style={{ color: colors.onAccentSoft }}>
+        <AppText variant="label" weight={700} color="ink">
           {title}
         </AppText>
-        <AppText variant="caption" style={{ color: colors.onAccentSoft }}>
+        <AppText variant="caption" color="inkMuted">
           {hint}
         </AppText>
       </View>
-      <Forward size={18} color={colors.onAccentSoft} strokeWidth={1.75} />
+      <Forward size={18} color={colors.inkMuted} strokeWidth={1.75} />
     </Pressable>
   );
 }

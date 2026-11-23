@@ -74,7 +74,7 @@ const STATUS_TONE: Record<RequestStatus, BadgeTone> = {
   pending_approval: "new",
   accepted: "muted",
   in_progress: "muted",
-  delivered: "new",
+  delivered: "action",
   completed: "ok",
   expired: "muted",
   cancelled: "bad",

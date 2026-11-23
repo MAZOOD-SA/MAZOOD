@@ -276,12 +276,13 @@ export function SideCard({ title, children }: { title: string; children: ReactNo
 
 /** سطر معلومة: تسمية وقيمة. */
 export function Fact({ label, value, ltr }: { label: string; value: string; ltr?: boolean }) {
+  const { isRTL } = useI18n();
   return (
     <View style={{ gap: 2 }}>
       <AppText variant="caption" color="inkMuted">
         {label}
       </AppText>
-      <AppText variant="bodySm" style={ltr ? { writingDirection: "ltr", alignSelf: "flex-start" } : undefined}>
+      <AppText variant="bodySm" style={ltr ? { writingDirection: "ltr", alignSelf: "flex-start" } : { writingDirection: isRTL ? "rtl" : "ltr" }}>
         {value}
       </AppText>
     </View>

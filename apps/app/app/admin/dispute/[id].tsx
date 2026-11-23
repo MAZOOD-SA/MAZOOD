@@ -15,6 +15,7 @@ import { AppText, Badge, Button, Card, Chips, Row } from "@/components/ui";
 import { DISPUTE_REASON_LABEL } from "@/data/dispute-labels";
 import { useStore } from "@/data/store";
 import { useAction, useLoad } from "@/data/useAdmin";
+import { isolate } from "@/lib/format";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { StringKey } from "@/i18n/strings";
 
@@ -93,8 +94,8 @@ export default function DisputeScreen() {
 
           <SectionTitle title={t("disputeParties")} />
           <Card style={{ gap: spacing["2"] }}>
-            <Fact label={t("openedByCustomer")} value={`${d.factory.name ?? "—"} · ${phone(d.factory.contactPhone)}`} />
-            <Fact label={t("openedByProvider")} value={`${d.provider.tradeName} · ${phone(d.provider.contactPhone)}`} />
+            <Fact label={t("openedByCustomer")} value={`${isolate(d.factory.name ?? "—")} · ${phone(d.factory.contactPhone)}`} />
+            <Fact label={t("openedByProvider")} value={`${isolate(d.provider.tradeName)} · ${phone(d.provider.contactPhone)}`} />
             <Fact label={t("admAgreedPrice")} value={money(d.priceHalalas)} />
           </Card>
 

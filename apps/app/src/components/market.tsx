@@ -11,6 +11,7 @@ import { AppText, Badge, Card, Row, VerifiedBadge, type BadgeTone } from "@/comp
 import { useStore } from "@/data/store";
 import type { StringKey } from "@/i18n/strings";
 import { useI18n } from "@/i18n/I18nProvider";
+import { isolate } from "@/lib/format";
 import { useTheme } from "@/theme/ThemeProvider";
 
 /** اسم الوحدة («طبلية»، «طن»...). */
@@ -92,7 +93,7 @@ export function PurchaseStatusBadge({ status, viewer }: { status: PurchaseStatus
 }
 
 export function PurchaseCard({ purchase, viewer, onPress }: { purchase: PurchaseRequest; viewer: "buyer" | "seller"; onPress: () => void }) {
-  const { t, num, relative, money } = useI18n();
+  const { t, num, relative, money, isRTL } = useI18n();
   const unit = useUnit();
   return (
     <Card onPress={onPress} style={{ gap: spacing["2"] }}>
@@ -102,9 +103,9 @@ export function PurchaseCard({ purchase, viewer, onPress }: { purchase: Purchase
           <AppText weight={600} numberOfLines={1}>
             {purchase.product.name}
           </AppText>
-          <AppText variant="caption" color="inkMuted">
+          <AppText variant="caption" color="inkMuted" style={{ writingDirection: isRTL ? "rtl" : "ltr" }}>
             {num(purchase.quantity)} {unit(purchase.product.unit)} ·{" "}
-            {viewer === "buyer" ? purchase.seller.name ?? "" : t(purchase.buyer?.kind === "individual" ? "customerIndividual" : "customerBusiness")} · {relative(purchase.createdAt)}
+            {viewer === "buyer" ? isolate(purchase.seller.name ?? "") : t(purchase.buyer?.kind === "individual" ? "customerIndividual" : "customerBusiness")} · {relative(purchase.createdAt)}
           </AppText>
         </View>
         <PurchaseStatusBadge status={purchase.status} viewer={viewer} />

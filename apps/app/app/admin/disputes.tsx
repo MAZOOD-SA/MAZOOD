@@ -10,6 +10,7 @@ import { categoryById, type CategoryId } from "@/data/categories";
 import { DISPUTE_REASON_LABEL } from "@/data/dispute-labels";
 import { useLoad } from "@/data/useAdmin";
 import { useI18n } from "@/i18n/I18nProvider";
+import { isolate } from "@/lib/format";
 
 type Dispute = {
   id: string;
@@ -23,7 +24,7 @@ type Dispute = {
 };
 
 export default function DisputesScreen() {
-  const { t, tl, relative, num } = useI18n();
+  const { t, tl, relative, num, isRTL } = useI18n();
   const [status, setStatus] = useState<"open" | "closed" | "all">("open");
   const { data, error } = useLoad<{ disputes: Dispute[] }>(`/v1/admin/disputes${status === "all" ? "" : `?status=${status}`}`);
   return (
@@ -48,8 +49,8 @@ export default function DisputesScreen() {
               </AppText>
               <Badge label={d.status === "open" ? t("disputeOpen") : t("disputeClosed")} tone={d.status === "open" ? "bad" : "muted"} />
             </Row>
-            <AppText variant="bodySm" color="inkMuted">
-              {tl(categoryById(d.category).name)} · {d.factoryName ?? "—"} ← {d.providerName}
+            <AppText variant="bodySm" color="inkMuted" style={{ writingDirection: isRTL ? "rtl" : "ltr" }}>
+              {tl(categoryById(d.category).name)} · {isolate(d.factoryName ?? "—")} ← {isolate(d.providerName)}
             </AppText>
             <AppText variant="caption" color="inkMuted">
               {relative(d.openedAt)}

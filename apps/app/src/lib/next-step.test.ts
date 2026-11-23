@@ -50,3 +50,23 @@ describe("نص «ينتهي بعد كم يوم» (عربي صحيح للعدد)"
     expect(expiringCopy(30)).toEqual({ key: "nextDocExpiring", n: 30 });
   });
 });
+
+describe("«اليوم» بالتاريخ المحلي (مو غرينتش)", () => {
+  it("١:٣٠ فجر بتوقيت السعودية يظل نفس اليوم، مو اليوم اللي قبله", async () => {
+    const { localIso } = await import("./next-step");
+    const oldTZ = process.env.TZ;
+    process.env.TZ = "Asia/Riyadh"; // UTC+3: ١:٣٠ فجر عندنا = ٢٢:٣٠ أمس بغرينتش
+    try {
+      const d = new Date(2026, 10, 23, 1, 30); // ٢٣ نوفمبر ٢٠٢٦، ١:٣٠ محلي
+      expect(d.toISOString().slice(0, 10)).toBe("2026-11-22"); // الطريقة القديمة تغلط
+      expect(localIso(d)).toBe("2026-11-23");
+    } finally {
+      if (oldTZ === undefined) delete process.env.TZ;
+      else process.env.TZ = oldTZ;
+    }
+  });
+  it("يكمّل الصفر في الشهر واليوم", async () => {
+    const { localIso } = await import("./next-step");
+    expect(localIso(new Date(2026, 0, 5, 12))).toBe("2026-01-05");
+  });
+});

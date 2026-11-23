@@ -22,7 +22,7 @@ import { CATEGORIES, categoryById, type CategoryId } from "@/data/categories";
 import type { ProviderView } from "@/data/provider-types";
 import type { OpenRequest } from "@/api/types";
 import { useLayout } from "@/lib/layout";
-import { nextStep } from "@/lib/next-step";
+import { localIso, nextStep } from "@/lib/next-step";
 import { StoreProvider, useStore } from "@/data/store";
 import { I18nProvider, useI18n } from "@/i18n/I18nProvider";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
@@ -105,7 +105,7 @@ function Shell() {
         newOffers,
         newRequests: providerData?.open.filter((r) => !r.myOffer).length ?? 0,
         expiring: providerData?.provider?.expiring ?? [],
-        today: new Date().toISOString().slice(0, 10),
+        today: localIso(),
       })
     : null;
   // الأقسام: العميل يشوف السبعة ويفتح طلب جديد في القسم، والمزوّد يشوف أقسامه ويفلتر الطلبات المتاحة.
