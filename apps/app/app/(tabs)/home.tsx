@@ -1,6 +1,7 @@
 // الشاشة الرئيسية للمصنع، مطابقة لـ «الشاشة الرئيسية في التطبيق» في brand/reference.html.
 // الإجراء الأهم «اطلب عرض» هو زر accent الوحيد في الشاشة.
-import { colors as brandColors, radius, spacing } from "@mazood/brand";
+// الرأس فاتح بتدرّج متحرّك بدل الكحلي المليان (docs/plans/design-phase.md).
+import { radius, spacing } from "@mazood/brand";
 import { IconBell, IconPlus } from "@/components/icons";
 import { router } from "expo-router";
 import { Pressable, ScrollView, View } from "react-native";
@@ -9,14 +10,12 @@ import { Grid, SectionTitle, useContentFrame } from "@/components/layout";
 import { useAutoRefresh } from "@/components/flow";
 import { useLayout } from "@/lib/layout";
 import { LogoMark } from "@/components/Logo";
+import { HeroGradient } from "@/components/HeroGradient";
 import { AppText, Button, Card } from "@/components/ui";
 import { CATEGORIES } from "@/data/categories";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useTheme } from "@/theme/ThemeProvider";
-
-// رأس الشاشة كحلي في الوضعين (كما في المرجع)، والنص فوقه بلون concrete الفاتح.
-const header = brandColors.light;
 
 export default function Home() {
   const { colors } = useTheme();
@@ -31,26 +30,27 @@ export default function Home() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.surface }}>
-      <View style={{ backgroundColor: header.navy }}>
+      {/* الرأس فاتح بتدرّج متحرّك (مرحلة التصميم و). الكحلي يبقى في النص والشعار بس. */}
+      <HeroGradient>
         <View style={[width, { paddingTop: 20, paddingBottom: 22 }]}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing["2"] }}>
               <LogoMark size={30} />
-              <AppText variant="h2" weight={700} style={{ color: header.concrete, fontSize: 22 }}>
+              <AppText variant="h2" weight={700} style={{ color: colors.ink, fontSize: 22 }}>
                 {t("appName")}
               </AppText>
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel={t("notifications")} onPress={() => router.push("/notifications")} hitSlop={8}>
-              <IconBell size={22} color={header.concrete} strokeWidth={1.75} />
+              <IconBell size={22} color={colors.ink} strokeWidth={1.75} />
               {unread && (
-                <View style={{ position: "absolute", top: 0, end: 0, width: 8, height: 8, borderRadius: radius.full, backgroundColor: header.amber }} />
+                <View style={{ position: "absolute", top: 0, end: 0, width: 8, height: 8, borderRadius: radius.full, backgroundColor: colors.accent }} />
               )}
             </Pressable>
           </View>
-          <AppText variant="bodySm" style={{ color: header.concrete, opacity: 0.8, marginTop: 18, fontSize: 13 }}>
+          <AppText variant="bodySm" color="inkMuted" style={{ marginTop: 18, fontSize: 13 }}>
             {profileComplete ? `${tl(FACTORY.name)} · ${tl(FACTORY.city)}` : t("welcome")}
           </AppText>
-          <AppText variant="h2" weight={700} style={{ color: header.concrete, fontSize: 22, lineHeight: 30, marginTop: 2 }}>
+          <AppText variant="h2" weight={700} style={{ color: colors.ink, fontSize: 22, lineHeight: 30, marginTop: 2 }}>
             {t("homeQuestion")}
           </AppText>
           <Button
@@ -63,7 +63,7 @@ export default function Home() {
             onPress={() => router.push("/request/new")}
           />
         </View>
-      </View>
+      </HeroGradient>
 
       <View style={[width, { paddingVertical: spacing["4"], gap: spacing["3"] }]}>
         {!profileComplete && (
