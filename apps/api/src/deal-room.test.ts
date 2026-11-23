@@ -1,4 +1,4 @@
-// غرفة الصفقة (القرار ٣٥ والقرار ٥٠): المحادثة بين العميل والمزوّد بعد القبول.
+// غرفة الصفقة (القرار ٣٥ والقرار ٥٢): المحادثة بين العميل والمزوّد بعد القبول.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { auth, createTestCtx, validRequest, type TestCtx } from "./test-helpers.ts";
 
