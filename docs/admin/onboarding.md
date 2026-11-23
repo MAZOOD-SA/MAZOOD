@@ -18,7 +18,7 @@
 | --- | --- |
 | موظف توثيق | `verify-provider.md`، و`reject-provider.md` |
 | مدير عام | كل الإجراءات |
-| خدمة عملاء | [`faq.md`](faq.md) |
+| خدمة عملاء | [`faq.md`](faq.md)، و`read-dispute-chat.md` |
 
 ## اليوم الثالث والرابع: تجربة مع زميل
 

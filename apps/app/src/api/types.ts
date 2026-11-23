@@ -44,7 +44,8 @@ export type ApiOrder = {
   deliveredAt: string | null;
   confirmedAt: string | null;
   cancellationPolicy: CancellationPolicy;
-  provider: { tradeName: string; contactPhone: string; verified: boolean };
+  /** بدون رقم الجوال (القرار ٣٥): التواصل من غرفة الصفقة. */
+  provider: { tradeName: string; verified: boolean };
 };
 
 export type PriceChange = {
@@ -108,6 +109,8 @@ export type FactoryRequestView = {
   withdrawal: { at: string; reason: string | null } | null;
   dispute: DisputeView | null;
   rating: { stars: number; createdAt: string } | null;
+  /** رسائل من المزوّد ما قرأها هذا المستخدم (غرفة الصفقة). */
+  unreadMessages: number;
 };
 
 /** طلب مفتوح كما يشوفه المزوّد (بدون اسم المصنع والموقع بالضبط). */
@@ -156,7 +159,9 @@ export type JobSummary = {
   acceptedAt: string;
   startedAt: string | null;
   deliveredAt: string | null;
-  factory: { name: string | null; kind?: "business" | "individual"; contactPhone: string };
+  factory: { name: string | null; kind?: "business" | "individual" };
+  /** رسائل من العميل ما قرأها المزوّد (غرفة الصفقة). */
+  unreadMessages: number;
 };
 
 /** الطلب المنفّذ للمزوّد (GET /v1/provider/jobs/:orderId). */

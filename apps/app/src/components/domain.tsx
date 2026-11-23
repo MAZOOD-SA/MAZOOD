@@ -102,8 +102,9 @@ export function RequestCard({ request, onPress }: { request: ServiceRequest; onP
   const cat = categoryById(request.category);
   const Icon = cat.icon;
   const fresh = request.newOfferCount ?? 0;
+  const unread = request.unreadMessages ?? 0;
   return (
-    <Card onPress={onPress} style={{ paddingVertical: spacing["3"], paddingHorizontal: spacing["4"], borderColor: fresh ? colors.accent : colors.line }}>
+    <Card onPress={onPress} style={{ paddingVertical: spacing["3"], paddingHorizontal: spacing["4"], borderColor: fresh || unread ? colors.accent : colors.line }}>
       <Row gap="3" style={{ justifyContent: "space-between" }}>
         <Icon size={22} color={colors.inkMuted} strokeWidth={1.75} />
         <View style={{ flex: 1, gap: 2 }}>
@@ -111,7 +112,11 @@ export function RequestCard({ request, onPress }: { request: ServiceRequest; onP
             {tl(request.title)}
           </AppText>
           <AppText variant="caption" color="inkMuted" numberOfLines={1}>
-            {fresh ? t("newOffersCount", { n: num(fresh) }) : `${tl(cat.name)} · ${relative(request.createdAt)}`}
+            {fresh
+              ? t("newOffersCount", { n: num(fresh) })
+              : unread
+                ? t("chatUnread", { n: num(unread) })
+                : `${tl(cat.name)} · ${relative(request.createdAt)}`}
           </AppText>
         </View>
         <RequestStatusBadge status={request.status} offerCount={request.offerCount ?? 0} />
@@ -120,7 +125,8 @@ export function RequestCard({ request, onPress }: { request: ServiceRequest; onP
   );
 }
 
-/** ترتيب الطلبات: اللي فيها عروض جديدة فوق، وبعدها الأحدث. */
+/** ترتيب الطلبات: اللي فيها جديد (عروض أو رسائل) فوق، وبعدها الأحدث. */
 export function sortRequests(list: ServiceRequest[]): ServiceRequest[] {
-  return [...list].sort((a, b) => (b.newOfferCount ?? 0) - (a.newOfferCount ?? 0) || Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const fresh = (r: ServiceRequest) => (r.newOfferCount ?? 0) + (r.unreadMessages ?? 0);
+  return [...list].sort((a, b) => fresh(b) - fresh(a) || Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }

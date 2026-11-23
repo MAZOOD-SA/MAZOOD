@@ -156,14 +156,17 @@ describe("القبول", () => {
     expect(job).toMatchObject({
       status: "accepted",
       location: validRequest.location,
-      factory: { name: "مصنع القبول التجريبي", contactPhone: "+966522000001" },
+      factory: { name: "مصنع القبول التجريبي" },
       priceHalalas: 245_000,
     });
     // المزوّد الثاني (المرفوض) ما يشوف بيانات المصنع
     const bJobs = (await call("GET", "/v1/provider/jobs", b.token)).json().jobs;
     expect(bJobs.map((j: { requestId: string }) => j.requestId)).not.toContain(id);
     const r = await call("GET", `/v1/requests/${id}`, factory.token);
-    expect(r.json().order.provider).toMatchObject({ contactPhone: "+966562100001", verified: true });
+    expect(r.json().order.provider).toMatchObject({ verified: true });
+    // رقم الجوال ما يطلع لأي طرف (القرار ٣٥): التواصل من غرفة الصفقة.
+    expect(job.factory.contactPhone).toBeUndefined();
+    expect(r.json().order.provider.contactPhone).toBeUndefined();
   });
 
   it("بعد القبول: المزوّد المقبول ما يقدر يسحب عرضه بالسحب العادي، والطلب يختفي من المتاحة", async () => {

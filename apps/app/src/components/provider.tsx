@@ -239,12 +239,13 @@ export function OfferComposer({
 
 /** بطاقة طلب منفّذ في «شغلي». newlyAccepted: انقبل عرضه وما شافه للحين (لحظة المكافأة). */
 export function JobCard({ job, newlyAccepted, onPress }: { job: JobSummary; newlyAccepted?: boolean; onPress: () => void }) {
-  const { t, tl, money } = useI18n();
+  const { t, tl, money, num } = useI18n();
   const { colors } = useTheme();
   const cat = categoryById(job.category);
   const type = cat.types.find((x) => x.id === job.typeId);
+  const unread = job.unreadMessages ?? 0;
   return (
-    <Card onPress={onPress} style={{ gap: spacing["2"], borderColor: newlyAccepted ? colors.success : colors.line }}>
+    <Card onPress={onPress} style={{ gap: spacing["2"], borderColor: newlyAccepted ? colors.success : unread ? colors.accent : colors.line }}>
       <Row gap="3" style={{ alignItems: "center" }}>
         {newlyAccepted && <RewardCheck size={40} animate />}
         <View style={{ flex: 1, gap: 2 }}>
@@ -255,6 +256,11 @@ export function JobCard({ job, newlyAccepted, onPress }: { job: JobSummary; newl
             {newlyAccepted ? `${type ? tl(type.name) : tl(cat.name)} · ` : ""}
             {job.factory.name ?? t("factory")} · {money(job.priceHalalas)}
           </AppText>
+          {unread > 0 && (
+            <AppText variant="caption" weight={600}>
+              {t("chatUnread", { n: num(unread) })}
+            </AppText>
+          )}
         </View>
         <RequestStatusBadge status={job.status} viewer="provider" />
       </Row>

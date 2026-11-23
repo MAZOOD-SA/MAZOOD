@@ -54,3 +54,5 @@ export { default as IconSearch } from "@tabler/icons-react-native/icons/IconSear
 export { default as IconPhoto } from "@tabler/icons-react-native/icons/IconPhoto";
 export { default as IconEye } from "@tabler/icons-react-native/icons/IconEye";
 export { default as IconEyeOff } from "@tabler/icons-react-native/icons/IconEyeOff";
+export { default as IconMessage } from "@tabler/icons-react-native/icons/IconMessage";
+export { default as IconLock } from "@tabler/icons-react-native/icons/IconLock";

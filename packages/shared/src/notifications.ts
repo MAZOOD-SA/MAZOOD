@@ -28,6 +28,7 @@ export const NOTIFICATION_EVENTS = {
   purchase_quoted: { push: true, sms: null },
   purchase_accepted: { push: true, sms: null },
   subscription_ending: { push: true, sms: null },
+  new_message: { push: true, sms: null },
 } as const satisfies Record<string, { push: boolean; sms: "first_offer" | "offer_accepted" | "cancellation_requested" | null }>;
 export type NotificationEvent = keyof typeof NOTIFICATION_EVENTS;
 export const NOTIFICATION_EVENT_IDS = Object.keys(NOTIFICATION_EVENTS) as NotificationEvent[];
@@ -48,7 +49,7 @@ export const NOTIFICATION_TEXT: Record<NotificationEvent, { ar: string; en: stri
   first_offer: { ar: "وصلك أول عرض على طلب {title}", en: "First offer on your {title} request" },
   more_offers: { ar: "وصلتك عروض جديدة على طلب {title}", en: "New offers on your {title} request" },
   approval_needed: { ar: "عرض مرشّح ينتظر موافقتك على طلب {title}", en: "A nominated offer awaits your approval: {title}" },
-  offer_accepted: { ar: "انقبل عرضك على طلب {title}. تواصل مع العميل وابدأ.", en: "Your offer on {title} was accepted. Contact the customer and start." },
+  offer_accepted: { ar: "انقبل عرضك على طلب {title}. راسل العميل من صفحة الطلب وابدأ.", en: "Your offer on {title} was accepted. Message the customer from the job page and start." },
   offer_not_selected: { ar: "العميل اختار عرض ثاني على طلب {title}.", en: "The customer chose another offer on {title}." },
   job_started: { ar: "المزوّد بدأ تنفيذ طلب {title}", en: "The provider started your {title} request" },
   job_delivered: { ar: "المزوّد خلّص طلب {title}. أكّد الاستلام.", en: "The provider finished {title}. Confirm receipt." },
@@ -64,6 +65,8 @@ export const NOTIFICATION_TEXT: Record<NotificationEvent, { ar: string; en: stri
   purchase_quoted: { ar: "رد المصنع على طلبك: {title}", en: "The factory replied to your request: {title}" },
   purchase_accepted: { ar: "المشتري قبل ردك على {title}. تواصل معه.", en: "The buyer accepted your reply on {title}. Contact them." },
   subscription_ending: { ar: "اشتراكك في السوق ينتهي خلال {n} يوم. جدّده عشان ما تختفي منتجاتك.", en: "Your market subscription ends in {n} days. Renew it to keep your products live." },
+  // بدون نص الرسالة نفسها: التنبيه يظهر على قفل الشاشة، والمحادثة خاصة.
+  new_message: { ar: "رسالة جديدة في طلب {title}", en: "New message on {title}" },
 };
 
 /** نص التنبيه بالبيانات. */

@@ -251,24 +251,25 @@ export function offerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const user = await g.requireProviderUser(req);
     const [p] = await db.query<{ id: string }>("SELECT id FROM providers WHERE user_id=$1", [user.id]);
     if (!p) return { jobs: [] };
-    const rows = await db.query<Record<string, unknown> & { price_halalas: string; factory_name: string | null; factory_kind: string; factory_phone: string }>(
+    const rows = await db.query<Record<string, unknown> & { price_halalas: string; factory_name: string | null; factory_kind: string }>(
       `SELECT o.id AS "orderId", o.request_id AS "requestId", r.status, r.category, r.type_id AS "typeId", r.details, r.area,
               r.location, r.needed_when AS "when", o.price_halalas, o.accepted_at AS "acceptedAt", o.started_at AS "startedAt",
               o.delivered_at AS "deliveredAt", o.cancellation_policy AS "cancellationPolicy",
-              f.name AS factory_name, COALESCE(f.kind, 'business') AS factory_kind, u.phone AS factory_phone
+              f.name AS factory_name, COALESCE(f.kind, 'business') AS factory_kind,
+              (SELECT count(*)::int FROM order_messages m WHERE m.order_id = o.id AND m.sender_role = 'customer'
+                  AND m.seq > COALESCE((SELECT last_seq FROM order_message_reads rd WHERE rd.order_id = o.id AND rd.user_id = $2), 0)) AS "unreadMessages"
          FROM orders o
          JOIN requests r ON r.id = o.request_id
          JOIN factories f ON f.id = o.factory_id
-         JOIN users u ON u.id = o.accepted_by
         WHERE o.provider_id = $1 AND o.state <> 'withdrawn'
         ORDER BY o.accepted_at DESC LIMIT 200`,
-      [p.id],
+      [p.id, user.id],
     );
     return {
-      jobs: rows.map(({ price_halalas, factory_name, factory_kind, factory_phone, ...j }) => ({
+      jobs: rows.map(({ price_halalas, factory_name, factory_kind, ...j }) => ({
         ...j,
         priceHalalas: Number(price_halalas),
-        factory: { name: factory_name, kind: factory_kind, contactPhone: factory_phone },
+        factory: { name: factory_name, kind: factory_kind },
       })),
     };
   });

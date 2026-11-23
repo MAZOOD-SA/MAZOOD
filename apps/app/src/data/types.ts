@@ -26,6 +26,8 @@ export type ServiceRequest = {
   /** عدد العروض الصالحة، وكم واحد منها ما انفتح (من قائمة الطلبات في الخادم). */
   offerCount?: number;
   newOfferCount?: number;
+  /** رسائل من المزوّد ما انقرت (غرفة الصفقة). */
+  unreadMessages?: number;
 };
 
 export type Provider = {

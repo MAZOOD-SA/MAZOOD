@@ -55,8 +55,8 @@ function Shell() {
   const { isRTL, t, tl, digits } = useI18n();
   const { state, role, staffRole, factory, profileComplete, signOut } = useStore();
   // القائمة الجانبية (تابلت وكمبيوتر) للمستخدم الداخل، على كل الشاشات بما فيها التفاصيل.
-  // جنب «طلباتي»: عدد العروض اللي ما انفتحت، عشان المصنع يعرف من أي شاشة إن فيه جديد.
-  const newOffers = state.requests.reduce((n, r) => n + (r.newOfferCount ?? 0), 0);
+  // جنب «طلباتي»: عدد العروض اللي ما انفتحت والرسائل اللي ما انقرت، عشان المصنع يعرف من أي شاشة إن فيه جديد.
+  const newOffers = state.requests.reduce((n, r) => n + (r.newOfferCount ?? 0) + (r.unreadMessages ?? 0), 0);
   const seller = useSellerEnabled();
   const items = state.signedIn ? navItemsFor(role, t, (p) => can(staffRole, p), { newOffers, seller }) : [];
   const phone = state.phone ? digits(`0${state.phone.slice(4)}`) : "";
