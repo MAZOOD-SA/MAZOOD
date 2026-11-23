@@ -8,8 +8,9 @@ import { ApiError } from "../errors.ts";
 import { actorOf, parse, type Ctx, type Guards } from "../http.ts";
 import { rejectContactInfo } from "./offers.ts";
 
-type DeletionRow = { id: string; status: string; requested_at: Date };
-const view = (r: DeletionRow) => ({ id: r.id, status: r.status, requestedAt: new Date(r.requested_at).toISOString() });
+type DeletionRow = { id: string; status: string; requested_at: Date; note?: string | null };
+// note: سبب الرفض لو رفضت الإدارة الطلب (يشوفه صاحب الطلب في «حسابي» عشان يعرف وش يسوي).
+const view = (r: DeletionRow) => ({ id: r.id, status: r.status, requestedAt: new Date(r.requested_at).toISOString(), note: r.note ?? null });
 
 export function accountRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
   const { db } = ctx;
@@ -24,7 +25,7 @@ export function accountRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
   app.get("/v1/account/deletion", async (req) => {
     const user = await partyUser(req);
     const [r] = await db.query<DeletionRow>(
-      "SELECT id, status, requested_at FROM account_deletion_requests WHERE user_id=$1 ORDER BY requested_at DESC LIMIT 1",
+      "SELECT id, status, requested_at, handled_note AS note FROM account_deletion_requests WHERE user_id=$1 ORDER BY requested_at DESC LIMIT 1",
       [user.id],
     );
     return { request: r ? view(r) : null };

@@ -19,6 +19,7 @@ import { marketRoutes } from "./routes/market.ts";
 import { marketAdminRoutes } from "./routes/market-admin.ts";
 import { customerAdminRoutes } from "./routes/customers-admin.ts";
 import { adminRoutes } from "./routes/admin.ts";
+import { platformAdminRoutes } from "./routes/platform-admin.ts";
 import { accountRoutes } from "./routes/account.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { cancellationRoutes } from "./routes/cancellations.ts";
@@ -134,6 +135,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   cancellationRoutes(app, ctx, guards);
   adminRoutes(app, ctx, guards);
   customerAdminRoutes(app, ctx, guards);
+  platformAdminRoutes(app, ctx, guards);
   marketRoutes(app, ctx, guards);
   marketAdminRoutes(app, ctx, guards);
   notificationRoutes(app, ctx, guards);

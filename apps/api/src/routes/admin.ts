@@ -6,7 +6,7 @@ import {
   canManageRole,
   DOC_CHECKLISTS,
   documentReviewBody,
-  PERMISSIONS,
+  permissionsOf,
   providerDecisionBody,
   reasonBody,
   uuidSchema,
@@ -18,7 +18,7 @@ import { audit } from "../audit.ts";
 import { providerReliability } from "../cancellations.ts";
 import { ApiError } from "../errors.ts";
 import { signFileLink, verifyFileLink } from "../files.ts";
-import { actorOf, addDays, parse, todayRiyadh, type Ctx, type Guards } from "../http.ts";
+import { actorOf, addDays, parse, permissionMap, todayRiyadh, type Ctx, type Guards } from "../http.ts";
 import { loadDoc, loadDocs, slotView, summarize, type ProviderRow } from "../providers.ts";
 
 const idParam = (req: { params: unknown }) => {
@@ -39,7 +39,7 @@ export function adminRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
 
   app.get("/v1/admin/me", async (req) => {
     const u = await g.requireStaff(req);
-    const permissions = (Object.keys(PERMISSIONS) as Permission[]).filter((p) => can(u.staffRole, p));
+    const permissions = permissionsOf(u.staffRole, u.perms);
     return { staffRole: u.staffRole, permissions };
   });
 
@@ -89,7 +89,7 @@ export function adminRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     const u = await g.requireStaff(req, "providers.view");
     const p = await providerById(idParam(req));
     const s = summarize(p, await loadDocs(db, p.id), today());
-    const canSeeId = can(u.staffRole, "documents.view");
+    const canSeeId = can(u.staffRole, "documents.view", u.perms);
     const [owner] = await db.query<{ phone: string }>("SELECT phone FROM users WHERE id = $1", [p.user_id]);
     if (canSeeId) {
       // الاطلاع على رقم الهوية الكامل ينكتب في السجل (PDPL: مين اطلع على بيانات شخصية ومتى).
@@ -134,7 +134,7 @@ export function adminRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     if (!by) throw new ApiError(403, "link_invalid_or_expired");
     // نتأكد إن الموظف ما زال فعّال وعنده الصلاحية لحظة الفتح.
     const [st] = await db.query<{ role: StaffRole }>("SELECT role FROM staff WHERE user_id = $1 AND active", [by]);
-    if (!st || !can(st.role, "documents.view")) throw new ApiError(403, "link_invalid_or_expired");
+    if (!st || !can(st.role, "documents.view", await permissionMap(db))) throw new ApiError(403, "link_invalid_or_expired");
     const [row] = await db.query<{ storage_key: string; mime_type: string; provider_id: string }>(
       "SELECT storage_key, mime_type, provider_id FROM provider_documents WHERE id = $1",
       [id],

@@ -10,7 +10,12 @@ import { identityStatus, markIdentityVerified, profileComplete, type CustomerRow
 import { can } from "@mazood/shared";
 
 const listQuery = z
-  .object({ kind: z.enum(["business", "individual"]).optional(), identity: z.enum(["pending", "verified"]).optional() })
+  .object({
+    kind: z.enum(["business", "individual"]).optional(),
+    identity: z.enum(["pending", "verified"]).optional(),
+    /** بحث بالاسم أو جزء من الجوال */
+    q: z.string().trim().min(2).max(60).optional(),
+  })
   .strict();
 
 const idParam = (req: { params: unknown }) => {
@@ -31,8 +36,12 @@ export function customerAdminRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
          FROM factories f
         WHERE ($1::text IS NULL OR f.kind = $1::text)
           AND ($2::text IS NULL OR (f.kind = 'individual' AND (($2 = 'verified') = (f.identity_verified_at IS NOT NULL))))
+          AND ($3::text IS NULL OR f.name ILIKE '%' || $3 || '%'
+               OR EXISTS (SELECT 1 FROM factory_members fm JOIN users u ON u.id = fm.user_id
+                           WHERE fm.factory_id = f.id AND u.phone LIKE '%' || regexp_replace($3, '[^0-9]', '', 'g') || '%'
+                             AND regexp_replace($3, '[^0-9]', '', 'g') <> ''))
         ORDER BY f.created_at DESC LIMIT 500`,
-      [q.kind ?? null, q.identity ?? null],
+      [q.kind ?? null, q.identity ?? null, q.q ?? null],
     );
     return {
       customers: rows.map((f) => ({
@@ -57,7 +66,7 @@ export function customerAdminRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       `SELECT u.phone, fm.role, fm.active FROM factory_members fm JOIN users u ON u.id = fm.user_id WHERE fm.factory_id=$1 ORDER BY fm.created_at`,
       [id],
     );
-    const canSeeId = can(u.staffRole, "customers.identity") && !!f.id_number_enc;
+    const canSeeId = can(u.staffRole, "customers.identity", u.perms) && !!f.id_number_enc;
     if (canSeeId) await audit(db, actorOf(u), "customer.id_number_viewed", { type: "factory", id });
     return {
       customer: {

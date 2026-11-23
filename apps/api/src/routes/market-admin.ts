@@ -10,7 +10,7 @@ import { z } from "zod";
 import { audit } from "../audit.ts";
 import { ApiError } from "../errors.ts";
 import { FILE_LINK_TTL_SECONDS } from "../files.ts";
-import { actorOf, parse, type Ctx, type Guards } from "../http.ts";
+import { actorOf, parse, permissionMap, type Ctx, type Guards } from "../http.ts";
 import { lastSubscriptionEnd, sellerState } from "../market.ts";
 import { safeEqualHex } from "../security.ts";
 import { getSettings } from "../settings.ts";
@@ -87,7 +87,7 @@ export function marketAdminRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
     if (!ok) throw new ApiError(403, "link_invalid_or_expired");
     // الموظف لازم يكون فعّال وعنده الصلاحية لحظة الفتح.
     const [st] = await db.query<{ role: StaffRole }>("SELECT role FROM staff WHERE user_id=$1 AND active", [q.by]);
-    if (!st || !can(st.role, "sellers.review")) throw new ApiError(403, "link_invalid_or_expired");
+    if (!st || !can(st.role, "sellers.review", await permissionMap(db))) throw new ApiError(403, "link_invalid_or_expired");
     const [row] = await db.query<{ storage_key: string; mime_type: string; factory_id: string }>(
       "SELECT storage_key, mime_type, factory_id FROM seller_documents WHERE id=$1",
       [id],

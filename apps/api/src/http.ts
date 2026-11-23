@@ -1,6 +1,6 @@
 // أدوات مشتركة لكل المسارات: التحقق من الجلسة والصلاحيات وقراءة المدخلات.
 // القاعدة: هوية المستخدم ودوره وجهته (مصنع/مزوّد) تجي من الجلسة في الخادم، ما تجي أبدًا من العميل.
-import { can, type Permission, type StaffRole } from "@mazood/shared";
+import { can, resolvePermissions, type Permission, type PermissionMap, type StaffRole } from "@mazood/shared";
 import type { FastifyRequest } from "fastify";
 import type { ZodTypeAny, z } from "zod";
 import type { SessionUser } from "./auth.ts";
@@ -8,6 +8,7 @@ import type { Config } from "./config.ts";
 import type { CryptoBox } from "./crypto-box.ts";
 import type { Db } from "./db.ts";
 import { ApiError } from "./errors.ts";
+import { getSettings } from "./settings.ts";
 import type { SmsSender } from "./sms.ts";
 import type { FileStorage } from "./storage.ts";
 
@@ -59,7 +60,15 @@ export function sessionCookieOptions(env: Config["env"], maxAgeMs: number) {
   return { httpOnly: true, sameSite: "strict" as const, secure: env === "production", path: "/v1", maxAge: Math.floor(maxAgeMs / 1000) };
 }
 
-export function makeGuards(_ctx: Ctx) {
+/** موظف داخل مسار: دوره وجدول الصلاحيات الفعلي لحظة الطلب (عشان تعديل المالك ينطبق فورًا). */
+export type StaffUser = SessionUser & { staffRole: StaffRole; perms: PermissionMap };
+
+/** جدول الصلاحيات الفعلي: الافتراضي + تعديلات المالك المحفوظة في الإعدادات (resolvePermissions). */
+export async function permissionMap(db: Db): Promise<PermissionMap> {
+  return resolvePermissions((await getSettings(db)).rolePermissions);
+}
+
+export function makeGuards(ctx: Ctx) {
   /** المستخدم انعرف في app.ts (onRequest). هنا بس نتأكد إنه موجود. */
   async function authenticate(req: FastifyRequest): Promise<SessionUser> {
     if (!req.user || !req.token) throw new ApiError(401, "unauthorized");
@@ -79,11 +88,12 @@ export function makeGuards(_ctx: Ctx) {
       return user;
     },
     /** موظف فعّال عنده الصلاحية المطلوبة. */
-    async requireStaff(req: FastifyRequest, permission?: Permission): Promise<SessionUser & { staffRole: StaffRole }> {
+    async requireStaff(req: FastifyRequest, permission?: Permission): Promise<StaffUser> {
       const user = await authenticate(req);
       if (user.role !== "staff" || !user.staffRole) throw new ApiError(403, "forbidden");
-      if (permission && !can(user.staffRole, permission)) throw new ApiError(403, "forbidden");
-      return user as SessionUser & { staffRole: StaffRole };
+      const perms = await permissionMap(ctx.db);
+      if (permission && !can(user.staffRole, permission, perms)) throw new ApiError(403, "forbidden");
+      return { ...user, staffRole: user.staffRole, perms };
     },
   };
 }

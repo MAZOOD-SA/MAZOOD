@@ -1,12 +1,14 @@
 // التخزين الخاص للمستندات (الهويات والسجلات). ما له أي رابط عام:
 // الملف ما ينفتح إلا برابط مؤقت يوقّعه الخادم (files.ts)، وكل فتح ينكتب في سجل الإجراءات.
 // اليوم: قرص محلي خاص بالخادم (أو الذاكرة للاختبارات). لما تنحدد الاستضافة نضيف S3 بنفس الواجهة.
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export interface FileStorage {
   put(key: string, bytes: Buffer): Promise<void>;
   get(key: string): Promise<Buffer | null>;
+  /** يمسح الملف نهائيًا (حذف الحساب). ملف مو موجود ما يعتبر خطأ. */
+  remove(key: string): Promise<void>;
 }
 
 export function memoryStorage(): FileStorage {
@@ -17,6 +19,9 @@ export function memoryStorage(): FileStorage {
     },
     async get(key) {
       return files.get(key) ?? null;
+    },
+    async remove(key) {
+      files.delete(key);
     },
   };
 }
@@ -38,6 +43,9 @@ export function diskStorage(dir: string): FileStorage {
       } catch {
         return null;
       }
+    },
+    async remove(key) {
+      await rm(safe(key), { force: true });
     },
   };
 }
