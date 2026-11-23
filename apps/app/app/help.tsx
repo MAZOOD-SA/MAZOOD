@@ -2,8 +2,9 @@
 // في الكمبيوتر تنفتح من القائمة الجانبية، وفي الجوال من «حسابي» (docs/plans/design-phase.md، القسم ٤).
 import { layout, radius, spacing } from "@mazood/brand";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { Animated, Pressable, View } from "react-native";
 import { IconChevronDown, IconMessageCircle } from "@/components/icons";
+import { useUiTransition } from "@/components/flow";
 import { Screen, SectionTitle } from "@/components/layout";
 import { AppText, Card, focusRing } from "@/components/ui";
 import { FAQ, type FaqItem } from "@/data/faq";
@@ -63,6 +64,10 @@ function FaqRow({ item, first }: { item: FaqItem; first: boolean }) {
   const { colors } = useTheme();
   const { tl } = useI18n();
   const [open, setOpen] = useState(false);
+  // السهم يدور والجواب يطلع بهدوء (١٥٠ مللي ثانية، ويقف مع «تقليل الحركة»).
+  const t = useUiTransition(open);
+  const rotate = t.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "180deg"] });
+  const answerShift = t.interpolate({ inputRange: [0, 1], outputRange: [-4, 0] });
   return (
     <View style={{ borderTopWidth: first ? 0 : 1, borderTopColor: colors.line }}>
       <Pressable
@@ -87,16 +92,16 @@ function FaqRow({ item, first }: { item: FaqItem; first: boolean }) {
         <AppText weight={600} style={{ flex: 1 }}>
           {tl(item.q)}
         </AppText>
-        <View style={{ transform: [{ rotate: open ? "180deg" : "0deg" }] }}>
+        <Animated.View style={{ transform: [{ rotate }] }}>
           <IconChevronDown size={20} color={colors.inkMuted} strokeWidth={1.75} />
-        </View>
+        </Animated.View>
       </Pressable>
       {open && (
-        <View style={{ paddingHorizontal: spacing["4"], paddingBottom: spacing["4"] }}>
+        <Animated.View style={{ paddingHorizontal: spacing["4"], paddingBottom: spacing["4"], opacity: t, transform: [{ translateY: answerShift }] }}>
           <AppText variant="bodySm" color="inkMuted">
             {tl(item.a)}
           </AppText>
-        </View>
+        </Animated.View>
       )}
     </View>
   );

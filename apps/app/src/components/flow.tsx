@@ -49,6 +49,27 @@ export function useReducedMotion(): boolean {
   return reduced;
 }
 
+/**
+ * حركة واجهة صغيرة (مرحلة التصميم و): قيمة تروح لـ١ لما on صحيح ولـ٠ لما يكون خطأ،
+ * بمدة motion.fast من التوكنز (١٥٠ مللي ثانية) وease-out. مع «تقليل الحركة» تقفز للقيمة مباشرة.
+ * تُستخدم لظهور الجواب في «مساعدة» ودوران سهمه، ولظهور بطاقة «خطوتك الجاية».
+ */
+export function useUiTransition(on: boolean): Animated.Value {
+  const reduced = useReducedMotion();
+  const v = useRef(new Animated.Value(on ? 1 : 0)).current;
+  useEffect(() => {
+    if (reduced) {
+      v.stopAnimation();
+      v.setValue(on ? 1 : 0);
+      return;
+    }
+    const anim = Animated.timing(v, { toValue: on ? 1 : 0, duration: motion.fast, easing: Easing.out(Easing.cubic), useNativeDriver: false });
+    anim.start();
+    return () => anim.stop();
+  }, [on, reduced, v]);
+  return v;
+}
+
 /** قيمة من ٠ إلى ١ خلال مدة حركة المكافأة (من التوكنز). مع «تقليل الحركة» تبدأ من ١. */
 function useRewardProgress(run: boolean): number {
   const reduced = useReducedMotion();

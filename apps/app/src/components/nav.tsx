@@ -2,12 +2,13 @@
 // القائمة أول عنصر في صف، والصف يتبع اتجاه اللغة: على اليمين في العربي، وعلى اليسار في الإنجليزي.
 import { layout, radius, spacing } from "@mazood/brand";
 import { router, usePathname, type Href } from "expo-router";
-import type { ReactNode } from "react";
-import { Pressable, ScrollView, useWindowDimensions, View } from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import { Animated, Pressable, ScrollView, useWindowDimensions, View } from "react-native";
 import type { Category, IconComponent } from "@/data/categories";
 import { DOC_LABELS } from "@/data/labels";
 import type { NextStep } from "@/lib/next-step";
 import { CategoryIcon } from "./CategoryIcon";
+import { useUiTransition } from "./flow";
 import { useLayout } from "@/lib/layout";
 import { useTheme } from "@/theme/ThemeProvider";
 import { LogoMark } from "./Logo";
@@ -124,11 +125,7 @@ export function Sidebar({ items, action, next, categories, tools, footer }: Side
           </AppText>
         </View>
         {action && <View style={{ paddingBottom: spacing["3"] }}>{action}</View>}
-        {next && (
-          <View style={{ paddingBottom: spacing["3"] }}>
-            <NextStepCard step={next} />
-          </View>
-        )}
+        {next && <NextStepAppear step={next} />}
         {items.map((item) => (
           <SidebarLink key={item.href} item={item} active={isActive(pathname, item)} />
         ))}
@@ -206,6 +203,18 @@ function nextStepText(step: NextStep, t: (k: StringKey, v?: Record<string, strin
     case "newRequests":
       return { title: t("nextNewRequests", { n: num(step.count) }), hint: t("nextNewRequestsHint") };
   }
+}
+
+/** البطاقة تظهر بتلاشي ١٥٠ مللي ثانية أول ما توصل بياناتها، بدل ما تقفز وتدفّ الروابط (تقف مع «تقليل الحركة»). */
+function NextStepAppear({ step }: { step: NextStep }) {
+  const [shown, setShown] = useState(false);
+  useEffect(() => setShown(true), []);
+  const opacity = useUiTransition(shown);
+  return (
+    <Animated.View style={{ paddingBottom: spacing["3"], opacity }}>
+      <NextStepCard step={step} />
+    </Animated.View>
+  );
 }
 
 /** بطاقة «خطوتك الجاية»: خلفية accentSoft (تنبيه، مو زر كهرماني)، والضغط يوديه للشاشة اللي فيها الشي. */
