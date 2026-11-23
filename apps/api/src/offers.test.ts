@@ -160,3 +160,40 @@ describe("تعديل العرض وسحبه", () => {
     expect((await call("POST", `/v1/provider/requests/${id}/offers`, a.token, offer)).statusCode).toBe(201);
   });
 });
+
+describe("«يشمل / ما يشمل» (القرار ٥٧)", () => {
+  const inclusions = { loading: "included", unloading: "excluded", waiting_over_2h: "excluded" };
+
+  it("البنود تنحفظ، والعميل يشوفها مع العرض", async () => {
+    const id = await newRequest();
+    const r = await call("POST", `/v1/provider/requests/${id}/offers`, a.token, { ...offer, inclusions });
+    expect(r.statusCode).toBe(201);
+    expect(r.json().offer.inclusions).toEqual(inclusions);
+    const view = await call("GET", `/v1/requests/${id}`, factory.token);
+    expect(view.json().offers[0].inclusions).toEqual(inclusions);
+  });
+
+  it("بند ناقص أو بند من قسم ثاني أو قيمة غلط: ينرفض", async () => {
+    const id = await newRequest();
+    const send = (inc: object) => call("POST", `/v1/provider/requests/${id}/offers`, a.token, { ...offer, inclusions: inc });
+    expect((await send({ loading: "included" })).json().error.code).toBe("inclusions_incomplete");
+    expect((await send({ ...inclusions, parts: "included" })).json().error.code).toBe("inclusions_unknown");
+    expect((await send({ ...inclusions, loading: "maybe" })).statusCode).toBe(400);
+  });
+
+  it("عرض بدون بنود (نسخة تطبيق قديمة) ينقبل، والبنود null", async () => {
+    const id = await newRequest();
+    const r = await call("POST", `/v1/provider/requests/${id}/offers`, b.token, offer);
+    expect(r.statusCode).toBe(201);
+    expect(r.json().offer.inclusions).toBeNull();
+  });
+
+  it("التعديل يغيّر البنود، والتعديل بدون بنود ما يمسحها", async () => {
+    const id = await newRequest();
+    const sent = await call("POST", `/v1/provider/requests/${id}/offers`, a.token, { ...offer, inclusions });
+    const offerId = sent.json().offer.id;
+    const changed = { ...inclusions, unloading: "included" };
+    expect((await call("PUT", `/v1/provider/offers/${offerId}`, a.token, { ...offer, inclusions: changed })).json().offer.inclusions).toEqual(changed);
+    expect((await call("PUT", `/v1/provider/offers/${offerId}`, a.token, offer)).json().offer.inclusions).toEqual(changed);
+  });
+});

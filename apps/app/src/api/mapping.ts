@@ -96,7 +96,7 @@ export type ErrorKey =
   | "errProfileIncomplete" | "errIdentityUnverified" | "errKindLocked" | "errIndividualNoMembers"
   | "errProductsLimit" | "errImagesLimit" | "errBelowMinOrder" | "errOwnProduct" | "errSellerNotEnabled" | "errProductRemoved"
   | "errMarketBuyerNotAllowed" | "errSellerBusinessOnly"
-  | "errOwnerOnly" | "errPermissionLocked" | "errDeletionActive";
+  | "errOwnerOnly" | "errPermissionLocked" | "errDeletionActive" | "errInclusions";
 
 export function errorKey(code: string): ErrorKey {
   switch (code) {
@@ -132,6 +132,9 @@ export function errorKey(code: string): ErrorKey {
       return "errContactInfo";
     case "offer_exists":
       return "errOfferExists";
+    case "inclusions_incomplete":
+    case "inclusions_unknown":
+      return "errInclusions";
     case "offers_full":
       return "errOffersFull";
     case "offer_not_active":

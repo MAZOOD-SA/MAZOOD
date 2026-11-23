@@ -118,12 +118,21 @@ export function Sidebar({ items, action, next, categories, tools, footer }: Side
       style={{ width: layout.sidebar, backgroundColor: colors.surfaceAlt, borderEndWidth: 1, borderEndColor: colors.line }}
     >
       <ScrollView contentContainerStyle={{ padding: spacing["4"], gap: spacing["1"], flexGrow: 1 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: spacing["2"], paddingBottom: spacing["4"], paddingHorizontal: spacing["2"] }}>
+        {/* الشعار والاسم يرجّعون للرئيسية (طلب المالك، 23 نوفمبر 2026). الرئيسية أول رابط في القائمة، فتناسب كل نوع حساب. */}
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel={`${t("appName")}، ${t("tabHome")}`}
+          onPress={() => items[0] && router.push(items[0].href)}
+          style={(state) => [
+            { flexDirection: "row", alignItems: "center", gap: spacing["2"], marginBottom: spacing["4"], paddingHorizontal: spacing["2"], minHeight: layout.touchMin, alignSelf: "flex-start", borderRadius: radius.md },
+            focusRing(state, colors),
+          ]}
+        >
           <LogoMark size={30} />
           <AppText variant="h2" weight={700}>
             {t("appName")}
           </AppText>
-        </View>
+        </Pressable>
         {action && <View style={{ paddingBottom: spacing["3"] }}>{action}</View>}
         {next && <NextStepAppear step={next} />}
         {items.map((item) => (

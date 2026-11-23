@@ -17,7 +17,7 @@ import { errorKey } from "@/api/mapping";
 import type { FactoryOffer, FactoryRequestView } from "@/api/types";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Field } from "@/components/Field";
-import { CountUp, Fact, PhotoStrip, ProviderLine, SideCard, Stars, Timeline, useAutoRefresh } from "@/components/flow";
+import { CountUp, Fact, InclusionList, PhotoStrip, ProviderLine, SideCard, Stars, Timeline, useAutoRefresh } from "@/components/flow";
 import { IconAlertTriangle, IconCircleCheck, IconHourglass } from "@/components/icons";
 import { DealRoom } from "@/components/deal-room";
 import { Grid, Screen, SectionTitle, SkeletonList, TwoColumn } from "@/components/layout";
@@ -250,6 +250,7 @@ export default function RequestDetails() {
               </AppText>
             </View>
           </Row>
+          <InclusionList inclusions={view.offers.find((o) => o.status === "accepted")?.inclusions} />
           {status === "accepted" && <AppText variant="caption" color="inkMuted">{t("freeCancelUntilStart")}</AppText>}
         </Card>
       )}
@@ -563,6 +564,8 @@ function OfferCompareCard({ offer, selected, nominated, onSelect }: { offer: Fac
           {t("priceExcludesVat")}
         </AppText>
       </View>
+      {/* «يشمل / ما يشمل» تحت السعر مباشرة (فكرة ايكيا، القرار ٥٧). */}
+      <InclusionList inclusions={offer.inclusions} />
       {/* المدة نص واضح مو كبسولة: «١٠ ساعات» لحالها ما تقول وش هي. والكبسولات للحالات بس. */}
       <AppText variant="bodySm" weight={600}>
         {t("doneWithin", { d: duration(offer.durationHours) })}

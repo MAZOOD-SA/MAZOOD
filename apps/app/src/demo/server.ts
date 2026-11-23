@@ -41,6 +41,8 @@ import {
   type FlowActor,
   type RequestStatus,
   type DocType,
+  inclusionsError,
+  type Inclusions,
 } from "@mazood/shared";
 import { ApiClientError } from "@/api/errors";
 
@@ -79,6 +81,7 @@ type Offer = {
   priceHalalas: number;
   durationHours: number;
   note: string | null;
+  inclusions?: Inclusions | null;
   validUntil: string;
   status: "active" | "withdrawn" | "accepted" | "rejected" | "expired";
   revision: number;
@@ -209,6 +212,16 @@ function seed(): Db {
   offer("o1", "r1", "p2", 2450, 8, "السعر يشمل التأمين على الحمولة.", 2);
   offer("o2", "r1", "p1", 2300, 10, null, 1.5);
   offer("o3", "r1", "p3", 2600, 6, "نقدر نحمّل اليوم العصر.", 1);
+  // «يشمل / ما يشمل» (القرار ٥٧): الأرخص ما يشمل التنزيل، عشان المقارنة تبين ليش السعر يفرق.
+  const inc = (o: string, loading: boolean, unloading: boolean, waiting: boolean) =>
+    (db.offers.find((x) => x.id === o)!.inclusions = {
+      loading: loading ? "included" : "excluded",
+      unloading: unloading ? "included" : "excluded",
+      waiting_over_2h: waiting ? "included" : "excluded",
+    });
+  inc("o1", true, true, false);
+  inc("o2", true, false, false);
+  inc("o3", true, true, true);
   req("r2", "f1", "maintenance", "ac", "صيانة ٤ مكيفات سبليت في صالة الإنتاج، واحد منها ما يبرّد.", "المدينة الصناعية الأولى", 30, "in_progress");
   offer("o4", "r2", "p4", 1200, 5, null, 29, "accepted");
   order("d2", "r2", "o4", "p4", 1200, 28, { startedAt: iso(t - 2 * HOUR) });
@@ -356,6 +369,12 @@ function parseBody<T>(schema: { safeParse: (v: unknown) => { success: true; data
   return (r as { data: T }).data;
 }
 
+/** نفس فحص الخادم الحقيقي لـ«يشمل / ما يشمل» (القرار ٥٧). */
+function checkInclusions(category: string, inclusions: Inclusions | undefined) {
+  const err = inclusionsError(category, inclusions);
+  if (err) fail(400, err);
+}
+
 function noContact(...texts: (string | null | undefined)[]) {
   if (texts.some((x) => containsContactInfo(x))) fail(400, "contact_info_not_allowed");
 }
@@ -455,6 +474,7 @@ function factoryView(u: User, requestId: string) {
       price: priceForFactory(o.priceHalalas),
       durationHours: o.durationHours,
       note: o.note,
+      inclusions: o.inclusions ?? null,
       validUntil: o.validUntil,
       status: o.status as "active" | "accepted",
       revised: o.revision > 1,
@@ -542,6 +562,7 @@ function myOfferView(o: Offer) {
     priceHalalas: o.priceHalalas,
     durationHours: o.durationHours,
     note: o.note,
+    inclusions: o.inclusions ?? null,
     validUntil: o.validUntil,
     status: expired ? "expired" : o.status,
     revision: o.revision,
@@ -879,9 +900,10 @@ on("POST", "/v1/provider/requests/:id/offers", ({ u, params, body }) => {
   noContact(b.note);
   if ((b.validHours ?? 0) > SETTING_DEFAULTS.offerValidityHours) fail(400, "validity_too_long");
   const r = openRequests(p, params[0])[0] ?? fail(404, "not_found");
+  checkInclusions(r.category, b.inclusions);
   if (r.myOffer) fail(409, "offer_exists");
   const t = now();
-  const o: Offer = { id: id("o"), requestId: r.id, providerId: p.id, priceHalalas: b.priceHalalas, durationHours: b.durationHours, note: b.note || null, validUntil: iso(t + (b.validHours ?? SETTING_DEFAULTS.offerValidityHours) * HOUR), status: "active", revision: 1, firstSeenAt: null, createdAt: iso(t), updatedAt: iso(t) };
+  const o: Offer = { id: id("o"), requestId: r.id, providerId: p.id, priceHalalas: b.priceHalalas, durationHours: b.durationHours, note: b.note || null, inclusions: b.inclusions ?? null, validUntil: iso(t + (b.validHours ?? SETTING_DEFAULTS.offerValidityHours) * HOUR), status: "active", revision: 1, firstSeenAt: null, createdAt: iso(t), updatedAt: iso(t) };
   db.offers.push(o);
   return { offer: myOfferView(o) };
 });
@@ -892,8 +914,9 @@ on("PUT", "/v1/provider/offers/:id", ({ u, params, body }) => {
   const o = db.offers.find((x) => x.id === params[0] && x.providerId === p.id) ?? fail(404, "not_found");
   if (!live(o)) fail(409, "offer_not_active");
   if (effectiveStatus(db.requests.find((r) => r.id === o.requestId)!) !== "awaiting_offers") fail(409, "offer_locked");
+  checkInclusions(db.requests.find((r) => r.id === o.requestId)!.category, b.inclusions);
   const t = now();
-  Object.assign(o, { priceHalalas: b.priceHalalas, durationHours: b.durationHours, note: b.note || null, validUntil: iso(t + (b.validHours ?? SETTING_DEFAULTS.offerValidityHours) * HOUR), revision: o.revision + 1, updatedAt: iso(t) });
+  Object.assign(o, { priceHalalas: b.priceHalalas, durationHours: b.durationHours, note: b.note || null, inclusions: b.inclusions ?? o.inclusions ?? null, validUntil: iso(t + (b.validHours ?? SETTING_DEFAULTS.offerValidityHours) * HOUR), revision: o.revision + 1, updatedAt: iso(t) });
   return { offer: myOfferView(o) };
 });
 on("POST", "/v1/provider/offers/:id/withdraw", ({ u, params }) => {

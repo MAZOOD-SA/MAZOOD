@@ -327,12 +327,13 @@ async function requestDetails(db: Db, requestId: string, now: Date) {
     price_halalas: string;
     duration_hours: number;
     note: string | null;
+    inclusions: Record<string, "included" | "excluded"> | null;
     valid_until: Date;
     status: string;
     revision: number;
     created_at: Date;
   }>(
-    `SELECT o.id, o.provider_id, p.trade_name, o.price_halalas, o.duration_hours, o.note, o.valid_until, o.status, o.revision, o.created_at
+    `SELECT o.id, o.provider_id, p.trade_name, o.price_halalas, o.duration_hours, o.note, o.inclusions, o.valid_until, o.status, o.revision, o.created_at
        FROM offers o JOIN providers p ON p.id = o.provider_id
       WHERE o.request_id=$1 AND ((o.status='active' AND o.valid_until > $2) OR o.status='accepted')
       ORDER BY o.price_halalas ASC, o.created_at ASC`,
@@ -353,6 +354,8 @@ async function requestDetails(db: Db, requestId: string, now: Date) {
       price: priceForFactory(Number(o.price_halalas)),
       durationHours: o.duration_hours,
       note: o.note,
+      // «يشمل / ما يشمل» (القرار ٥٧). null: عرض قبل الميزة.
+      inclusions: o.inclusions,
       validUntil: new Date(o.valid_until).toISOString(),
       status: o.status,
       revised: o.revision > 1,

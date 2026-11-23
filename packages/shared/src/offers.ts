@@ -1,5 +1,6 @@
 // قواعد إدخال العرض. الخادم يطبّقها، والواجهة تستخدمها لرسائل فورية.
 import { z } from "zod";
+import type { CategoryId } from "./categories.ts";
 
 /** نص حر: نشيل الأحرف التحكمية ونقص المسافات. */
 const note = z
@@ -19,6 +20,7 @@ export const offerBody = z
     durationHours: z.number().int().min(1).max(2160),
     note: note.optional(),
     validHours: z.number().int().min(1).max(24 * 30).optional(),
+    inclusions: z.record(z.string().max(40), z.enum(["included", "excluded"])).optional(),
   })
   .strict();
 export type OfferBody = z.infer<typeof offerBody>;
@@ -45,3 +47,35 @@ export type PriceChangeStatus = (typeof PRICE_CHANGE_STATUSES)[number];
 export const ORDER_PHOTO_STAGES = ["start", "delivery"] as const;
 export type OrderPhotoStage = (typeof ORDER_PHOTO_STAGES)[number];
 export const ORDER_PHOTOS_PER_STAGE = 3;
+
+/**
+ * «يشمل / ما يشمل» (فكرة ايكيا، docs/plans/ikea-ideas.md المهمة ٥-ب، القرار ٥٧).
+ * بنود ثابتة لكل قسم، يجاوب عليها المزوّد مع عرضه، والعميل يشوفها تحت السعر.
+ * **القائمة مبدئية وقابلة للتغيير (قرار المالك ٢٣ نوفمبر ٢٠٢٦).** لتغييرها: عدّل هنا، وأضف اسم البند
+ * في الواجهة (apps/app/src/data/inclusions.ts). في المرحلة ٦ تنتقل للوحة الإدارة.
+ * لو شلت بند، العروض القديمة اللي فيها البند ما تنكسر: الواجهة تتجاهل البند اللي ما له اسم.
+ */
+export const OFFER_INCLUSIONS: Record<CategoryId, readonly string[]> = {
+  transport: ["loading", "unloading", "waiting_over_2h"],
+  maintenance: ["parts", "inspection_fee", "warranty"],
+  materials: ["delivery", "unloading_spreading"],
+  security: ["delivery", "installation", "guard_gear"],
+  cleaning: ["delivery", "setup"],
+  customs: ["government_fees", "port_transport"],
+  pest_control: ["pesticides", "revisit"],
+};
+
+export type InclusionValue = "included" | "excluded";
+export type Inclusions = Record<string, InclusionValue>;
+
+/**
+ * يتحقق إن البنود هي بنود القسم بالضبط: ولا بند ناقص، ولا بند غريب. يرجّع رمز الخطأ أو null.
+ * العرض بدون بنود (undefined) مقبول: نسخ التطبيق القديمة على الجوالات ما تعرف الميزة. التطبيق الجديد يلزم بها.
+ */
+export function inclusionsError(category: string, inclusions: Inclusions | undefined): "inclusions_incomplete" | "inclusions_unknown" | null {
+  if (inclusions === undefined) return null;
+  const allowed = OFFER_INCLUSIONS[category as CategoryId] ?? [];
+  if (Object.keys(inclusions).some((k) => !allowed.includes(k))) return "inclusions_unknown";
+  if (allowed.some((k) => !(k in inclusions))) return "inclusions_incomplete";
+  return null;
+}

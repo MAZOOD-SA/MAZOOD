@@ -1,5 +1,6 @@
 // شكل ردود الخادم لشاشات المرحلة ٤ (العروض والقبول والتنفيذ). نفس الشكل في الخادم الحقيقي
 // (apps/api/src/routes) والخادم التجريبي داخل المتصفح (src/demo/server.ts).
+import type { Inclusions } from "@mazood/shared";
 import type { CancellationFee, CancellationPolicy, CommitmentView, FactoryUiAction, RequestStatus } from "@mazood/shared";
 import type { CategoryId } from "@/data/categories";
 import type { When } from "@/data/types";
@@ -29,6 +30,8 @@ export type FactoryOffer = {
   price: Price;
   durationHours: number;
   note: string | null;
+  /** «يشمل / ما يشمل» (القرار ٥٧). null: عرض قبل الميزة. */
+  inclusions?: Inclusions | null;
   validUntil: string;
   status: "active" | "accepted";
   revised: boolean;
@@ -136,6 +139,7 @@ export type MyOffer = {
   priceHalalas: number;
   durationHours: number;
   note: string | null;
+  inclusions?: Inclusions | null;
   validUntil: string;
   status: "active" | "withdrawn" | "accepted" | "rejected" | "expired";
   revision: number;

@@ -5,7 +5,7 @@
 //  - يشوف الطلبات المفتوحة في أقسامه ومدنه بس. كل مزوّد مؤهّل يشوف الطلب بنفس اللحظة (عدالة: ما نبيع أولوية).
 //  - قبل القبول: القسم والنوع والتفاصيل والمدينة والمنطقة والموعد. **ما يطلع اسم المصنع ولا الموقع بالضبط**.
 //  - يشوف **عدد** العروض بس، مو أسعار غيره (سؤال ٤-٢).
-import { CATEGORY_IDS, containsContactInfo, offerBody, uuidSchema, type OfferStatus } from "@mazood/shared";
+import { CATEGORY_IDS, containsContactInfo, inclusionsError, offerBody, uuidSchema, type OfferBody, type OfferStatus } from "@mazood/shared";
 import { events } from "../events.ts";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
@@ -59,6 +59,7 @@ type OfferRow = {
   price_halalas: string | number;
   duration_hours: number;
   note: string | null;
+  inclusions: Record<string, "included" | "excluded"> | null;
   valid_until: Date;
   status: OfferStatus;
   revision: number;
@@ -77,6 +78,7 @@ export function offerView(o: OfferRow, now: Date) {
     priceHalalas: Number(o.price_halalas),
     durationHours: o.duration_hours,
     note: o.note,
+    inclusions: o.inclusions,
     validUntil: new Date(o.valid_until).toISOString(),
     status: expired ? ("expired" as const) : o.status,
     revision: o.revision,
@@ -91,6 +93,12 @@ export function rejectContactInfo(fields: Record<string, string | undefined>) {
   for (const [field, value] of Object.entries(fields)) {
     if (containsContactInfo(value)) throw new ApiError(400, "contact_info_not_allowed", undefined, { field });
   }
+}
+
+/** «يشمل / ما يشمل» لازم تطابق بنود قسم الطلب (القرار ٥٧). */
+function checkInclusions(category: string, inclusions: OfferBody["inclusions"]) {
+  const err = inclusionsError(category, inclusions);
+  if (err) throw new ApiError(400, err);
 }
 
 export function offerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
@@ -154,6 +162,7 @@ export function offerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       );
       const visible = r && r.status === "awaiting_offers" && new Date(r.expires_at) > now && p.categories.includes(r.category) && p.cityIds.includes(r.city_id);
       if (!visible) throw new ApiError(404, "not_found");
+      checkInclusions(r.category, body.inclusions);
       const withdrew = await t.query("SELECT 1 FROM orders WHERE request_id=$1 AND provider_id=$2 AND state='withdrawn'", [id, p.id]);
       if (withdrew.length) throw new ApiError(404, "not_found");
       // عرضه القديم اللي انتهت صلاحيته ما يمنعه يرسل جديد.
@@ -166,9 +175,9 @@ export function offerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       const [{ n }] = await t.query<{ n: number }>(`SELECT count(*)::int AS n FROM offers o WHERE o.request_id=$1 AND ${liveOffer("$2")}`, [id, now]);
       if (n >= maxOffersPerRequest) throw new ApiError(409, "offers_full");
       const [o] = await t.query<OfferRow>(
-        `INSERT INTO offers (request_id, provider_id, price_halalas, duration_hours, note, valid_until, created_at, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$7) RETURNING *`,
-        [id, p.id, body.priceHalalas, body.durationHours, body.note || null, new Date(now.getTime() + hours * 3600_000), now],
+        `INSERT INTO offers (request_id, provider_id, price_halalas, duration_hours, note, valid_until, created_at, updated_at, inclusions)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$7,$8) RETURNING *`,
+        [id, p.id, body.priceHalalas, body.durationHours, body.note || null, new Date(now.getTime() + hours * 3600_000), now, body.inclusions ? JSON.stringify(body.inclusions) : null],
       );
       // في السجل: بدون السعر (سري بين المزوّد والمصنع)، يكفي إنه أرسل عرض.
       await audit(t, actorOf(user), "offer.submitted", { type: "offer", id: o.id }, { requestId: id });
@@ -190,15 +199,19 @@ export function offerRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       const o = await ownOfferForUpdate(t, (req.params as { id: string }).id, p.id);
       if (o.status !== "active" || new Date(o.valid_until) <= now) throw new ApiError(409, "offer_not_active");
       if (o.request_status !== "awaiting_offers") throw new ApiError(409, "offer_locked");
+      const [{ category }] = await t.query<{ category: string }>("SELECT category FROM requests WHERE id=$1", [o.request_id]);
+      checkInclusions(category, body.inclusions);
       await t.query(
-        `INSERT INTO offer_revisions (offer_id, revision, price_halalas, duration_hours, note, valid_until, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [o.id, o.revision, o.price_halalas, o.duration_hours, o.note, o.valid_until, now],
+        `INSERT INTO offer_revisions (offer_id, revision, price_halalas, duration_hours, note, valid_until, created_at, inclusions)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [o.id, o.revision, o.price_halalas, o.duration_hours, o.note, o.valid_until, now, o.inclusions ? JSON.stringify(o.inclusions) : null],
       );
+      // تعديل من نسخة تطبيق قديمة (بدون بنود) ما يمسح البنود المحفوظة.
+      const inclusions = body.inclusions ?? o.inclusions;
       const [u] = await t.query<OfferRow>(
-        `UPDATE offers SET price_halalas=$2, duration_hours=$3, note=$4, valid_until=$5, revision=revision+1, updated_at=$6
+        `UPDATE offers SET price_halalas=$2, duration_hours=$3, note=$4, valid_until=$5, revision=revision+1, updated_at=$6, inclusions=$7
           WHERE id=$1 RETURNING *`,
-        [o.id, body.priceHalalas, body.durationHours, body.note || null, new Date(now.getTime() + hours * 3600_000), now],
+        [o.id, body.priceHalalas, body.durationHours, body.note || null, new Date(now.getTime() + hours * 3600_000), now, inclusions ? JSON.stringify(inclusions) : null],
       );
       await audit(t, actorOf(user), "offer.revised", { type: "offer", id: o.id }, { requestId: o.request_id, revision: u.revision });
       return u;

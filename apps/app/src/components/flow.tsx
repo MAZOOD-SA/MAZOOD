@@ -4,14 +4,16 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Animated, Easing, Image, Platform, Pressable, View, type TextStyle } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
+import type { Inclusions } from "@mazood/shared";
 import { fileUrl } from "@/api/client";
+import { inclusionRows } from "@/data/inclusions";
 import type { Execution, ProviderCard, TimelineEvent } from "@/api/types";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { StringKey } from "@/i18n/strings";
 import { formatNumber } from "@/lib/format";
 import { useReducedMotion } from "@/lib/motion";
 import { useTheme } from "@/theme/ThemeProvider";
-import { IconStar } from "./icons";
+import { IconCheck, IconStar, IconX } from "./icons";
 import { AppText, focusRing, ReadMore, Row, VerifiedBadge } from "./ui";
 
 /** كل كم ثانية تسأل الشاشة المفتوحة الخادم (بدون التنبيهات، الخطوة ١٠). */
@@ -281,6 +283,34 @@ export function Fact({ label, value, ltr, long }: { label: string; value: string
       {long ? <ReadMore text={value} style={{ writingDirection: isRTL ? "rtl" : "ltr" }} /> : <AppText variant="bodySm" style={ltr ? { writingDirection: "ltr", alignSelf: "flex-start" } : { writingDirection: isRTL ? "rtl" : "ltr" }}>
         {value}
       </AppText>}
+    </View>
+  );
+}
+
+/**
+ * «يشمل / ما يشمل» تحت السعر (فكرة ايكيا، القرار ٥٧): ✓ بلون success، و✗ بلون inkMuted.
+ * الكلمة جنب كل علامة للقارئ الصوتي، فاللون والعلامة مو المعلومة الوحيدة.
+ */
+export function InclusionList({ inclusions }: { inclusions: Inclusions | null | undefined }) {
+  const { t, tl } = useI18n();
+  const { colors } = useTheme();
+  const rows = inclusionRows(inclusions);
+  if (rows.length === 0) return null;
+  return (
+    <View style={{ gap: 4 }}>
+      {rows.map((r) => (
+        <View
+          key={r.id}
+          accessible
+          accessibilityLabel={`${tl(r.label)}: ${r.included ? t("included") : t("excluded")}`}
+          style={{ flexDirection: "row", alignItems: "center", gap: spacing["2"] }}
+        >
+          {r.included ? <IconCheck size={16} color={colors.success} strokeWidth={2.25} /> : <IconX size={16} color={colors.inkMuted} strokeWidth={2.25} />}
+          <AppText variant="bodySm" color={r.included ? "ink" : "inkMuted"} style={r.included ? undefined : { textDecorationLine: "line-through" }}>
+            {tl(r.label)}
+          </AppText>
+        </View>
+      ))}
     </View>
   );
 }

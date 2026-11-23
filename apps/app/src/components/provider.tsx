@@ -1,21 +1,22 @@
 // مكوّنات شاشات المزوّد: بطاقة الطلب المتاح، ولوحة الطلب مع نموذج العرض، وبطاقة الشغل.
 // هدف نموذج العرض: أقل من ٣٠ ثانية (السعر، والمدة، وملاحظة اختيارية). docs/product.md، القسم ٢.
 import { spacing } from "@mazood/brand";
-import { containsContactInfo, SETTING_DEFAULTS } from "@mazood/shared";
+import { containsContactInfo, SETTING_DEFAULTS, type InclusionValue, type Inclusions } from "@mazood/shared";
+import { inclusionItems } from "@/data/inclusions";
 import * as DocumentPicker from "expo-document-picker";
 import { useCallback, useEffect, useState } from "react";
 import { Platform, View } from "react-native";
 import { ApiClientError } from "@/api/client";
 import { errorKey } from "@/api/mapping";
 import type { JobSummary, MyOffer, OpenRequest } from "@/api/types";
-import { categoryById } from "@/data/categories";
+import { categoryById, type CategoryId } from "@/data/categories";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
 import { isolate } from "@/lib/format";
 import { useTheme } from "@/theme/ThemeProvider";
 import { RequestStatusDot } from "./domain";
 import { Field } from "./Field";
-import { Fact, RewardCheck, SideCard } from "./flow";
+import { Fact, InclusionList, RewardCheck, SideCard } from "./flow";
 import { IconAlertTriangle, IconCircleCheck, IconSend } from "./icons";
 import { AppText, Badge, Button, Card, Chips, Notice, ReadMore, Row } from "./ui";
 
@@ -135,6 +136,7 @@ export function ProviderRequestPanel({ requestId, onChanged }: { requestId: stri
           <AppText variant="caption" color="inkMuted">
             {t("priceExcludesVat")} · {duration(mine.durationHours)} · {t("validUntil", { until: until(mine.validUntil) })}
           </AppText>
+          <InclusionList inclusions={mine.inclusions} />
           {!!mine.note && <AppText variant="bodySm">{mine.note}</AppText>}
           <Row style={{ flexWrap: "wrap" }}>
             <Button label={t("editOffer")} variant="secondary" onPress={() => setEditing(true)} />
@@ -144,6 +146,7 @@ export function ProviderRequestPanel({ requestId, onChanged }: { requestId: stri
       ) : (
         <OfferComposer
           requestId={req.id}
+          category={req.category}
           existing={editing ? mine : null}
           onDone={() => {
             setSent(true);
@@ -181,21 +184,29 @@ function WithdrawOffer({ offerId, onDone }: { offerId: string; onDone: () => voi
 /** نموذج العرض: السعر، والمدة، والصلاحية، وملاحظة اختيارية. الزر الكهرماني الوحيد في الشاشة. */
 export function OfferComposer({
   requestId,
+  category,
   existing,
   onDone,
   onCancelEdit,
 }: {
   requestId: string;
+  category: CategoryId;
   existing: MyOffer | null;
   onDone: () => void;
   onCancelEdit?: () => void;
 }) {
-  const { t, num, duration } = useI18n();
+  const { t, tl, num, duration } = useI18n();
   const { authed } = useStore();
   const [price, setPrice] = useState(existing ? String(existing.priceHalalas / 100) : "");
   const [hours, setHours] = useState<number>(existing?.durationHours ?? 8);
   const [validity, setValidity] = useState<number>(SETTING_DEFAULTS.offerValidityHours);
   const [note, setNote] = useState(existing?.note ?? "");
+  // «يشمل / ما يشمل» (القرار ٥٧): لازم يختار في كل بند. التعديل يبدأ من اللي اختاره قبل.
+  const items = inclusionItems(category);
+  const [inclusions, setInclusions] = useState<Partial<Inclusions>>(() =>
+    Object.fromEntries(items.filter((i) => existing?.inclusions?.[i.id]).map((i) => [i.id, existing!.inclusions![i.id]])),
+  );
+  const [inclusionsError, setInclusionsError] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -205,9 +216,17 @@ export function OfferComposer({
     const halalas = parseRiyals(price);
     if (!halalas) return setPriceError(t("priceInvalid"));
     setPriceError(null);
+    if (items.some((i) => !inclusions[i.id])) return setInclusionsError(true);
+    setInclusionsError(false);
     setError(null);
     setBusy(true);
-    const body = { priceHalalas: halalas, durationHours: hours, validHours: validity, ...(note.trim() ? { note: note.trim() } : {}) };
+    const body = {
+      priceHalalas: halalas,
+      durationHours: hours,
+      validHours: validity,
+      ...(items.length ? { inclusions } : {}),
+      ...(note.trim() ? { note: note.trim() } : {}),
+    };
     try {
       if (existing) await authed(`/v1/provider/offers/${existing.id}`, { method: "PUT", body });
       else await authed(`/v1/provider/requests/${requestId}/offers`, { method: "POST", body });
@@ -241,6 +260,37 @@ export function OfferComposer({
       <Chips<string> value={String(hours)} onChange={(v) => setHours(Number(v))} options={durationOptions.map((h) => ({ value: String(h), label: duration(h) }))} />
       <AppText variant="label">{t("validityLabel")}</AppText>
       <Chips<string> value={String(validity)} onChange={(v) => setValidity(Number(v))} options={VALIDITIES.map((h) => ({ value: String(h), label: duration(h) }))} />
+      {items.length > 0 && (
+        <View style={{ gap: spacing["2"] }}>
+          <AppText variant="label">{t("inclusionsLabel")}</AppText>
+          <AppText variant="caption" color="inkMuted">
+            {t("inclusionsHint")}
+          </AppText>
+          {items.map((i) => (
+            <View key={i.id} style={{ gap: spacing["1"] }}>
+              <AppText variant="bodySm" weight={600}>
+                {tl(i.label)}
+              </AppText>
+              <Chips<InclusionValue>
+                value={inclusions[i.id] ?? null}
+                onChange={(v) => {
+                  setInclusions((cur) => ({ ...cur, [i.id]: v }));
+                  setInclusionsError(false);
+                }}
+                options={[
+                  { value: "included", label: t("included") },
+                  { value: "excluded", label: t("excluded") },
+                ]}
+              />
+            </View>
+          ))}
+          {inclusionsError && (
+            <AppText variant="bodySm" color="danger">
+              {t("errInclusions")}
+            </AppText>
+          )}
+        </View>
+      )}
       <Field label={t("noteOptional")} value={note} onChangeText={setNote} multiline maxLength={500} placeholder={t("notePlaceholder")} />
       {containsContactInfo(note) && <Notice icon={IconAlertTriangle} text={t("noContactInOffer")} />}
       {error && <Notice icon={IconAlertTriangle} text={error} />}
