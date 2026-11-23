@@ -166,7 +166,7 @@ export function VerifiedBadge() {
 export function Card({ children, style, onPress }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void }) {
   const { colors } = useTheme();
   const base: ViewStyle = {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised, // في الداكن أفتح من الصفحة (طبقة مرفوعة)
     borderColor: colors.line,
     borderWidth: 1,
     borderRadius: radius.lg,

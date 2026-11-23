@@ -50,3 +50,20 @@ describe("خلفية رأس الرئيسية", () => {
     });
   }
 });
+
+describe("البطاقات المرفوعة (surface-raised)", () => {
+  for (const theme of ["light", "dark"]) {
+    it(`surface-raised (${theme}): النص يقرى عليها، وأيقونات الأقسام تبان`, () => {
+      const colors = resolveColors(json.color.tokens, theme);
+      if (!colors.surfaceRaised) throw new Error("توكن غير موجود: surface-raised");
+      expect(contrast(colors.ink, colors.surfaceRaised)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(colors.inkMuted, colors.surfaceRaised)).toBeGreaterThanOrEqual(4.5);
+      for (const id of CATEGORY_IDS) expect(contrast(colors[camel(`cat-${id}`)], colors.surfaceRaised)).toBeGreaterThanOrEqual(3);
+    });
+  }
+  it("في الداكن البطاقة أفتح من الصفحة، والرأس أفتح من البطاقة (طبقات واضحة)", () => {
+    const d = resolveColors(json.color.tokens, "dark");
+    expect(luminance(d.surfaceRaised)).toBeGreaterThan(luminance(d.surface));
+    expect(luminance(d.heroSurface)).toBeGreaterThan(luminance(d.surfaceRaised));
+  });
+});

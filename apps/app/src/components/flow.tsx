@@ -244,7 +244,7 @@ export function PhotoStrip({ photos, stage }: { photos: Execution["photos"]; sta
 export function SideCard({ title, children }: { title: string; children: ReactNode }) {
   const { colors } = useTheme();
   return (
-    <View style={{ borderWidth: 1, borderColor: colors.line, borderRadius: radius.lg, padding: spacing["4"], gap: spacing["3"], backgroundColor: colors.surface }}>
+    <View style={{ borderWidth: 1, borderColor: colors.line, borderRadius: radius.lg, padding: spacing["4"], gap: spacing["3"], backgroundColor: colors.surfaceRaised }}>
       <AppText variant="label" color="inkMuted">
         {title}
       </AppText>

@@ -27,6 +27,7 @@ export const colors = {
     "success": "#176B47",
     "successSoft": "#E3F4EC",
     "danger": "#B93A26",
+    "surfaceRaised": "#FFFFFF",
     "heroSurface": "#EAF1F8",
     "catTransport": "#1D63A8",
     "catTransportSoft": "#E3EEF9",
@@ -68,21 +69,22 @@ export const colors = {
     "success": "#4CC38A",
     "successSoft": "#12352A",
     "danger": "#F08A73",
-    "heroSurface": "#15304A",
+    "surfaceRaised": "#132A41",
+    "heroSurface": "#183A5A",
     "catTransport": "#7DB4EC",
-    "catTransportSoft": "#14304D",
+    "catTransportSoft": "#364A5F",
     "catMaintenance": "#C39BEA",
-    "catMaintenanceSoft": "#2C1E40",
+    "catMaintenanceSoft": "#4B425E",
     "catMaterials": "#D9A877",
-    "catMaterialsSoft": "#35281B",
+    "catMaterialsSoft": "#51463B",
     "catSecurity": "#5CC6D3",
-    "catSecuritySoft": "#0F3338",
+    "catSecuritySoft": "#2C4F57",
     "catCleaning": "#EE8DBA",
-    "catCleaningSoft": "#3A1A2A",
+    "catCleaningSoft": "#573E50",
     "catCustoms": "#9EA3F0",
-    "catCustomsSoft": "#1F2247",
+    "catCustomsSoft": "#404460",
     "catPest_control": "#B8C85A",
-    "catPest_controlSoft": "#283010"
+    "catPest_controlSoft": "#475033"
   }
 } as const;
 

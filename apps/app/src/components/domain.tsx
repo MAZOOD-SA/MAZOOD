@@ -21,7 +21,7 @@ export function CategoryTile({ category, onPress, compact }: { category: Categor
       style={({ pressed }) => ({
         flex: 1,
         minWidth: 96,
-        backgroundColor: colors.surface,
+        backgroundColor: colors.surfaceRaised,
         borderColor: colors.line,
         borderWidth: 1,
         borderRadius: compact ? 14 : radius.lg,

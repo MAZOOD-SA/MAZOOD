@@ -183,7 +183,7 @@ export function AccountCard({ title, subtitle, onSignOut }: { title: string; sub
   const { colors } = useTheme();
   const { t } = useI18n();
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing["2"], padding: spacing["3"], borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing["2"], padding: spacing["3"], borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surfaceRaised }}>
       <View style={{ width: 36, height: 36, borderRadius: radius.full, backgroundColor: colors.surfaceAlt, alignItems: "center", justifyContent: "center" }}>
         <IconUser size={18} color={colors.inkMuted} strokeWidth={1.75} />
       </View>

@@ -29,6 +29,8 @@
   --success: #176B47;
   --success-soft: #E3F4EC;
   --danger: #B93A26;
+  /* البطاقات: نفس surface في الفاتح، وأفتح درجة من الصفحة في الداكن */
+  --surface-raised: var(--surface);
   /* خلفية رأس الرئيسية: أزرق هادئ مشتق من الكحلي، مسطّحة */
   --hero-surface: #EAF1F8;
   /* ألوان الأقسام: للأيقونة ودائرتها بس، وما تعني حالة أبد */
@@ -66,21 +68,22 @@
   --success: #4CC38A;
   --success-soft: #12352A;
   --danger: #F08A73;
-  --hero-surface: #15304A;
+  --surface-raised: #132A41;
+  --hero-surface: #183A5A;
   --cat-transport: #7DB4EC;
-  --cat-transport-soft: #14304D;
+  --cat-transport-soft: #364A5F;
   --cat-maintenance: #C39BEA;
-  --cat-maintenance-soft: #2C1E40;
+  --cat-maintenance-soft: #4B425E;
   --cat-materials: #D9A877;
-  --cat-materials-soft: #35281B;
+  --cat-materials-soft: #51463B;
   --cat-security: #5CC6D3;
-  --cat-security-soft: #0F3338;
+  --cat-security-soft: #2C4F57;
   --cat-cleaning: #EE8DBA;
-  --cat-cleaning-soft: #3A1A2A;
+  --cat-cleaning-soft: #573E50;
   --cat-customs: #9EA3F0;
-  --cat-customs-soft: #1F2247;
+  --cat-customs-soft: #404460;
   --cat-pest_control: #B8C85A;
-  --cat-pest_control-soft: #283010;
+  --cat-pest_control-soft: #475033;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -102,21 +105,22 @@
     --success: #4CC38A;
     --success-soft: #12352A;
     --danger: #F08A73;
-    --hero-surface: #15304A;
+    --surface-raised: #132A41;
+    --hero-surface: #183A5A;
     --cat-transport: #7DB4EC;
-    --cat-transport-soft: #14304D;
+    --cat-transport-soft: #364A5F;
     --cat-maintenance: #C39BEA;
-    --cat-maintenance-soft: #2C1E40;
+    --cat-maintenance-soft: #4B425E;
     --cat-materials: #D9A877;
-    --cat-materials-soft: #35281B;
+    --cat-materials-soft: #51463B;
     --cat-security: #5CC6D3;
-    --cat-security-soft: #0F3338;
+    --cat-security-soft: #2C4F57;
     --cat-cleaning: #EE8DBA;
-    --cat-cleaning-soft: #3A1A2A;
+    --cat-cleaning-soft: #573E50;
     --cat-customs: #9EA3F0;
-    --cat-customs-soft: #1F2247;
+    --cat-customs-soft: #404460;
     --cat-pest_control: #B8C85A;
-    --cat-pest_control-soft: #283010;
+    --cat-pest_control-soft: #475033;
   }
 }
 

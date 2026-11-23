@@ -50,7 +50,7 @@ export function ConfirmDialog({
             width: "100%",
             maxWidth: 440,
             maxHeight: "90%",
-            backgroundColor: colors.surface,
+            backgroundColor: colors.surfaceRaised,
             borderRadius: radius.lg,
             borderWidth: 1,
             borderColor: colors.line,
