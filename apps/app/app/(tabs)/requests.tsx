@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { useCallback, useState } from "react";
 import type { PurchaseRequest } from "@/api/market-types";
 import { PurchaseCard } from "@/components/market";
-import { RequestCard, sortRequests } from "@/components/domain";
+import { EmptyRequests, RequestCard, sortRequests } from "@/components/domain";
 import { useAutoRefresh } from "@/components/flow";
 import { Grid, Screen } from "@/components/layout";
 import { AppText, Button, Chips } from "@/components/ui";
@@ -67,6 +67,8 @@ export default function Requests() {
         )
       ) : (
       <>
+      {/* التصفية بس لما فيه طلبات، وإلا تطلع بطاقة الخطوة الأولى لحالها. */}
+      {state.requests.length > 0 && (
       <Chips<Filter>
         value={filter}
         onChange={setFilter}
@@ -77,9 +79,12 @@ export default function Requests() {
           { value: "done", label: t("filterDone") },
         ]}
       />
-      {list.length === 0 ? (
+      )}
+      {state.requests.length === 0 ? (
+        <EmptyRequests />
+      ) : list.length === 0 ? (
         <AppText variant="bodySm" color="inkMuted">
-          {t("noRequests")}
+          {t("noRequestsInFilter")}
         </AppText>
       ) : (
         <Grid minItemWidth={320} max={2}>

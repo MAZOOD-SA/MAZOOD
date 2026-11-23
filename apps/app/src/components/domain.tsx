@@ -8,7 +8,9 @@ import { useI18n } from "@/i18n/I18nProvider";
 import type { StringKey } from "@/i18n/strings";
 import { useTheme } from "@/theme/ThemeProvider";
 import { CategoryIcon } from "./CategoryIcon";
-import { AppText, Badge, Card, Row, type BadgeTone } from "./ui";
+import { router } from "expo-router";
+import { IconClipboardList, IconPlus } from "./icons";
+import { AppText, Badge, Button, Card, Row, type BadgeTone } from "./ui";
 
 export function CategoryTile({ category, onPress, compact }: { category: Category; onPress: () => void; compact?: boolean }) {
   const { colors } = useTheme();
@@ -125,4 +127,27 @@ export function RequestCard({ request, onPress }: { request: ServiceRequest; onP
 export function sortRequests(list: ServiceRequest[]): ServiceRequest[] {
   const fresh = (r: ServiceRequest) => (r.newOfferCount ?? 0) + (r.unreadMessages ?? 0);
   return [...list].sort((a, b) => fresh(b) - fresh(a) || Date.parse(b.createdAt) - Date.parse(a.createdAt));
+}
+
+/**
+ * «طلباتي» الفاضية: تشرح الخطوة الأولى بدل «ما فيه طلبات»، وفيها زر يفتح طلب جديد.
+ * الزر secondary مو كهرماني، لأن الكهرماني «اطلب عرض» موجود فوق في الرئيسية (زر كهرماني واحد في الشاشة).
+ */
+export function EmptyRequests() {
+  const { t } = useI18n();
+  const { colors } = useTheme();
+  return (
+    <Card style={{ alignItems: "center", gap: spacing["2"], paddingVertical: spacing["6"] }}>
+      <View style={{ width: 48, height: 48, borderRadius: radius.full, backgroundColor: colors.surfaceAlt, alignItems: "center", justifyContent: "center" }}>
+        <IconClipboardList size={24} color={colors.inkMuted} strokeWidth={1.75} />
+      </View>
+      <AppText weight={700} align="center">
+        {t("emptyRequestsTitle")}
+      </AppText>
+      <AppText variant="bodySm" color="inkMuted" align="center" style={{ maxWidth: 360 }}>
+        {t("emptyRequestsBody")}
+      </AppText>
+      <Button label={t("requestOffer")} icon={IconPlus} variant="secondary" style={{ marginTop: spacing["2"], alignSelf: "center" }} onPress={() => router.push("/request/new")} />
+    </Card>
+  );
 }

@@ -5,7 +5,7 @@ import { radius, spacing } from "@mazood/brand";
 import { IconBell, IconPlus } from "@/components/icons";
 import { router } from "expo-router";
 import { Pressable, ScrollView, View } from "react-native";
-import { CategoryTile, RequestCard, sortRequests } from "@/components/domain";
+import { CategoryTile, EmptyRequests, RequestCard, sortRequests } from "@/components/domain";
 import { Grid, SectionTitle, useContentFrame } from "@/components/layout";
 import { useAutoRefresh } from "@/components/flow";
 import { useLayout } from "@/lib/layout";
@@ -100,9 +100,7 @@ export default function Home() {
           />
         </View>
         {recent.length === 0 ? (
-          <AppText variant="bodySm" color="inkMuted">
-            {t("noRequests")}
-          </AppText>
+          <EmptyRequests />
         ) : (
           <Grid minItemWidth={320} max={2}>
             {recent.map((r) => (
