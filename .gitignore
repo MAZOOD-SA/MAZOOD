@@ -43,3 +43,7 @@ graphify-out/
 
 # صور فحص الشاشات (pnpm screens) لو انشغّل بدون مجلد: تتولّد من جديد، ما تنحفظ
 /screens/
+
+# ملفات Python المؤقتة (مهارة watch)
+__pycache__/
+*.pyc
