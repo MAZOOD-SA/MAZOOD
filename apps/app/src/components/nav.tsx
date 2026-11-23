@@ -3,7 +3,7 @@
 import { layout, radius, spacing } from "@mazood/brand";
 import { router, usePathname, type Href } from "expo-router";
 import type { ReactNode } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, useWindowDimensions, View } from "react-native";
 import type { Category, IconComponent } from "@/data/categories";
 import { DOC_LABELS } from "@/data/labels";
 import type { NextStep } from "@/lib/next-step";
@@ -90,9 +90,26 @@ export type SidebarExtras = {
  * القائمة الجانبية، بالترتيب: الشعار، والإجراء، وبطاقة «خطوتك الجاية»، والروابط مع أرقام اللي ينتظر،
  * والأقسام، وتحت: الأدوات وبطاقة الحساب. الروابط تبقى فوق عشان «طلباتي» تبان من أول نظرة.
  */
+/** أقل ارتفاع للشاشة عشان نثبّت الأدوات والحساب تحت. أقل منه (جوال بالعرض أو تكبير ٢٠٠٪) يتمرّرون مع الباقي. */
+const PIN_FOOTER_MIN_HEIGHT = 640;
+
 export function Sidebar({ items, action, next, categories, tools, footer }: SidebarExtras & { items: NavItem[] }) {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { height } = useWindowDimensions();
+  const pinFooter = height >= PIN_FOOTER_MIN_HEIGHT;
+  const bottom = (tools || footer) && (
+    <View
+      style={
+        pinFooter
+          ? { padding: spacing["4"], paddingTop: spacing["3"], gap: spacing["2"], borderTopWidth: 1, borderTopColor: colors.line }
+          : { marginTop: "auto", paddingTop: spacing["4"], gap: spacing["2"] }
+      }
+    >
+      {tools}
+      {footer}
+    </View>
+  );
   const pathname = usePathname();
   return (
     <View
@@ -125,14 +142,10 @@ export function Sidebar({ items, action, next, categories, tools, footer }: Side
             ))}
           </View>
         )}
+        {!pinFooter && bottom}
       </ScrollView>
-      {/* الأدوات وبطاقة الحساب ثابتة تحت دائمًا، والجزء اللي فوقها يتمرّر لو ما كفّت الشاشة. */}
-      {(tools || footer) && (
-        <View style={{ padding: spacing["4"], paddingTop: spacing["3"], gap: spacing["2"], borderTopWidth: 1, borderTopColor: colors.line }}>
-          {tools}
-          {footer}
-        </View>
-      )}
+      {/* الأدوات وبطاقة الحساب ثابتة تحت لما الشاشة طويلة كفاية، والجزء اللي فوقها يتمرّر. */}
+      {pinFooter && bottom}
     </View>
   );
 }
@@ -236,7 +249,7 @@ function NextStepCard({ step }: { step: NextStep }) {
   );
 }
 
-/** صف قسم في القائمة: دائرة القسم بلونه مع الاسم. ارتفاعه ٣٦ (حسب الخطة) ومساحة اللمس ٤٤ بالـhitSlop. */
+/** صف قسم في القائمة: دائرة القسم بلونه مع الاسم. ارتفاعه ٤٤ (أقل مساحة لمس)، لأن hitSlop ما يشتغل في الويب. */
 function SidebarCategory({ category, onPress }: { category: Category; onPress: () => void }) {
   const { colors } = useTheme();
   const { tl } = useI18n();
@@ -245,13 +258,12 @@ function SidebarCategory({ category, onPress }: { category: Category; onPress: (
       accessibilityRole="menuitem"
       accessibilityLabel={tl(category.name)}
       onPress={onPress}
-      hitSlop={{ top: 4, bottom: 4 }}
       style={(state) => [
         {
           flexDirection: "row",
           alignItems: "center",
           gap: spacing["3"],
-          minHeight: 36,
+          minHeight: layout.touchMin,
           paddingHorizontal: spacing["2"],
           borderRadius: radius.md,
           backgroundColor: (state as { hovered?: boolean }).hovered ? colors.line : "transparent",

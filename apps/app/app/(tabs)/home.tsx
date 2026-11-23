@@ -8,6 +8,7 @@ import { Pressable, ScrollView, View } from "react-native";
 import { CategoryTile, EmptyRequests, RequestCard, sortRequests } from "@/components/domain";
 import { Grid, SectionTitle, useContentFrame } from "@/components/layout";
 import { useAutoRefresh } from "@/components/flow";
+import { isolate } from "@/lib/format";
 import { useLayout } from "@/lib/layout";
 import { LogoMark } from "@/components/Logo";
 import { AppText, Button, Card } from "@/components/ui";
@@ -18,7 +19,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 
 export default function Home() {
   const { colors } = useTheme();
-  const { t, tl } = useI18n();
+  const { t, tl, isRTL } = useI18n();
   const { state, factory: FACTORY, profileComplete, refreshRequests } = useStore();
   const unread = state.notifications.some((n) => !n.read);
   // الطلبات اللي فيها عروض جديدة تطلع فوق (docs/plans/phase-4.md، القسم ٦).
@@ -39,15 +40,22 @@ export default function Home() {
                 {t("appName")}
               </AppText>
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel={t("notifications")} onPress={() => router.push("/notifications")} hitSlop={8}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("notifications")}
+              onPress={() => router.push("/notifications")}
+              // ٤٤×٤٤ مساحة لمس (hitSlop ما يشتغل في الويب).
+              style={{ minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}
+            >
               <IconBell size={22} color={colors.ink} strokeWidth={1.75} />
               {unread && (
-                <View style={{ position: "absolute", top: 0, end: 0, width: 8, height: 8, borderRadius: radius.full, backgroundColor: colors.accent }} />
+                <View style={{ position: "absolute", top: 11, end: 11, width: 8, height: 8, borderRadius: radius.full, backgroundColor: colors.accent }} />
               )}
             </Pressable>
           </View>
-          <AppText variant="bodySm" color="inkMuted" style={{ marginTop: 18, fontSize: 13 }}>
-            {profileComplete ? `${tl(FACTORY.name)} · ${tl(FACTORY.city)}` : t("welcome")}
+          {/* اتجاه السطر من لغة الواجهة، والاسم معزول: اسم مثل «Al-Sharq Industrial Co. مصنع الشرق» ما يقلب الترتيب. */}
+          <AppText variant="bodySm" color="inkMuted" style={{ marginTop: 18, fontSize: 13, writingDirection: isRTL ? "rtl" : "ltr" }}>
+            {profileComplete ? `${isolate(tl(FACTORY.name))} · ${tl(FACTORY.city)}` : t("welcome")}
           </AppText>
           <AppText variant="h2" weight={700} style={{ color: colors.ink, fontSize: 22, lineHeight: 30, marginTop: 2 }}>
             {t("homeQuestion")}

@@ -98,3 +98,12 @@ export function formatUntil(iso: string, locale: Locale, now: Date = new Date())
   if (h < 48) return locale === "ar" ? `خلال ${formatDuration(h, locale)}` : `in ${formatDuration(h, locale)}`;
   return formatDate(iso, locale);
 }
+
+/**
+ * يعزل اتجاه نص يدخله المستخدم (مثل اسم منشأة يخلط العربي والإنجليزي) لما ينحط وسط جملة،
+ * عشان اتجاهه ما يقلب ترتيب باقي الجملة. مثال: «Al-Sharq Industrial Co. مصنع الشرق · سدير».
+ * FSI (U+2068) يبدأ العزل ويحدد الاتجاه من أول حرف، وPDI (U+2069) يقفله.
+ */
+export function isolate(text: string): string {
+  return text ? `⁨${text}⁩` : text;
+}

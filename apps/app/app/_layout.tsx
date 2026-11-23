@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { OfflineBanner, PrototypeBanner } from "@/components/layout";
+import { DataVariantToggle } from "@/components/DataVariantToggle";
 import { AccountCard, LanguageThemeTools, NavShell, SidebarTool, navItemsFor } from "@/components/nav";
 import { useSellerEnabled } from "@/components/market";
 import { Button } from "@/components/ui";
@@ -148,6 +149,7 @@ function Shell() {
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }} />
         </NavShell>
       </View>
+      <DataVariantToggle />
     </View>
   );
 }

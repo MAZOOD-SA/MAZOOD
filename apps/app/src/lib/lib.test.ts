@@ -156,3 +156,11 @@ describe("أسئلة صفحة المساعدة", () => {
     expect(FAQ.provider.some((x) => x.a.ar.startsWith("(حاليًا)"))).toBe(true);
   });
 });
+
+describe("عزل اتجاه النص (isolate)", () => {
+  it("يلف النص بعلامتي FSI وPDI عشان اسم يخلط العربي والإنجليزي ما يقلب ترتيب الجملة", async () => {
+    const { isolate } = await import("./format");
+    expect(isolate("Al-Sharq Industrial Co. مصنع الشرق")).toBe("⁨Al-Sharq Industrial Co. مصنع الشرق⁩");
+    expect(isolate("")).toBe("");
+  });
+});

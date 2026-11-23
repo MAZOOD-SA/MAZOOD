@@ -40,6 +40,7 @@ import {
   type FlowAction,
   type FlowActor,
   type RequestStatus,
+  type DocType,
 } from "@mazood/shared";
 import { ApiClientError } from "@/api/errors";
 
@@ -130,6 +131,8 @@ type Db = {
   market: MarketState;
   /** جلسة «الكوكي» في الموقع (الخادم الحقيقي يحطها في كوكي محمي). */
   session: string | null;
+  /** مستندات المزوّد التجريبي القريبة من الانتهاء (فاضية إلا في بيانات «أسوأ حالة»). */
+  demoExpiring?: { docType: DocType; expiresOn: string; expired: boolean }[];
 };
 
 const CITY = "sudair";
@@ -237,7 +240,68 @@ function seed(): Db {
   msg("d2", "p4", "provider", "تمام. نوصل الساعة ٨ الصبح ومعنا غاز للمكيف اللي ما يبرّد.", 26);
   db.reads["d2:u1"] = 1;
   msg("d8", "u3", "customer", "الدرج جنب المستودع رقم ٢. نبي اللون أسود مطفي.", 0.5);
+  applyDataVariant(db, demoDataVariant(), t);
   return db;
+}
+
+// ───────── بيانات «أسوأ حالة» (للفحص بس) ─────────
+// ?data=worst أو ?data=mixed في الرابط أول ما تنفتح النسخة التجريبية (أو زر DataVariantToggle).
+// تختبر الشاشات بقيم حقيقية ممكنة: اسم منشأة طويل، واسم يخلط العربي والإنجليزي، و١٢٠ عرض، ومستند ينتهي اليوم.
+// ما تأثر على الخادم الحقيقي: هذا الملف يشتغل بس في النسخة التجريبية.
+
+export type DemoDataVariant = "demo" | "worst" | "mixed";
+
+export function demoDataVariant(): DemoDataVariant {
+  try {
+    const v = typeof location !== "undefined" ? new URLSearchParams(location.search).get("data") : null;
+    return v === "worst" || v === "mixed" ? v : "demo";
+  } catch {
+    return "demo";
+  }
+}
+
+/** يرجّع النسخة التجريبية لبياناتها الأولى بنوع بيانات معيّن (يستخدمه زر الفحص). */
+export function resetDemoData() {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ما فيه تخزين: البيانات أصلًا تبدأ من جديد.
+  }
+}
+
+export const WORST_CASE = {
+  // ٦٠ حرف بالضبط، وأقل من حد الاسم في الخادم (١٢٠).
+  longName: "شركة مصنع سدير الوطني للصناعات البلاستيكية والتغليف المحدودة".slice(0, 60),
+  mixedName: "Al-Sharq Industrial Co. مصنع الشرق",
+  offers: 120,
+} as const;
+
+function applyDataVariant(db: Db, variant: DemoDataVariant, t: number) {
+  if (variant === "demo") return;
+  const f1 = db.factories.find((f) => f.id === "f1")!;
+  f1.name = variant === "worst" ? WORST_CASE.longName : WORST_CASE.mixedName;
+  // مستند للمزوّد التجريبي ينتهي اليوم.
+  db.demoExpiring = [{ docType: "cr_certificate", expiresOn: iso(t).slice(0, 10), expired: false }];
+  if (variant !== "worst") return;
+  // ١٢٠ عرض على طلب النقل (r1)، كل واحد من مزوّد مختلف، وما انفتح منها شي.
+  for (let n = 1; db.offers.filter((o) => o.requestId === "r1").length < WORST_CASE.offers; n++) {
+    const pid = `pw${n}`;
+    db.providers.push({ id: pid, userId: null, tradeName: `مؤسسة رقم ${n} للنقل والخدمات اللوجستية`, categories: ["transport"], withdrawals: 0, history: n });
+    db.offers.push({
+      id: `ow${n}`,
+      requestId: "r1",
+      providerId: pid,
+      priceHalalas: (2000 + n * 15) * 100,
+      durationHours: 4 + (n % 20),
+      note: null,
+      validUntil: iso(t + SETTING_DEFAULTS.offerValidityHours * HOUR),
+      status: "active",
+      revision: 1,
+      firstSeenAt: null,
+      createdAt: iso(t - (n % 50) * 60_000),
+      updatedAt: iso(t - (n % 50) * 60_000),
+    });
+  }
 }
 
 // ───────── الحفظ في المتصفح ─────────
@@ -556,7 +620,7 @@ function providerMe(u: User) {
       verified: true,
       readyToSubmit: false,
       documents: docs,
-      expiring: [],
+      expiring: db.demoExpiring ?? [],
       rating: rating(p.id),
       commitment: commitment(p),
     },

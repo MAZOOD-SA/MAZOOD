@@ -104,6 +104,24 @@ for (const size of [WIDTHS[0], WIDTHS[2]]) {
   await context.close();
 }
 
+// بيانات «أسوأ حالة» (src/demo/server.ts): اسم منشأة ٦٠ حرف، و١٢٠ عرض، ومستند ينتهي اليوم، واسم يخلط العربي والإنجليزي.
+for (const size of [WIDTHS[0], WIDTHS[2]]) {
+  for (const [data, label, button, routes] of [
+    ["worst", "factory-worst", "ادخل كمنشأة", ["/home", "/requests", "/request/r1", "/help"]],
+    ["worst", "provider-worst", "ادخل كمزوّد", ["/provider/requests"]],
+    ["mixed", "factory-mixed", "ادخل كمنشأة", ["/home", "/account"]],
+  ]) {
+    const context = await browser.newContext({ viewport: { width: size.width, height: size.height } });
+    const page = await context.newPage();
+    page.on("pageerror", (e) => problems.push(`${label} ${size.name}: خطأ في الصفحة: ${e.message}`));
+    await page.goto(`${base}/login?data=${data}`);
+    await page.getByRole("button", { name: button }).click();
+    await page.waitForTimeout(1500);
+    for (const route of routes) await shoot(page, size, route, label);
+    await context.close();
+  }
+}
+
 await browser.close();
 server.close();
 if (problems.length) {
