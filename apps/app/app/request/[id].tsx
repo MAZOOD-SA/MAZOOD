@@ -255,7 +255,7 @@ export default function RequestDetails() {
       )}
 
       {pendingChange && (
-        <Card style={{ gap: spacing["2"], borderColor: colors.accent }}>
+        <Card style={{ gap: spacing["2"], borderColor: colors.ink }}>
           <AppText variant="body" weight={600}>
             {t("priceChangeTitle")}
           </AppText>

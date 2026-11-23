@@ -246,7 +246,7 @@ export function JobCard({ job, newlyAccepted, onPress }: { job: JobSummary; newl
   const type = cat.types.find((x) => x.id === job.typeId);
   const unread = job.unreadMessages ?? 0;
   return (
-    <Card onPress={onPress} style={{ gap: spacing["2"], borderColor: newlyAccepted ? colors.success : unread ? colors.accent : colors.line }}>
+    <Card onPress={onPress} style={{ gap: spacing["2"], borderColor: newlyAccepted ? colors.success : unread ? colors.ink : colors.line }}>
       <Row gap="3" style={{ alignItems: "center" }}>
         {newlyAccepted && <RewardCheck size={40} animate />}
         <View style={{ flex: 1, gap: 2 }}>

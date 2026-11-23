@@ -204,13 +204,13 @@ export function Row({ children, gap = "2", style }: { children: ReactNode; gap?:
   return <View style={[{ flexDirection: "row", alignItems: "center", gap: spacing[gap] }, style]}>{children}</View>;
 }
 
-/** رسالة تنبيه هادئة (خلفية accent-soft). */
+/** رسالة تنبيه هادئة (سطح محايد بإطار line، بدون أصفر: قرار المالك ٢٣ نوفمبر). */
 export function Notice({ text, icon: Icon }: { text: string; icon?: IconComponent }) {
   const { colors } = useTheme();
   return (
-    <View style={{ flexDirection: "row", gap: spacing["2"], backgroundColor: colors.accentSoft, borderRadius: radius.md, padding: spacing["3"] }}>
-      {Icon && <Icon size={18} color={colors.onAccentSoft} strokeWidth={2} />}
-      <AppText variant="bodySm" color="onAccentSoft" style={{ flex: 1 }}>
+    <View style={{ flexDirection: "row", gap: spacing["2"], backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, padding: spacing["3"] }}>
+      {Icon && <Icon size={18} color={colors.ink} strokeWidth={2} />}
+      <AppText variant="bodySm" color="ink" style={{ flex: 1 }}>
         {text}
       </AppText>
     </View>

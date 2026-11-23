@@ -35,10 +35,10 @@ export default function Notifications() {
           <Card
             key={n.id}
             onPress={n.href ? () => router.push(n.href as never) : n.requestId ? () => router.push(`/request/${n.requestId}`) : undefined}
-            style={{ paddingVertical: spacing["3"], backgroundColor: unreadIds.has(n.id) ? colors.accentSoft : colors.surface }}
+            style={{ paddingVertical: spacing["3"], backgroundColor: unreadIds.has(n.id) ? colors.surfaceAlt : colors.surface }}
           >
             <Row style={{ alignItems: "flex-start" }}>
-              {unreadIds.has(n.id) && <View style={{ width: 8, height: 8, borderRadius: radius.full, backgroundColor: colors.accent, marginTop: 8 }} />}
+              {unreadIds.has(n.id) && <View style={{ width: 8, height: 8, borderRadius: radius.full, backgroundColor: colors.ink, marginTop: 8 }} />}
               <View style={{ flex: 1 }}>
                 <AppText variant="bodySm" weight={unreadIds.has(n.id) ? 600 : 400}>
                   {tl(n.text)}

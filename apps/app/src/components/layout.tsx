@@ -117,8 +117,8 @@ export function PrototypeBanner() {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   return (
-    <View style={{ backgroundColor: colors.accentSoft, paddingTop: insets.top + 4, paddingBottom: 4, alignItems: "center" }}>
-      <AppText variant="caption" color="onAccentSoft" weight={600}>
+    <View style={{ backgroundColor: colors.surfaceAlt, paddingTop: insets.top + 4, paddingBottom: 4, alignItems: "center" }}>
+      <AppText variant="caption" color="inkMuted" weight={600}>
         {LIVE ? t("testBanner") : t("prototypeBanner")}
       </AppText>
     </View>

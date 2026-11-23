@@ -132,7 +132,7 @@ export default function ProviderJob() {
       </Card>
 
       {cancellation && (
-        <Card style={{ gap: spacing["2"], borderColor: colors.accent }}>
+        <Card style={{ gap: spacing["2"], borderColor: colors.ink }}>
           <AppText variant="body" weight={600}>
             {t("factoryRequestedCancel")}
           </AppText>
