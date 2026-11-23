@@ -2,13 +2,14 @@
 import { layout, motion, radius, spacing } from "@mazood/brand";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { AccessibilityInfo, Animated, Easing, Image, Pressable, View, type TextStyle } from "react-native";
+import { Animated, Easing, Image, Platform, Pressable, View, type TextStyle } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { fileUrl } from "@/api/client";
 import type { Execution, ProviderCard, TimelineEvent } from "@/api/types";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { StringKey } from "@/i18n/strings";
 import { formatNumber } from "@/lib/format";
+import { useReducedMotion } from "@/lib/motion";
 import { useTheme } from "@/theme/ThemeProvider";
 import { IconStar } from "./icons";
 import { AppText, focusRing, Row, VerifiedBadge } from "./ui";
@@ -32,22 +33,8 @@ export function useAutoRefresh(load: () => Promise<unknown> | void) {
   );
 }
 
-/** «تقليل الحركة» في إعدادات الجوال أو الكمبيوتر: النتيجة تطلع مباشرة بدون حركة. */
-export function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    AccessibilityInfo.isReduceMotionEnabled?.()
-      .then((v) => alive && setReduced(v))
-      .catch(() => {});
-    const sub = AccessibilityInfo.addEventListener?.("reduceMotionChanged", setReduced);
-    return () => {
-      alive = false;
-      sub?.remove?.();
-    };
-  }, []);
-  return reduced;
-}
+// «تقليل الحركة» صار في lib/motion.ts (مستمع واحد للتطبيق كله)، ونعيد تصديره هنا للشاشات القديمة.
+export { useReducedMotion };
 
 /**
  * حركة واجهة صغيرة (مرحلة التصميم و): قيمة تروح لـ١ لما on صحيح ولـ٠ لما يكون خطأ،
@@ -63,7 +50,9 @@ export function useUiTransition(on: boolean): Animated.Value {
       v.setValue(on ? 1 : 0);
       return;
     }
-    const anim = Animated.timing(v, { toValue: on ? 1 : 0, duration: motion.fast, easing: Easing.out(Easing.cubic), useNativeDriver: false });
+    // في الجوال الحركة على خيط الرسم (native driver) فتبقى ناعمة حتى لو التطبيق مشغول.
+    // يصلح لأن القيمة تروح للشفافية والدوران والإزاحة بس. الموقع ما يدعمه فيبقى false هناك.
+    const anim = Animated.timing(v, { toValue: on ? 1 : 0, duration: motion.fast, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== "web" });
     anim.start();
     return () => anim.stop();
   }, [on, reduced, v]);
@@ -81,6 +70,7 @@ function useRewardProgress(run: boolean): number {
     }
     const v = new Animated.Value(0);
     const id = v.addListener(({ value }) => setP(value));
+    // هنا لازم false: الرقم يتحدّث من مستمع (addListener)، والـnative driver ما يرسل القيم للمستمع.
     Animated.timing(v, { toValue: 1, duration: motion.reward, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
     return () => {
       v.removeListener(id);
@@ -158,11 +148,16 @@ export function ProviderLine({ provider, large, nameOnly }: { provider: Provider
   const c = provider.commitment;
   return (
     <View style={{ gap: 2 }}>
-      <Row style={{ flexWrap: "wrap" }}>
-        <AppText variant={large ? "h2" : "body"} weight={600}>
+      {/* الاسم يلتف داخل عموده، والشارة ثابتة جنبه على أول سطر. قبل: الاسم الطويل كان ينزّل الشارة لسطر لحالها. */}
+      <Row style={{ alignItems: "flex-start" }}>
+        <AppText variant={large ? "h2" : "body"} weight={600} style={{ flexShrink: 1 }}>
           {provider.tradeName}
         </AppText>
-        {provider.verified && <VerifiedBadge />}
+        {provider.verified && (
+          <View style={{ flexShrink: 0, marginTop: large ? 4 : 3 }}>
+            <VerifiedBadge />
+          </View>
+        )}
       </Row>
       {!nameOnly && <Row gap="2" style={{ flexWrap: "wrap" }}>
         {r ? (

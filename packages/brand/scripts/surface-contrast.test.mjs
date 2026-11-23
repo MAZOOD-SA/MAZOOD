@@ -1,15 +1,11 @@
-// ألوان الأقسام: لكل قسم لون للأيقونة (cat-<id>) ولون لدائرتها (cat-<id>-soft)، بالفاتح والداكن.
-// الاختبار يتأكد إن كل قسم له التوكنين، وإن الأيقونة تبان (تباين ٣:١ أو أكثر) على دائرتها وعلى خلفية الصفحة.
+// فحوص ألوان الأسطح: الرأس والبطاقات المرفوعة تقرى عليها، وما فيه ألوان أقسام (cat-*).
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { camel, resolveColors } from "./build-tokens.mjs";
+import { resolveColors } from "./build-tokens.mjs";
 
 const root = resolve(import.meta.dirname, "../../..");
 const json = JSON.parse(readFileSync(resolve(root, "brand/tokens.json"), "utf8"));
-
-// نفس قيم CategoryId في packages/shared. لو انضاف قسم، أضفه هنا ومعه توكنيه.
-const CATEGORY_IDS = ["transport", "maintenance", "materials", "security", "cleaning", "customs", "pest_control"];
 
 /** الإضاءة النسبية حسب WCAG 2.x */
 function luminance(hex) {
@@ -23,20 +19,12 @@ function contrast(a, b) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-describe("ألوان الأقسام", () => {
-  for (const theme of ["light", "dark"]) {
-    const colors = resolveColors(json.color.tokens, theme);
-    for (const id of CATEGORY_IDS) {
-      it(`${id} (${theme}): التوكنين موجودين والتباين ٣ أو أكثر`, () => {
-        const fg = colors[camel(`cat-${id}`)];
-        const soft = colors[camel(`cat-${id}-soft`)];
-        if (!fg) throw new Error(`توكن غير موجود: cat-${id}`);
-        if (!soft) throw new Error(`توكن غير موجود: cat-${id}-soft`);
-        expect(contrast(fg, soft)).toBeGreaterThanOrEqual(3);
-        expect(contrast(fg, colors.surface)).toBeGreaterThanOrEqual(3);
-      });
-    }
-  }
+describe("أيقونات الأقسام بلون واحد", () => {
+  // قرار ٢٣ نوفمبر ٢٠٢٦: شلنا ألوان الأقسام السبعة (كانت تخلّي الواجهة تبان جاهزة ومكررة).
+  // الأيقونة بلون النص (ink)، ولون القسم ما يرجع إلا بقرار جديد من المالك.
+  it("ما فيه توكنات cat-*", () => {
+    expect(json.color.tokens.filter((t) => t.name.startsWith("cat-")).map((t) => t.name)).toEqual([]);
+  });
 });
 
 describe("خلفية رأس الرئيسية", () => {
@@ -53,12 +41,11 @@ describe("خلفية رأس الرئيسية", () => {
 
 describe("البطاقات المرفوعة (surface-raised)", () => {
   for (const theme of ["light", "dark"]) {
-    it(`surface-raised (${theme}): النص يقرى عليها، وأيقونات الأقسام تبان`, () => {
+    it(`surface-raised (${theme}): النص والأيقونات تقرى عليها`, () => {
       const colors = resolveColors(json.color.tokens, theme);
       if (!colors.surfaceRaised) throw new Error("توكن غير موجود: surface-raised");
       expect(contrast(colors.ink, colors.surfaceRaised)).toBeGreaterThanOrEqual(4.5);
       expect(contrast(colors.inkMuted, colors.surfaceRaised)).toBeGreaterThanOrEqual(4.5);
-      for (const id of CATEGORY_IDS) expect(contrast(colors[camel(`cat-${id}`)], colors.surfaceRaised)).toBeGreaterThanOrEqual(3);
     });
   }
   it("في الداكن البطاقة أفتح من الصفحة، والرأس أفتح من البطاقة (طبقات واضحة)", () => {

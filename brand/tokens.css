@@ -33,21 +33,6 @@
   --surface-raised: var(--surface);
   /* خلفية رأس الرئيسية: أزرق هادئ مشتق من الكحلي، مسطّحة */
   --hero-surface: #EAF1F8;
-  /* ألوان الأقسام: للأيقونة ودائرتها بس، وما تعني حالة أبد */
-  --cat-transport: #1D63A8;
-  --cat-transport-soft: #E3EEF9;
-  --cat-maintenance: #7A3FB0;
-  --cat-maintenance-soft: #F1E8FA;
-  --cat-materials: #8A5A2B;
-  --cat-materials-soft: #F5ECE2;
-  --cat-security: #0E7381;
-  --cat-security-soft: #DFF2F4;
-  --cat-cleaning: #B0306E;
-  --cat-cleaning-soft: #FBE7F0;
-  --cat-customs: #4A4FB5;
-  --cat-customs-soft: #E9EAF8;
-  --cat-pest_control: #5F6E12;
-  --cat-pest_control-soft: #EEF2DA;
 }
 
 [data-theme="dark"] {
@@ -70,20 +55,6 @@
   --danger: #F08A73;
   --surface-raised: #132A41;
   --hero-surface: #183A5A;
-  --cat-transport: #7DB4EC;
-  --cat-transport-soft: #364A5F;
-  --cat-maintenance: #C39BEA;
-  --cat-maintenance-soft: #4B425E;
-  --cat-materials: #D9A877;
-  --cat-materials-soft: #51463B;
-  --cat-security: #5CC6D3;
-  --cat-security-soft: #2C4F57;
-  --cat-cleaning: #EE8DBA;
-  --cat-cleaning-soft: #573E50;
-  --cat-customs: #9EA3F0;
-  --cat-customs-soft: #404460;
-  --cat-pest_control: #B8C85A;
-  --cat-pest_control-soft: #475033;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -107,20 +78,6 @@
     --danger: #F08A73;
     --surface-raised: #132A41;
     --hero-surface: #183A5A;
-    --cat-transport: #7DB4EC;
-    --cat-transport-soft: #364A5F;
-    --cat-maintenance: #C39BEA;
-    --cat-maintenance-soft: #4B425E;
-    --cat-materials: #D9A877;
-    --cat-materials-soft: #51463B;
-    --cat-security: #5CC6D3;
-    --cat-security-soft: #2C4F57;
-    --cat-cleaning: #EE8DBA;
-    --cat-cleaning-soft: #573E50;
-    --cat-customs: #9EA3F0;
-    --cat-customs-soft: #404460;
-    --cat-pest_control: #B8C85A;
-    --cat-pest_control-soft: #475033;
   }
 }
 
@@ -131,9 +88,9 @@
   --space-4: 16px;
   --space-6: 24px;
   --space-8: 32px;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
   --radius-full: 999px;
   --font-sans: "IBM Plex Sans Arabic", Tahoma, system-ui, sans-serif;
   /* المقاسات: جوال أقل من tablet، وتابلت لين desktop، وكمبيوتر من desktop وأكثر.

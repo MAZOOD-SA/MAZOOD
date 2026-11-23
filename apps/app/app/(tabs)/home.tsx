@@ -2,16 +2,16 @@
 // الإجراء الأهم «اطلب عرض» هو زر accent الوحيد في الشاشة.
 // الرأس أزرق هادئ مسطّح (hero-surface) بدل الكحلي المليان: بدون تدرّج ولا حركة، حسب brand/BRAND.md.
 import { radius, spacing } from "@mazood/brand";
-import { IconBell, IconPlus } from "@/components/icons";
+import { IconBell, IconBuildingStore, IconChevronLeft, IconChevronRight, IconPlus } from "@/components/icons";
 import { router } from "expo-router";
 import { Pressable, ScrollView, View } from "react-native";
-import { CategoryTile, EmptyRequests, RequestCard, sortRequests } from "@/components/domain";
-import { Grid, SectionTitle, useContentFrame } from "@/components/layout";
+import { CategoryGrid, EmptyRequests, ListFrame, ListRow, RequestCard, sortRequests } from "@/components/domain";
+import { SectionTitle, useContentFrame } from "@/components/layout";
 import { useAutoRefresh } from "@/components/flow";
 import { isolate } from "@/lib/format";
 import { useLayout } from "@/lib/layout";
 import { LogoMark } from "@/components/Logo";
-import { AppText, Button, Card } from "@/components/ui";
+import { AppText, Button, Card, Row } from "@/components/ui";
 import { CATEGORIES } from "@/data/categories";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -27,6 +27,7 @@ export default function Home() {
   const width = useContentFrame("page");
   const { split } = useLayout();
   useAutoRefresh(refreshRequests);
+  const Chevron = isRTL ? IconChevronLeft : IconChevronRight;
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.surface }}>
@@ -57,16 +58,17 @@ export default function Home() {
           <AppText variant="bodySm" color="inkMuted" style={{ marginTop: 18, fontSize: 13, writingDirection: isRTL ? "rtl" : "ltr" }}>
             {profileComplete ? `${isolate(tl(FACTORY.name))} · ${tl(FACTORY.city)}` : t("welcome")}
           </AppText>
-          <AppText variant="h2" weight={700} style={{ color: colors.ink, fontSize: 22, lineHeight: 30, marginTop: 2 }}>
+          <AppText variant="h1" style={{ color: colors.ink, marginTop: 2 }}>
             {t("homeQuestion")}
           </AppText>
+          {/* في الجوال الزر بعرض الشاشة (قريب من الإبهام)، وفي الكمبيوتر على قد نصه: زر بعرض ١١٠٠px شكل قالب جاهز. */}
           <Button
             label={t("requestOffer")}
             icon={IconPlus}
             variant="accent"
             size="lg"
-            full
-            style={{ marginTop: 14 }}
+            full={!split}
+            style={{ marginTop: 14, ...(split ? { paddingHorizontal: spacing["8"] } : null) }}
             onPress={() => router.push("/request/new")}
           />
         </View>
@@ -83,21 +85,31 @@ export default function Home() {
           </Card>
         )}
         <SectionTitle title={t("categories")} />
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing["2"] }}>
-          {CATEGORIES.map((c) => (
-            <View key={c.id} style={{ width: split ? "13%" : "31.5%", flexGrow: 1 }}>
-              <CategoryTile compact category={c} onPress={() => router.push({ pathname: "/request/new", params: { category: c.id } })} />
-            </View>
-          ))}
-        </View>
+        <CategoryGrid
+          categories={CATEGORIES}
+          columns={split ? 4 : 2}
+          onPick={(c) => router.push({ pathname: "/request/new", params: { category: c.id } })}
+        />
 
-        {/* مدخل السوق من الرئيسية (خطة السوق، القسم ٥). */}
-        <Card onPress={() => router.push("/shop")} style={{ gap: spacing["1"] }}>
-          <AppText weight={700}>{t("marketEntryTitle")}</AppText>
-          <AppText variant="bodySm" color="inkMuted">
-            {t("marketEntryHint")}
-          </AppText>
-        </Card>
+        {/* مدخل السوق من الرئيسية (خطة السوق، القسم ٥): صف واضح إنه ينضغط (أيقونة وسهم)، مو صندوق فاضي. */}
+        <ListFrame>
+          {[
+            <ListRow key="market" onPress={() => router.push("/shop")} label={t("marketEntryTitle")}>
+              <Row gap="3">
+                <IconBuildingStore size={24} color={colors.ink} strokeWidth={1.75} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText variant="bodySm" weight={600}>
+                    {t("marketEntryTitle")}
+                  </AppText>
+                  <AppText variant="caption" color="inkMuted">
+                    {t("marketEntryHint")}
+                  </AppText>
+                </View>
+                <Chevron size={20} color={colors.inkMuted} strokeWidth={1.75} />
+              </Row>
+            </ListRow>,
+          ]}
+        </ListFrame>
 
         <View style={{ marginTop: spacing["2"] }}>
           <SectionTitle
@@ -110,11 +122,11 @@ export default function Home() {
         {recent.length === 0 ? (
           <EmptyRequests />
         ) : (
-          <Grid minItemWidth={320} max={2}>
+          <ListFrame>
             {recent.map((r) => (
               <RequestCard key={r.id} request={r} onPress={() => router.push(`/request/${r.id}`)} />
             ))}
-          </Grid>
+          </ListFrame>
         )}
       </View>
     </ScrollView>

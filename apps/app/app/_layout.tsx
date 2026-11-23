@@ -18,7 +18,7 @@ import { useSellerEnabled } from "@/components/market";
 import { Button } from "@/components/ui";
 import { IconHelpCircle, IconPlus } from "@/components/icons";
 import { useCan } from "@/data/useAdmin";
-import { CATEGORIES, categoryById, type CategoryId } from "@/data/categories";
+import { categoryById, type CategoryId } from "@/data/categories";
 import type { ProviderView } from "@/data/provider-types";
 import type { OpenRequest } from "@/api/types";
 import { useLayout } from "@/lib/layout";
@@ -97,6 +97,7 @@ function Shell() {
   const accountTitle = role === "factory" && profileComplete ? tl(factory.name) : phone;
   const roleLabel = role === "factory" ? t("factory") : role === "provider" ? t("providerAccount") : t("staffAccount");
   const { sidebar } = useLayout();
+  const pathname = usePathname();
   const providerData = useSidebarProviderData(state.signedIn && role === "provider" && sidebar);
   const next = state.signedIn
     ? nextStep({
@@ -108,11 +109,9 @@ function Shell() {
         today: localIso(),
       })
     : null;
-  // الأقسام: العميل يشوف السبعة ويفتح طلب جديد في القسم، والمزوّد يشوف أقسامه ويفلتر الطلبات المتاحة.
+  // الأقسام في القائمة الجانبية للمزوّد بس (تفلتر الطلبات المتاحة). العميل يشوفها في الرئيسية، فتكرارها هنا زحمة.
   const sidebarCategories =
-    role === "factory"
-      ? CATEGORIES.map((c) => ({ category: c, onPress: () => router.push({ pathname: "/request/new", params: { category: c.id } }) }))
-      : role === "provider"
+    role === "provider"
         ? ((providerData?.provider?.categories ?? []) as CategoryId[]).map((id) => ({
             category: categoryById(id),
             onPress: () => router.navigate({ pathname: "/provider/requests", params: { category: id } }),
@@ -126,8 +125,13 @@ function Shell() {
       <View style={{ flex: 1 }}>
         <NavShell
           items={items}
-          // «طلب جديد» زر عادي (مو كهرماني)، لأن الكهرماني واحد بس في الشاشة وهو «اطلب عرض» في الرئيسية.
-          action={role === "factory" ? <Button label={t("newRequestShort")} icon={IconPlus} variant="secondary" full onPress={() => router.push("/request/new")} /> : undefined}
+          // «اطلب عرض» زر عادي (مو كهرماني)، لأن الكهرماني واحد بس في الشاشة. وفي الرئيسية ما يطلع،
+          // لأن نفس الزر كهرماني في رأسها: زرين لنفس الشي بكلمتين مختلفة كانت تلخبط.
+          action={
+            role === "factory" && pathname !== "/home" && pathname !== "/" ? (
+              <Button label={t("requestOffer")} icon={IconPlus} variant="secondary" full onPress={() => router.push("/request/new")} />
+            ) : undefined
+          }
           next={next}
           categories={sidebarCategories}
           tools={

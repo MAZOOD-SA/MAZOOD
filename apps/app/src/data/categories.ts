@@ -9,7 +9,6 @@ import {
   IconTool,
   IconTruck,
 } from "@/components/icons";
-import type { ColorName } from "@mazood/brand";
 import type { ComponentType } from "react";
 import type { ColorValue } from "react-native";
 import type { Localized } from "@/i18n/I18nProvider";
@@ -107,14 +106,4 @@ export function categoryById(id: CategoryId): Category {
   const c = CATEGORIES.find((x) => x.id === id);
   if (!c) throw new Error(`قسم غير معروف: ${id}`);
   return c;
-}
-
-/**
- * توكنات لون القسم: fg للأيقونة، وsoft للدائرة اللي وراها (brand/tokens.json: cat-<id> وcat-<id>-soft).
- * لون القسم للأيقونة بس، وما يعني حالة. والاختبار يتأكد إن لكل قسم توكنين.
- */
-export function categoryColorKeys(id: CategoryId): { fg: ColorName; soft: ColorName } {
-  // نفس تحويل camel() في packages/brand/scripts/build-tokens.mjs: "cat-pest_control" → "catPest_control"
-  const base = `cat${id.charAt(0).toUpperCase()}${id.slice(1)}`;
-  return { fg: base as ColorName, soft: `${base}Soft` as ColorName };
 }

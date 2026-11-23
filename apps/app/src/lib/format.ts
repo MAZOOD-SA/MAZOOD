@@ -88,6 +88,18 @@ export function formatDuration(hours: number, locale: Locale): string {
   return hours === 1 ? "1 hour" : `${n(hours)} hours`;
 }
 
+/**
+ * صيغة العدد في العربي: واحد، ومثنى، و٣-١٠ جمع («٥ عروض»)، و١١ وأكثر مفرد («١٢٠ عرض»).
+ * نستخدمها عشان ما يطلع «١٢٠ عروض». الإنجليزي يكفيه one/many.
+ */
+export function arabicCountForm(n: number): "one" | "two" | "few" | "many" {
+  const k = Math.abs(n) % 100;
+  if (n === 1) return "one";
+  if (n === 2) return "two";
+  if (k >= 3 && k <= 10) return "few";
+  return "many";
+}
+
 /** وقت في المستقبل (صلاحية العرض، ومهلة الرد): «خلال ٥ ساعات»، أو التاريخ لو بعيد. */
 export function formatUntil(iso: string, locale: Locale, now: Date = new Date()): string {
   const diffMin = Math.round((new Date(iso).getTime() - now.getTime()) / 60000);

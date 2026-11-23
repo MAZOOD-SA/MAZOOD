@@ -24,6 +24,7 @@ const DURATIONS = [2, 4, 8, 24, 48, 72] as const;
 /** صلاحية العرض: بالكثير الإعداد offerValidityHours (٤٨ ساعة الحين). */
 const VALIDITIES = [12, 24, SETTING_DEFAULTS.offerValidityHours] as const;
 
+import { arabicCountForm } from "@/lib/format";
 import { parseRiyals } from "@/lib/money";
 
 export { parseRiyals };
@@ -38,7 +39,7 @@ export function OpenRequestCard({ request, selected, onPress }: { request: OpenR
     <Card onPress={onPress} style={{ gap: spacing["2"], borderWidth: selected ? 2 : 1, borderColor: selected ? colors.ink : colors.line }}>
       <Row gap="3" style={{ alignItems: "flex-start" }}>
         <Icon size={22} color={colors.inkMuted} strokeWidth={1.75} />
-        <View style={{ flex: 1, gap: 2 }}>
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
           <AppText variant="body" weight={600}>
             {type ? tl(type.name) : tl(cat.name)}
           </AppText>
@@ -47,13 +48,24 @@ export function OpenRequestCard({ request, selected, onPress }: { request: OpenR
             {t(request.when === "today" ? "whenToday" : request.when === "tomorrow" ? "whenTomorrow" : "whenThisWeek")}
           </AppText>
         </View>
-        {request.myOffer ? <Badge label={t("offerSent")} tone="ok" /> : <Badge label={relative(request.createdAt)} tone="muted" />}
+        {/* الوقت نص ثانوي، والكبسولة للحالة بس («عرضك مرسل»). */}
+        {request.myOffer ? (
+          <Badge label={t("offerSent")} tone="ok" />
+        ) : (
+          <AppText variant="caption" color="inkMuted" style={{ flexShrink: 0 }}>
+            {relative(request.createdAt)}
+          </AppText>
+        )}
       </Row>
       <AppText variant="bodySm" numberOfLines={2}>
         {request.details}
       </AppText>
       <AppText variant="caption" color="inkMuted">
-        {request.offerCount === 0 ? t("noOffersYetBeFirst") : t("offersSoFar", { n: num(request.offerCount) })}
+        {request.offerCount === 0
+          ? t("noOffersYetBeFirst")
+          : t({ one: "offersSoFarOne", two: "offersSoFarTwo", few: "offersSoFarFew", many: "offersSoFar" }[arabicCountForm(request.offerCount)] as "offersSoFar", {
+              n: num(request.offerCount),
+            })}
       </AppText>
     </Card>
   );

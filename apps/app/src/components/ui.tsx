@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
+  ScrollView,
   Text,
   View,
   type PressableProps,
@@ -16,6 +17,7 @@ import {
 } from "react-native";
 import type { IconComponent } from "@/data/categories";
 import { useI18n } from "@/i18n/I18nProvider";
+import { pressFeedback, useReducedMotion } from "@/lib/motion";
 import { useTheme } from "@/theme/ThemeProvider";
 
 // ───────── النص ─────────
@@ -35,7 +37,8 @@ export function AppText({ variant = "body", color = "ink", weight, align, style,
     <Text
       {...rest}
       style={[
-        { fontFamily: fontFamilyByWeight[w], fontSize: t.fontSize, lineHeight: t.lineHeight, color: colors[color], textAlign: align },
+        // tabular-nums: كل رقم بنفس العرض، فالأسعار والأعداد تصطف تحت بعض وما ترقص لما تتغيّر.
+        { fontFamily: fontFamilyByWeight[w], fontSize: t.fontSize, lineHeight: t.lineHeight, color: colors[color], textAlign: align, fontVariant: ["tabular-nums"] },
         style,
       ]}
     />
@@ -74,6 +77,7 @@ type ButtonProps = Omit<PressableProps, "style" | "children"> & {
 
 export function Button({ label, variant = "primary", icon: Icon, full, size = "md", loading, tone = "default", disabled, style, ...rest }: ButtonProps) {
   const { colors } = useTheme();
+  const reduced = useReducedMotion();
   const look: Record<ButtonVariant, { bg: string; fg: string; border: string }> = {
     accent: { bg: colors.accent, fg: colors.onAccent, border: colors.accent },
     primary: { bg: colors.btnPrimaryBg, fg: colors.btnPrimaryFg, border: colors.btnPrimaryBorder },
@@ -105,6 +109,7 @@ export function Button({ label, variant = "primary", icon: Icon, full, size = "m
           opacity: disabled ? 0.5 : state.pressed ? 0.85 : (state as InteractionState).hovered ? 0.92 : 1,
           alignSelf: full ? "stretch" : "flex-start",
         },
+        pressFeedback(state.pressed && !disabled, reduced),
         focusRing(state, colors),
         style,
       ]}
@@ -143,7 +148,7 @@ export function Badge({ label, tone, icon: Icon }: { label: string; tone: BadgeT
         alignItems: "center",
         gap: spacing["1"],
         backgroundColor: l.bg,
-        borderRadius: radius.full,
+        borderRadius: radius.sm,
         paddingVertical: 2,
         paddingHorizontal: spacing["2"],
         alignSelf: "flex-start",
@@ -167,6 +172,7 @@ export function VerifiedBadge() {
 
 export function Card({ children, style, onPress }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void }) {
   const { colors } = useTheme();
+  const reduced = useReducedMotion();
   const base: ViewStyle = {
     backgroundColor: colors.surfaceRaised, // في الداكن أفتح من الصفحة (طبقة مرفوعة)
     borderColor: colors.line,
@@ -181,7 +187,10 @@ export function Card({ children, style, onPress }: { children: ReactNode; style?
         onPress={onPress}
         style={(state) => [
           base,
-          { opacity: state.pressed ? 0.85 : 1, borderColor: (state as InteractionState).hovered ? colors.lineStrong : colors.line },
+          { opacity: state.pressed ? 0.9 : 1, borderColor: (state as InteractionState).hovered ? colors.lineStrong : colors.line },
+          // البطاقة أكبر من الزر، فتصغر أقل (٠٫٩٩) عشان ما تبان إنها تنهار. والانتقال يشمل لون الإطار،
+          // فاختيار عرض في المقارنة (إطار أغمق) يتغيّر بنعومة مو فجأة.
+          pressFeedback(state.pressed, reduced, 0.99),
           focusRing(state, colors),
           style,
         ]}
@@ -222,14 +231,17 @@ export function Chips<T extends string>({
   options,
   value,
   onChange,
+  scroll,
 }: {
   options: { value: T; label: string }[];
   value: T | null;
   onChange: (v: T) => void;
+  /** سطر واحد يتمرّر أفقيًا بدل ما يلتف على كذا سطر (للفلاتر الكثيرة مثل أقسام السوق). */
+  scroll?: boolean;
 }) {
   const { colors } = useTheme();
-  return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing["2"] }}>
+  const items = (
+    <>
       {options.map((o) => {
         const selected = o.value === value;
         return (
@@ -256,6 +268,14 @@ export function Chips<T extends string>({
           </Pressable>
         );
       })}
-    </View>
+    </>
+  );
+  // ScrollView ثابت (مو مكوّن يتعرّف داخل الدالة)، عشان مكان التمرير ما يرجع للبداية مع كل اختيار.
+  return scroll ? (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing["2"] }}>
+      {items}
+    </ScrollView>
+  ) : (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing["2"] }}>{items}</View>
   );
 }

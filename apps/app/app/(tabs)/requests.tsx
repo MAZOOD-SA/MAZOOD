@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { useCallback, useState } from "react";
 import type { PurchaseRequest } from "@/api/market-types";
 import { PurchaseCard } from "@/components/market";
-import { EmptyRequests, RequestCard, sortRequests } from "@/components/domain";
+import { EmptyRequests, ListFrame, RequestCard, sortRequests } from "@/components/domain";
 import { useAutoRefresh } from "@/components/flow";
 import { Grid, Screen } from "@/components/layout";
 import { AppText, Button, Chips } from "@/components/ui";
@@ -87,11 +87,11 @@ export default function Requests() {
           {t("noRequestsInFilter")}
         </AppText>
       ) : (
-        <Grid minItemWidth={320} max={2}>
+        <ListFrame>
           {list.map((r) => (
             <RequestCard key={r.id} request={r} onPress={() => router.push(`/request/${r.id}`)} />
           ))}
-        </Grid>
+        </ListFrame>
       )}
       </>
       )}

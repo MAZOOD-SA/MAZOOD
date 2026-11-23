@@ -50,6 +50,7 @@ export function MarketBrowse({ publicPage }: { publicPage?: boolean }) {
       <Chips
         value={category}
         onChange={setCategory}
+        scroll
         options={[{ value: "all", label: t("marketAll") }, ...categories.map((c) => ({ value: c.id, label: tl(c.name) }))]}
       />
       {data?.comingSoon ? (

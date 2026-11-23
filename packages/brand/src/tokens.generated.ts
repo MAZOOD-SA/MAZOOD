@@ -28,21 +28,7 @@ export const colors = {
     "successSoft": "#E3F4EC",
     "danger": "#B93A26",
     "surfaceRaised": "#FFFFFF",
-    "heroSurface": "#EAF1F8",
-    "catTransport": "#1D63A8",
-    "catTransportSoft": "#E3EEF9",
-    "catMaintenance": "#7A3FB0",
-    "catMaintenanceSoft": "#F1E8FA",
-    "catMaterials": "#8A5A2B",
-    "catMaterialsSoft": "#F5ECE2",
-    "catSecurity": "#0E7381",
-    "catSecuritySoft": "#DFF2F4",
-    "catCleaning": "#B0306E",
-    "catCleaningSoft": "#FBE7F0",
-    "catCustoms": "#4A4FB5",
-    "catCustomsSoft": "#E9EAF8",
-    "catPest_control": "#5F6E12",
-    "catPest_controlSoft": "#EEF2DA"
+    "heroSurface": "#EAF1F8"
   },
   "dark": {
     "navy": "#0F2A44",
@@ -70,21 +56,7 @@ export const colors = {
     "successSoft": "#12352A",
     "danger": "#F08A73",
     "surfaceRaised": "#132A41",
-    "heroSurface": "#183A5A",
-    "catTransport": "#7DB4EC",
-    "catTransportSoft": "#364A5F",
-    "catMaintenance": "#C39BEA",
-    "catMaintenanceSoft": "#4B425E",
-    "catMaterials": "#D9A877",
-    "catMaterialsSoft": "#51463B",
-    "catSecurity": "#5CC6D3",
-    "catSecuritySoft": "#2C4F57",
-    "catCleaning": "#EE8DBA",
-    "catCleaningSoft": "#573E50",
-    "catCustoms": "#9EA3F0",
-    "catCustomsSoft": "#404460",
-    "catPest_control": "#B8C85A",
-    "catPest_controlSoft": "#475033"
+    "heroSurface": "#183A5A"
   }
 } as const;
 
@@ -98,9 +70,9 @@ export const spacing = {
 } as const;
 
 export const radius = {
-  "sm": 6,
-  "md": 10,
-  "lg": 16,
+  "sm": 4,
+  "md": 6,
+  "lg": 8,
   "full": 999
 } as const;
 

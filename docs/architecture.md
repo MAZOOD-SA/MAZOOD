@@ -243,7 +243,8 @@
 - `src/api/types.ts`: شكل ردود الخادم لشاشات المرحلة ٤.
 - `src/demo/server.ts`: الخادم التجريبي داخل المتصفح (القرار ٣٦). وفيه بيانات «أسوأ حالة» للفحص (`?data=worst` أو `?data=mixed`، القرار ٥٤)، وزرها `src/components/DataVariantToggle.tsx` (للتطوير بس).
 - `src/lib/next-step.ts`: بطاقة «خطوتك الجاية» في القائمة الجانبية (دالة صافية مع اختبارات، القرار ٥٤).
-- `src/components/CategoryIcon.tsx`: أيقونة القسم بلونه (`cat-*` في التوكنز).
+- `src/components/CategoryIcon.tsx`: أيقونة القسم بلون النص، بدون دائرة (القرار ٥٥).
+- `src/lib/motion.ts`: «تقليل الحركة» (مستمع واحد للتطبيق) و`pressFeedback` (ردة فعل الضغط للأزرار والبطاقات).
 - `src/components/flow.tsx`: التحديث كل ٢٠ ثانية (`useAutoRefresh`)، وحركة المكافأة (`CountUp` و`RewardCheck`، تحترم «تقليل الحركة»)، والنجوم، والخط الزمني.
 - `src/components/provider.tsx`: بطاقة الطلب المتاح، ونموذج العرض، وبطاقة الشغل.
 - `src/components/account.tsx`: التفضيلات، وطلب حذف الحساب، والخروج.

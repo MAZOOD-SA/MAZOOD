@@ -53,6 +53,7 @@ export default function AvailableRequests() {
           value={category}
           // القسم يتكتب في الرابط، فالرابط هو المرجع الوحيد: الضغط على نفس القسم في القائمة الجانبية بعدين يشتغل.
           onChange={(v) => router.setParams({ category: v === "all" ? undefined : v })}
+          scroll
           options={[{ value: "all", label: t("filterAll") }, ...categories.map((c) => ({ value: c, label: tl(categoryById(c).name) }))]}
         />
       )}

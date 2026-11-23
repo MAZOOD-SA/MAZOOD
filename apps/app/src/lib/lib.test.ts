@@ -117,18 +117,10 @@ describe("تصغير صورة المنتج", () => {
   });
 });
 
-describe("ألوان الأقسام", () => {
-  it("لكل قسم توكنين موجودين في الفاتح والداكن ومختلفين", async () => {
-    const { colors } = await import("@mazood/brand");
-    const { CATEGORIES, categoryColorKeys } = await import("@/data/categories");
-    for (const c of CATEGORIES) {
-      const { fg, soft } = categoryColorKeys(c.id);
-      expect(colors.light[fg], `${c.id} fg`).toBeTruthy();
-      expect(colors.light[soft], `${c.id} soft`).toBeTruthy();
-      expect(colors.dark[fg], `${c.id} fg dark`).toBeTruthy();
-      expect(colors.dark[soft], `${c.id} soft dark`).toBeTruthy();
-      expect(fg).not.toBe(soft);
-    }
+describe("صيغة العدد في العربي", () => {
+  it("واحد ومثنى وجمع ومفرد بعد العشرة (ما يطلع «١٢٠ عروض»)", async () => {
+    const { arabicCountForm } = await import("./format");
+    expect([1, 2, 3, 10, 11, 99, 100, 103, 120].map(arabicCountForm)).toEqual(["one", "two", "few", "few", "many", "many", "many", "few", "many"]);
   });
 });
 

@@ -563,11 +563,16 @@ function OfferCompareCard({ offer, selected, nominated, onSelect }: { offer: Fac
           {t("priceExcludesVat")}
         </AppText>
       </View>
-      <Row gap="2" style={{ flexWrap: "wrap" }}>
-        <Badge label={duration(offer.durationHours)} tone="muted" />
-        {offer.revised && <Badge label={t("offerRevised")} tone="muted" />}
-        {nominated && <Badge label={t("nominatedBadge")} tone="new" />}
-      </Row>
+      {/* المدة نص واضح مو كبسولة: «١٠ ساعات» لحالها ما تقول وش هي. والكبسولات للحالات بس. */}
+      <AppText variant="bodySm" weight={600}>
+        {t("doneWithin", { d: duration(offer.durationHours) })}
+      </AppText>
+      {(offer.revised || nominated) && (
+        <Row gap="2" style={{ flexWrap: "wrap" }}>
+          {offer.revised && <Badge label={t("offerRevised")} tone="muted" />}
+          {nominated && <Badge label={t("nominatedBadge")} tone="new" />}
+        </Row>
+      )}
       {!!offer.note && (
         <AppText variant="bodySm" color="ink">
           {offer.note}

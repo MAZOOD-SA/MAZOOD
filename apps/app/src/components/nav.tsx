@@ -405,7 +405,7 @@ export function AccountCard({ title, subtitle, onSignOut }: { title: string; sub
         <IconUser size={18} color={colors.inkMuted} strokeWidth={1.75} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <AppText variant="label" numberOfLines={1}>
+        <AppText variant="label" numberOfLines={2}>
           {title}
         </AppText>
         <AppText variant="caption" color="inkMuted" numberOfLines={1}>

@@ -58,7 +58,8 @@ export function ProductCard({ product, onPress, showStatus }: { product: MarketP
   const unit = useUnit();
   return (
     <Card onPress={onPress} style={{ gap: spacing["2"] }}>
-      <ProductImage url={product.images[0]?.url} size="full" />
+      {/* الصورة بس لو المصنع رفعها. مربع رمادي فيه صندوق في كل بطاقة كان يملأ الشاشة بدون أي معلومة. */}
+      {!!product.images[0]?.url && <ProductImage url={product.images[0].url} size="full" />}
       <AppText weight={700} numberOfLines={2}>
         {product.name}
       </AppText>
