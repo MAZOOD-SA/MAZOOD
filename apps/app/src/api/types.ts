@@ -30,7 +30,7 @@ export type FactoryOffer = {
   price: Price;
   durationHours: number;
   note: string | null;
-  /** «يشمل / ما يشمل» (القرار ٥٧). null: عرض قبل الميزة. */
+  /** «يشمل / ما يشمل» (القرار ٥٨). null: عرض قبل الميزة. */
   inclusions?: Inclusions | null;
   validUntil: string;
   status: "active" | "accepted";

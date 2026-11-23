@@ -22,6 +22,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { audit } from "../audit.ts";
 import { resolveCityId } from "../cities.ts";
+import { requireActiveProvider } from "../provider-access.ts";
 import type { Db } from "../db.ts";
 import { ApiError } from "../errors.ts";
 import { actorOf, parse, todayRiyadh, type Ctx, type Guards } from "../http.ts";
@@ -107,7 +108,9 @@ type PurchaseRow = {
   id: string;
   product_id: string;
   seller_id: string;
-  buyer_factory_id: string;
+  /** المشتري واحد بس: عميل أو مزوّد (قيد في قاعدة البيانات، الترحيل 017). */
+  buyer_factory_id: string | null;
+  buyer_provider_id: string | null;
   buyer_user_id: string;
   quantity: number;
   city_id: string;
@@ -167,7 +170,10 @@ async function purchaseView(db: Db, p: PurchaseRow, viewer: "buyer" | "seller", 
     [p.product_id],
   );
   const [seller] = await db.query<{ name: string | null }>("SELECT name FROM factories WHERE id=$1", [p.seller_id]);
-  const [buyer] = await db.query<{ name: string | null; kind: string | null }>("SELECT name, kind FROM factories WHERE id=$1", [p.buyer_factory_id]);
+  // المشتري مزوّد: البائع يشوف «مزوّد» قبل الاتفاق، والاسم التجاري بعده.
+  const [buyer] = p.buyer_provider_id
+    ? await db.query<{ name: string | null; kind: string | null }>("SELECT trade_name AS name, 'provider' AS kind FROM providers WHERE id=$1", [p.buyer_provider_id])
+    : await db.query<{ name: string | null; kind: string | null }>("SELECT name, kind FROM factories WHERE id=$1", [p.buyer_factory_id]);
   const [rated] = await db.query("SELECT 1 FROM seller_ratings WHERE purchase_request_id=$1", [p.id]);
   const status = effectivePurchaseStatus(p, quote ?? null, now);
   const agreed = p.status === "accepted" || p.status === "received";
@@ -591,18 +597,47 @@ export function marketRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
 
   // ───────── المشتري ─────────
 
-  /** العميل اللي يقدر يشتري: نوعه في إعداد buyerKinds، وبياناته مكتملة. */
+  /**
+   * المشتري من الجلسة: عميل (منشأة أو فرد) أو مزوّد (قرار ٥٧). يرجّع اسم العمود اللي يربط الطلب فيه،
+   * وكل استعلام بعدها يقيّد بهذا العمود عشان ما أحد يشوف طلب غيره (404).
+   * العمود من قيمتين ثابتة هنا، مو من المستخدم، فإدخاله في نص الاستعلام آمن.
+   */
+  async function buyerSession(req: FastifyRequest) {
+    const user = await g.authenticate(req);
+    if (user.role === "provider") {
+      // القراءة والأزرار لأي مزوّد عنده طلبات، حتى لو انوقف بعدها (ولا مرة طريق مسدود).
+      // إنشاء طلب جديد يحتاج توثيق فعّال (requireBuyer تحت).
+      const [pr] = await db.query<{ id: string }>("SELECT id FROM providers WHERE user_id=$1", [user.id]);
+      // بدون ملف = ما توثّق بعد (نفس رسالة requireActiveProvider، والتطبيق يوجّهه لإكمال التوثيق).
+      if (!pr) throw new ApiError(403, "provider_not_verified");
+      return { user, column: "buyer_provider_id" as const, buyerId: pr.id };
+    }
+    const { factoryId } = await g.requireFactory(req);
+    return { user, column: "buyer_factory_id" as const, buyerId: factoryId };
+  }
+  type BuyerSession = Awaited<ReturnType<typeof buyerSession>>;
+
+  /**
+   * اللي يقدر يطلب طلب جديد: نوعه في إعداد buyerKinds.
+   *  - العميل: بياناته مكتملة.
+   *  - المزوّد: موثّق فعليًا (مستنداته مقبولة وما انتهت، ومو موقوف)، مثل شرط إرسال العروض.
+   */
   async function requireBuyer(req: FastifyRequest) {
-    const s = await g.requireFactory(req);
-    const [f] = await db.query<CustomerRow>("SELECT * FROM factories WHERE id=$1", [s.factoryId]);
+    const b = await buyerSession(req);
     const { buyerKinds } = await settings();
+    if (b.column === "buyer_provider_id") {
+      if (!buyerKinds.includes("provider")) throw new ApiError(403, "market_buyer_not_allowed");
+      const provider = await requireActiveProvider(db, b.user.id, now());
+      return { ...b, defaultCityId: provider.cityIds[0] ?? null };
+    }
+    const [f] = await db.query<CustomerRow>("SELECT * FROM factories WHERE id=$1", [b.buyerId]);
     if (!f.kind || !buyerKinds.includes(f.kind)) throw new ApiError(403, "market_buyer_not_allowed");
-    return { ...s, factory: f };
+    if (!profileComplete(f)) throw new ApiError(409, "profile_incomplete");
+    return { ...b, defaultCityId: f.city_id };
   }
 
   app.post("/v1/market/products/:id/purchase-requests", async (req, reply) => {
-    const { user, factoryId, factory } = await requireBuyer(req);
-    if (!profileComplete(factory)) throw new ApiError(409, "profile_incomplete");
+    const buyer = await requireBuyer(req);
     const body = parse(purchaseRequestBody, req.body);
     rejectContactInfo({ note: body.note });
     const [p] = await db.query<ProductRow>(
@@ -610,15 +645,15 @@ export function marketRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       [now(), todayRiyadh(now()), idParam(req)],
     );
     if (!p) throw new ApiError(404, "not_found");
-    if (p.seller_id === factoryId) throw new ApiError(409, "own_product");
+    if (buyer.column === "buyer_factory_id" && p.seller_id === buyer.buyerId) throw new ApiError(409, "own_product");
     if (body.quantity < p.min_order_qty) throw new ApiError(400, "below_min_order", undefined, { min: p.min_order_qty });
-    const cityId = await resolveCityId(db, body.cityId ?? factory.city_id);
+    const cityId = await resolveCityId(db, body.cityId ?? buyer.defaultCityId);
     const [row] = await db.query<PurchaseRow>(
-      `INSERT INTO purchase_requests (product_id, seller_id, buyer_factory_id, buyer_user_id, quantity, city_id, needed_when, note, created_at, updated_at)
+      `INSERT INTO purchase_requests (product_id, seller_id, ${buyer.column}, buyer_user_id, quantity, city_id, needed_when, note, created_at, updated_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9) RETURNING *`,
-      [p.id, p.seller_id, factoryId, user.id, body.quantity, cityId, body.when, body.note || null, now()],
+      [p.id, p.seller_id, buyer.buyerId, buyer.user.id, body.quantity, cityId, body.when, body.note || null, now()],
     );
-    await audit(db, actorOf(user), "purchase.requested", { type: "purchase_request", id: row.id }, { productId: p.id });
+    await audit(db, actorOf(buyer.user), "purchase.requested", { type: "purchase_request", id: row.id }, { productId: p.id });
     await events.purchaseRequested(db, row.id, now());
     // تقدير السعر من السعر المعلن (لو فيه)، عشان المشتري يشوف رقم مبدئي لين يرد المصنع.
     const estimate = unitPriceFor({ pricing: p.pricing, unitPriceHalalas: p.unit_price_halalas === null ? null : Number(p.unit_price_halalas), priceTiers: p.price_tiers }, body.quantity);
@@ -629,26 +664,27 @@ export function marketRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
   });
 
   app.get("/v1/market/purchase-requests", async (req) => {
-    const { factoryId } = await g.requireFactory(req);
-    const rows = await db.query<PurchaseRow>("SELECT * FROM purchase_requests WHERE buyer_factory_id=$1 ORDER BY created_at DESC LIMIT 200", [factoryId]);
+    const b = await buyerSession(req);
+    const rows = await db.query<PurchaseRow>(`SELECT * FROM purchase_requests WHERE ${b.column}=$1 ORDER BY created_at DESC LIMIT 200`, [b.buyerId]);
     return { purchaseRequests: await Promise.all(rows.map((r) => purchaseView(db, r, "buyer", now()))) };
   });
 
-  async function buyerPurchase(factoryId: string, id: string): Promise<PurchaseRow> {
-    const [p] = await db.query<PurchaseRow>("SELECT * FROM purchase_requests WHERE id=$1 AND buyer_factory_id=$2", [id, factoryId]);
+  async function buyerPurchase(b: BuyerSession, id: string): Promise<PurchaseRow> {
+    const [p] = await db.query<PurchaseRow>(`SELECT * FROM purchase_requests WHERE id=$1 AND ${b.column}=$2`, [id, b.buyerId]);
     if (!p) throw new ApiError(404, "not_found");
     return p;
   }
 
   app.get("/v1/market/purchase-requests/:id", async (req) => {
-    const { factoryId } = await g.requireFactory(req);
-    return { purchaseRequest: await purchaseView(db, await buyerPurchase(factoryId, idParam(req)), "buyer", now()) };
+    const b = await buyerSession(req);
+    return { purchaseRequest: await purchaseView(db, await buyerPurchase(b, idParam(req)), "buyer", now()) };
   });
 
   /** ينفّذ زر من أزرار المشتري بعد ما يتأكد إنه مسموح في الحالة الفعلية (نفس جدول buyerPurchaseActions). */
   async function buyerAction(req: FastifyRequest, action: "accept" | "reject" | "request_revision" | "cancel" | "confirm_received") {
-    const { user, factoryId } = await g.requireFactory(req);
-    const p = await buyerPurchase(factoryId, idParam(req));
+    const b = await buyerSession(req);
+    const { user } = b;
+    const p = await buyerPurchase(b, idParam(req));
     const view = await purchaseView(db, p, "buyer", now());
     if (!(view.actions as string[]).includes(action)) throw new ApiError(409, "invalid_transition");
     const body = parse(purchaseNoteBody, req.body ?? {});
@@ -683,7 +719,7 @@ export function marketRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       await audit(t, actorOf(user), `purchase.${action}`, { type: "purchase_request", id: p.id });
     });
     if (action === "accept") await events.purchaseAccepted(db, p.id, now());
-    return { purchaseRequest: await purchaseView(db, await buyerPurchase(factoryId, p.id), "buyer", now()) };
+    return { purchaseRequest: await purchaseView(db, await buyerPurchase(b, p.id), "buyer", now()) };
   }
 
   app.post("/v1/market/purchase-requests/:id/accept", (req) => buyerAction(req, "accept"));
@@ -694,8 +730,9 @@ export function marketRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
 
   // تقييم البائع بالنجوم بعد الاستلام، مرة وحدة.
   app.post("/v1/market/purchase-requests/:id/rating", async (req) => {
-    const { user, factoryId } = await g.requireFactory(req);
-    const p = await buyerPurchase(factoryId, idParam(req));
+    const b = await buyerSession(req);
+    const { user } = b;
+    const p = await buyerPurchase(b, idParam(req));
     const { stars } = parse(rateOrderBody, req.body);
     if (p.status !== "received") throw new ApiError(409, "not_completed");
     const rows = await db.query(

@@ -12,7 +12,7 @@ import { useAutoRefresh } from "@/components/flow";
 import { Field } from "@/components/Field";
 import { IconPhone, IconSend } from "@/components/icons";
 import { Screen, SectionTitle, TwoColumn } from "@/components/layout";
-import { PurchaseStatusBadge } from "@/components/market";
+import { buyerKindKey, PurchaseStatusBadge } from "@/components/market";
 import { PurchaseDetails } from "@/components/purchase";
 import { AppText, Button, Card, Notice, Row } from "@/components/ui";
 import { useStore } from "@/data/store";
@@ -109,7 +109,7 @@ export default function SellerPurchase() {
     <Screen title={t("purchaseTitle")} back width="page" onRefresh={load} contentStyle={{ gap: spacing["3"] }}>
       <Row style={{ justifyContent: "space-between", flexWrap: "wrap" }}>
         <AppText weight={600}>
-          {t("buyerKindLabel")}: {p.buyer?.name ?? t(p.buyer?.kind === "individual" ? "customerIndividual" : "customerBusiness")}
+          {t("buyerKindLabel")}: {p.buyer?.name ?? t(buyerKindKey(p.buyer?.kind))}
         </AppText>
         <PurchaseStatusBadge status={p.status} viewer="seller" />
       </Row>

@@ -1,4 +1,4 @@
-// أسماء بنود «يشمل / ما يشمل» في الواجهة (القرار ٥٧). البنود نفسها لكل قسم في packages/shared/src/offers.ts.
+// أسماء بنود «يشمل / ما يشمل» في الواجهة (القرار ٥٨). البنود نفسها لكل قسم في packages/shared/src/offers.ts.
 // **مبدئية وقابلة للتغيير (قرار المالك ٢٣ نوفمبر ٢٠٢٦).** لإضافة بند: أضفه في الملفين.
 import { OFFER_INCLUSIONS, type Inclusions } from "@mazood/shared";
 import type { Localized } from "@/i18n/I18nProvider";

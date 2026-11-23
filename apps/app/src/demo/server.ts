@@ -212,7 +212,7 @@ function seed(): Db {
   offer("o1", "r1", "p2", 2450, 8, "السعر يشمل التأمين على الحمولة.", 2);
   offer("o2", "r1", "p1", 2300, 10, null, 1.5);
   offer("o3", "r1", "p3", 2600, 6, "نقدر نحمّل اليوم العصر.", 1);
-  // «يشمل / ما يشمل» (القرار ٥٧): الأرخص ما يشمل التنزيل، عشان المقارنة تبين ليش السعر يفرق.
+  // «يشمل / ما يشمل» (القرار ٥٨): الأرخص ما يشمل التنزيل، عشان المقارنة تبين ليش السعر يفرق.
   const inc = (o: string, loading: boolean, unloading: boolean, waiting: boolean) =>
     (db.offers.find((x) => x.id === o)!.inclusions = {
       loading: loading ? "included" : "excluded",
@@ -369,7 +369,7 @@ function parseBody<T>(schema: { safeParse: (v: unknown) => { success: true; data
   return (r as { data: T }).data;
 }
 
-/** نفس فحص الخادم الحقيقي لـ«يشمل / ما يشمل» (القرار ٥٧). */
+/** نفس فحص الخادم الحقيقي لـ«يشمل / ما يشمل» (القرار ٥٨). */
 function checkInclusions(category: string, inclusions: Inclusions | undefined) {
   const err = inclusionsError(category, inclusions);
   if (err) fail(400, err);
@@ -1089,6 +1089,7 @@ const marketHost: DemoHost = {
   market: () => db.market,
   factories: () => db.factories,
   phoneOf: (factoryId) => db.users.find((u) => u.factoryId === factoryId)?.phone ?? "",
+  providerName: (providerId) => db.providers.find((p) => p.id === providerId)?.tradeName ?? null,
   fail,
   id,
   now,

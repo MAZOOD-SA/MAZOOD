@@ -161,7 +161,7 @@ describe("تعديل العرض وسحبه", () => {
   });
 });
 
-describe("«يشمل / ما يشمل» (القرار ٥٧)", () => {
+describe("«يشمل / ما يشمل» (القرار ٥٨)", () => {
   const inclusions = { loading: "included", unloading: "excluded", waiting_over_2h: "excluded" };
 
   it("البنود تنحفظ، والعميل يشوفها مع العرض", async () => {

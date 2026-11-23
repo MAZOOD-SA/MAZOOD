@@ -38,6 +38,8 @@ export type DemoPurchase = {
   id: string;
   productId: string;
   sellerId: string;
+  /** عميل (factory) أو مزوّد (provider، القرار ٥٧). بدون قيمة = عميل. */
+  buyerType?: "factory" | "provider";
   buyerId: string;
   buyerPhone: string;
   quantity: number;
@@ -97,7 +99,7 @@ export function seedMarket(t: number, iso: (ms: number) => string): MarketState 
 }
 
 type Factory = { id: string; kind?: "business" | "individual" | null; name: string | null };
-type User = { id: string; phone: string; role: string; factoryId: string | null };
+type User = { id: string; phone: string; role: string; factoryId: string | null; providerId: string | null };
 type Handler = (c: { u: () => User; body: unknown; params: string[]; query: URLSearchParams }) => unknown;
 
 /** أدوات الخادم التجريبي اللي يحتاجها السوق (من server.ts). */
@@ -106,6 +108,8 @@ export type DemoHost = {
   market: () => MarketState;
   factories: () => Factory[];
   phoneOf: (factoryId: string) => string;
+  /** الاسم التجاري للمزوّد (المشتري المزوّد). المزوّدين التجريبيين كلهم موثّقين. */
+  providerName: (providerId: string) => string | null;
   fail: (status: number, code: string) => never;
   id: (prefix: string) => string;
   now: () => number;
@@ -116,6 +120,10 @@ export function registerMarketDemo(h: DemoHost) {
   const { on, fail } = h;
   const factoryOf = (u: User) => (u.role === "factory" && u.factoryId ? u.factoryId : fail(403, "forbidden"));
   const factory = (id: string) => h.factories().find((f) => f.id === id);
+  /** المشتري من الجلسة: عميل أو مزوّد (نفس buyerSession في الخادم). */
+  const buyerOf = (u: User) =>
+    u.role === "provider" && u.providerId ? { type: "provider" as const, id: u.providerId } : { type: "factory" as const, id: factoryOf(u) };
+  const isBuyer = (p: DemoPurchase, b: ReturnType<typeof buyerOf>) => p.buyerId === b.id && (p.buyerType ?? "factory") === b.type;
   const parse = <T,>(schema: { safeParse: (v: unknown) => { success: true; data: T } | { success: false } }, body: unknown): T => {
     const r = schema.safeParse(body);
     return r.success ? r.data : fail(400, "validation");
@@ -139,7 +147,7 @@ export function registerMarketDemo(h: DemoHost) {
     const prod = h.market().products.find((x) => x.id === p.productId)!;
     const status = effective(p);
     const agreed = p.status === "accepted" || p.status === "received";
-    const buyer = factory(p.buyerId);
+    const buyer = p.buyerType === "provider" ? { kind: "provider" as const, name: h.providerName(p.buyerId) } : factory(p.buyerId);
     return {
       id: p.id,
       product: { id: prod.id, name: prod.name, unit: prod.unit, imageUrl: prod.images[0]?.url ?? null },
@@ -284,29 +292,29 @@ export function registerMarketDemo(h: DemoHost) {
   // ───── المشتري ─────
   on("POST", "/v1/market/products/:id/purchase-requests", ({ u, body, params }) => {
     const user = u();
-    const fid = factoryOf(user);
-    if (factory(fid)?.kind !== "business") fail(403, "market_buyer_not_allowed");
+    const buyer = buyerOf(user);
+    if (buyer.type === "factory" && factory(buyer.id)?.kind !== "business") fail(403, "market_buyer_not_allowed");
     const prod = h.market().products.find((x) => x.id === params[0] && listed(x)) ?? fail(404, "not_found");
-    if (prod.sellerId === fid) fail(409, "own_product");
+    if (buyer.type === "factory" && prod.sellerId === buyer.id) fail(409, "own_product");
     const b = parse(purchaseRequestBody, body);
     noContact(b.note);
     if (b.quantity < prod.minOrderQty) fail(400, "below_min_order");
-    const p: DemoPurchase = { id: h.id("pr"), productId: prod.id, sellerId: prod.sellerId, buyerId: fid, buyerPhone: user.phone, quantity: b.quantity, when: b.when, note: b.note || null,
+    const p: DemoPurchase = { id: h.id("pr"), productId: prod.id, sellerId: prod.sellerId, buyerType: buyer.type, buyerId: buyer.id, buyerPhone: user.phone, quantity: b.quantity, when: b.when, note: b.note || null,
       status: "pending", revisionUsed: false, revisionNote: null, decisionNote: null, quote: null, rated: null, acceptedAt: null, receivedAt: null, createdAt: h.iso(h.now()) };
     h.market().purchases.push(p);
     const est = unitPriceFor(prod, b.quantity);
     return { purchaseRequest: purchaseView(p, "buyer"), estimateHalalas: est === null ? null : est * b.quantity };
   });
   on("GET", "/v1/market/purchase-requests", ({ u }) => {
-    const fid = factoryOf(u());
-    const list = h.market().purchases.filter((p) => p.buyerId === fid).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    const b = buyerOf(u());
+    const list = h.market().purchases.filter((p) => isBuyer(p, b)).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
     return { purchaseRequests: list.map((p) => purchaseView(p, "buyer")) };
   });
-  const buyerPurchase = (fid: string, id: string) => h.market().purchases.find((p) => p.id === id && p.buyerId === fid) ?? fail(404, "not_found");
-  on("GET", "/v1/market/purchase-requests/:id", ({ u, params }) => ({ purchaseRequest: purchaseView(buyerPurchase(factoryOf(u()), params[0]), "buyer") }));
+  const buyerPurchase = (u: User, id: string) => h.market().purchases.find((p) => p.id === id && isBuyer(p, buyerOf(u))) ?? fail(404, "not_found");
+  on("GET", "/v1/market/purchase-requests/:id", ({ u, params }) => ({ purchaseRequest: purchaseView(buyerPurchase(u(), params[0]), "buyer") }));
   const act = (action: "accept" | "reject" | "request_revision" | "cancel" | "confirm_received", next: (p: DemoPurchase, note: string | null) => void) =>
     ({ u, body, params }: { u: () => User; body: unknown; params: string[] }) => {
-      const p = buyerPurchase(factoryOf(u()), params[0]);
+      const p = buyerPurchase(u(), params[0]);
       if (!(purchaseView(p, "buyer").actions as string[]).includes(action)) fail(409, "invalid_transition");
       const b = parse(purchaseNoteBody, body ?? {});
       noContact(b.note);
@@ -319,7 +327,7 @@ export function registerMarketDemo(h: DemoHost) {
   on("POST", "/v1/market/purchase-requests/:id/cancel", act("cancel", (p, n) => Object.assign(p, { status: "cancelled", decisionNote: n })));
   on("POST", "/v1/market/purchase-requests/:id/received", act("confirm_received", (p) => Object.assign(p, { status: "received", receivedAt: h.iso(h.now()) })));
   on("POST", "/v1/market/purchase-requests/:id/rating", ({ u, body, params }) => {
-    const p = buyerPurchase(factoryOf(u()), params[0]);
+    const p = buyerPurchase(u(), params[0]);
     const { stars } = parse(rateOrderBody, body);
     if (p.status !== "received") fail(409, "not_completed");
     if (p.rated) fail(409, "already_rated");

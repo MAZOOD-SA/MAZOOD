@@ -106,7 +106,7 @@ export function PurchaseCard({ purchase, viewer, onPress }: { purchase: Purchase
           </AppText>
           <AppText variant="caption" color="inkMuted" style={{ writingDirection: isRTL ? "rtl" : "ltr" }}>
             {num(purchase.quantity)} {unit(purchase.product.unit)} ·{" "}
-            {viewer === "buyer" ? isolate(purchase.seller.name ?? "") : t(purchase.buyer?.kind === "individual" ? "customerIndividual" : "customerBusiness")} · {relative(purchase.createdAt)}
+            {viewer === "buyer" ? isolate(purchase.seller.name ?? "") : t(buyerKindKey(purchase.buyer?.kind))} · {relative(purchase.createdAt)}
           </AppText>
         </View>
         <PurchaseStatusBadge status={purchase.status} viewer={viewer} />
@@ -187,4 +187,9 @@ export function useSellerEnabled(): boolean {
     };
   }, [load]);
   return enabled;
+}
+
+/** اسم نوع المشتري اللي يشوفه البائع قبل الاتفاق: منشأة، أو فرد، أو مزوّد (القرار ٥٧). */
+export function buyerKindKey(kind: "business" | "individual" | "provider" | undefined) {
+  return kind === "individual" ? "customerIndividual" : kind === "provider" ? "buyerProvider" : "customerBusiness";
 }

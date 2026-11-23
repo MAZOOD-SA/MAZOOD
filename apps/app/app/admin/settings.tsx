@@ -146,6 +146,7 @@ export default function SettingsScreen() {
               options={[
                 { value: "business" as Buyer, label: t("customerBusiness") },
                 { value: "individual" as Buyer, label: t("customerIndividual") },
+                { value: "provider" as Buyer, label: t("buyerProvider") },
               ]}
             />
             <Field label={t("setTrialDays")} value={f("trialDays")} onChangeText={setF("trialDays")} keyboardType="number-pad" maxLength={3} ltr />

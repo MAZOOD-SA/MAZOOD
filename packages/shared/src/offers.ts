@@ -49,7 +49,7 @@ export type OrderPhotoStage = (typeof ORDER_PHOTO_STAGES)[number];
 export const ORDER_PHOTOS_PER_STAGE = 3;
 
 /**
- * «يشمل / ما يشمل» (فكرة ايكيا، docs/plans/ikea-ideas.md المهمة ٥-ب، القرار ٥٧).
+ * «يشمل / ما يشمل» (فكرة ايكيا، docs/plans/ikea-ideas.md المهمة ٥-ب، القرار ٥٨).
  * بنود ثابتة لكل قسم، يجاوب عليها المزوّد مع عرضه، والعميل يشوفها تحت السعر.
  * **القائمة مبدئية وقابلة للتغيير (قرار المالك ٢٣ نوفمبر ٢٠٢٦).** لتغييرها: عدّل هنا، وأضف اسم البند
  * في الواجهة (apps/app/src/data/inclusions.ts). في المرحلة ٦ تنتقل للوحة الإدارة.

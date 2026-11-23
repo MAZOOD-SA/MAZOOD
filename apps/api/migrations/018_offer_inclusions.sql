@@ -1,4 +1,4 @@
--- «يشمل / ما يشمل» في العرض (فكرة ايكيا، docs/plans/ikea-ideas.md المهمة ٥-ب، القرار ٥٧).
+-- «يشمل / ما يشمل» في العرض (فكرة ايكيا، docs/plans/ikea-ideas.md المهمة ٥-ب، القرار ٥٨).
 -- مثل {"loading":"included","unloading":"excluded"}. البنود لكل قسم في packages/shared/src/offers.ts.
 -- NULL: عرض قبل الميزة، أو من نسخة تطبيق قديمة. ما نخترع له قيم.
 ALTER TABLE offers ADD COLUMN inclusions jsonb;

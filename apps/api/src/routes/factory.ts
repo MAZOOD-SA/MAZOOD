@@ -354,7 +354,7 @@ async function requestDetails(db: Db, requestId: string, now: Date) {
       price: priceForFactory(Number(o.price_halalas)),
       durationHours: o.duration_hours,
       note: o.note,
-      // «يشمل / ما يشمل» (القرار ٥٧). null: عرض قبل الميزة.
+      // «يشمل / ما يشمل» (القرار ٥٨). null: عرض قبل الميزة.
       inclusions: o.inclusions,
       validUntil: new Date(o.valid_until).toISOString(),
       status: o.status,

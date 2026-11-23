@@ -288,7 +288,7 @@ export function Fact({ label, value, ltr, long }: { label: string; value: string
 }
 
 /**
- * «يشمل / ما يشمل» تحت السعر (فكرة ايكيا، القرار ٥٧): ✓ بلون success، و✗ بلون inkMuted.
+ * «يشمل / ما يشمل» تحت السعر (فكرة ايكيا، القرار ٥٨): ✓ بلون success، و✗ بلون inkMuted.
  * الكلمة جنب كل علامة للقارئ الصوتي، فاللون والعلامة مو المعلومة الوحيدة.
  */
 export function InclusionList({ inclusions }: { inclusions: Inclusions | null | undefined }) {

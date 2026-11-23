@@ -95,7 +95,7 @@ export function rejectContactInfo(fields: Record<string, string | undefined>) {
   }
 }
 
-/** «يشمل / ما يشمل» لازم تطابق بنود قسم الطلب (القرار ٥٧). */
+/** «يشمل / ما يشمل» لازم تطابق بنود قسم الطلب (القرار ٥٨). */
 function checkInclusions(category: string, inclusions: OfferBody["inclusions"]) {
   const err = inclusionsError(category, inclusions);
   if (err) throw new ApiError(400, err);

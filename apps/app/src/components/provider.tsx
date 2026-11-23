@@ -201,7 +201,7 @@ export function OfferComposer({
   const [hours, setHours] = useState<number>(existing?.durationHours ?? 8);
   const [validity, setValidity] = useState<number>(SETTING_DEFAULTS.offerValidityHours);
   const [note, setNote] = useState(existing?.note ?? "");
-  // «يشمل / ما يشمل» (القرار ٥٧): لازم يختار في كل بند. التعديل يبدأ من اللي اختاره قبل.
+  // «يشمل / ما يشمل» (القرار ٥٨): لازم يختار في كل بند. التعديل يبدأ من اللي اختاره قبل.
   const items = inclusionItems(category);
   const [inclusions, setInclusions] = useState<Partial<Inclusions>>(() =>
     Object.fromEntries(items.filter((i) => existing?.inclusions?.[i.id]).map((i) => [i.id, existing!.inclusions![i.id]])),

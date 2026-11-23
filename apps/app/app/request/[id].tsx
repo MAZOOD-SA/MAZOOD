@@ -564,7 +564,7 @@ function OfferCompareCard({ offer, selected, nominated, onSelect }: { offer: Fac
           {t("priceExcludesVat")}
         </AppText>
       </View>
-      {/* «يشمل / ما يشمل» تحت السعر مباشرة (فكرة ايكيا، القرار ٥٧). */}
+      {/* «يشمل / ما يشمل» تحت السعر مباشرة (فكرة ايكيا، القرار ٥٨). */}
       <InclusionList inclusions={offer.inclusions} />
       {/* المدة نص واضح مو كبسولة: «١٠ ساعات» لحالها ما تقول وش هي. والكبسولات للحالات بس. */}
       <AppText variant="bodySm" weight={600}>
