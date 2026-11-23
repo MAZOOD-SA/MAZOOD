@@ -8,7 +8,7 @@ import { ApiClientError } from "@/api/client";
 import type { MarketProduct } from "@/api/market-types";
 import { TwoColumn, Screen, SectionTitle } from "@/components/layout";
 import { PriceText, ProductImage, SellerLine, useUnit } from "@/components/market";
-import { AppText, Button, Card, Divider, Notice, Row } from "@/components/ui";
+import { AppText, Button, Card, Divider, Notice, ReadMore, Row } from "@/components/ui";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
 import { errorKey } from "@/api/mapping";
@@ -67,7 +67,7 @@ export default function ProductPage() {
           {tl(product.category.name)}
         </AppText>
       )}
-      <AppText>{product.description}</AppText>
+      <ReadMore text={product.description} variant="body" />
     </>
   );
 

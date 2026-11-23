@@ -2,7 +2,7 @@
 // كل الألوان من useTheme() وكل المسافات والزوايا من @mazood/brand. ممنوع أي لون مباشر.
 import { fontFamilyByWeight, layout, radius, spacing, typography, type ColorName, type Palette, type TypographyName } from "@mazood/brand";
 import { IconRosetteDiscountCheck } from "@/components/icons";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -277,5 +277,164 @@ export function Chips<T extends string>({
     </ScrollView>
   ) : (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing["2"] }}>{items}</View>
+  );
+}
+
+// ───────── أفكار ايكيا (مرحلة التصميم ح، docs/plans/ikea-ideas.md) ─────────
+
+/**
+ * شريط معلومة وحدة مفيدة (المهمة ٢): سطح محايد، وخط جانبي على البداية بلون success، وأيقونة.
+ * النص لازم يكون وعد صادق للمنصة، مو دعاية.
+ */
+export function PromiseStrip({ text, icon: Icon }: { text: string; icon: IconComponent }) {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing["2"],
+        backgroundColor: colors.surfaceAlt,
+        borderStartWidth: 3,
+        borderStartColor: colors.success,
+        borderRadius: radius.sm,
+        paddingVertical: spacing["2"],
+        paddingHorizontal: spacing["3"],
+      }}
+    >
+      <Icon size={18} color={colors.success} strokeWidth={2} />
+      <AppText variant="bodySm" weight={600} style={{ flex: 1 }}>
+        {text}
+      </AppText>
+    </View>
+  );
+}
+
+/** النص اللي أطول من كذا حرف ينطوي على ٣ أسطر. (قياس الأسطر الفعلي ما يشتغل نفس الشي في الموقع والجوال.) */
+const READ_MORE_CHARS = 180;
+
+/** نص طويل ينطوي، وتحته «اقرأ الباقي» / «أخفِ» (المهمة ٣). النص القصير يبين كامل بدون زر. */
+export function ReadMore({ text, variant = "bodySm", style }: { text: string; variant?: TypographyName; style?: StyleProp<TextStyle> }) {
+  const { t } = useI18n();
+  const { colors } = useTheme();
+  const [open, setOpen] = useState(false);
+  const long = text.length > READ_MORE_CHARS;
+  return (
+    <View style={{ gap: spacing["1"] }}>
+      <AppText variant={variant} numberOfLines={long && !open ? 3 : undefined} style={style}>
+        {text}
+      </AppText>
+      {long && (
+        <Pressable
+          accessibilityRole="button"
+          aria-expanded={open}
+          accessibilityState={{ expanded: open }}
+          onPress={() => setOpen((o) => !o)}
+          style={(state) => [{ alignSelf: "flex-start", minHeight: layout.touchMin, justifyContent: "center" }, focusRing(state, colors)]}
+        >
+          <AppText variant="label" weight={600} style={{ textDecorationLine: "underline" }}>
+            {open ? t("readLess") : t("readMore")}
+          </AppText>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+/**
+ * خيارات بمربعات (المهمة ٤): اسم الخيار وسطر وصف قصير تحته، والمختار إطاره ink بعرض ٢ مع دائرة اختيار.
+ * بدون فرق سعر: السعر يحطه المزوّد في عرضه، مو المنصة.
+ */
+export function OptionTiles<T extends string>({
+  options,
+  value,
+  onChange,
+  columns = 2,
+}: {
+  options: { value: T; label: string; hint?: string }[];
+  value: T | null;
+  onChange: (v: T) => void;
+  columns?: number;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View accessibilityRole="radiogroup" style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing["2"] }}>
+      {options.map((o) => {
+        const selected = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            accessibilityRole="radio"
+            accessibilityState={{ selected }}
+            aria-checked={selected}
+            accessibilityLabel={o.hint ? `${o.label}، ${o.hint}` : o.label}
+            onPress={() => onChange(o.value)}
+            style={(state) => [
+              {
+                // عرض المربع: نسبة من السطر ناقص المسافات بينهم.
+                flexBasis: `${100 / columns - 2}%`,
+                flexGrow: 1,
+                minHeight: layout.touchMin,
+                flexDirection: "row",
+                alignItems: "flex-start",
+                gap: spacing["2"],
+                borderWidth: selected ? 2 : 1,
+                // الإطار ٢ للمختار: نصغّر الحشوة ١ عشان المحتوى ما يتحرّك.
+                padding: selected ? spacing["3"] - 1 : spacing["3"],
+                borderColor: selected ? colors.ink : colors.lineStrong,
+                backgroundColor: colors.surfaceRaised,
+                borderRadius: radius.md,
+              },
+              focusRing(state, colors),
+            ]}
+          >
+            <View
+              style={{
+                marginTop: 2,
+                width: 18,
+                height: 18,
+                borderRadius: radius.full,
+                borderWidth: 2,
+                borderColor: selected ? colors.ink : colors.lineStrong,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {selected && <View style={{ width: 8, height: 8, borderRadius: radius.full, backgroundColor: colors.ink }} />}
+            </View>
+            <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+              <AppText variant="label" weight={selected ? 700 : 600}>
+                {o.label}
+              </AppText>
+              {!!o.hint && (
+                <AppText variant="caption" color="inkMuted">
+                  {o.hint}
+                </AppText>
+              )}
+            </View>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+export type DotTone = "ok" | "info" | "wait" | "bad";
+
+/**
+ * الحالة بنقطة وكلمة (المهمة ٦): أهدى من الكبسولة في صفوف القوائم.
+ * الكلمة دائمًا موجودة، فاللون مو المعلومة الوحيدة.
+ */
+export function StatusDot({ label, tone }: { label: string; tone: DotTone }) {
+  const { colors } = useTheme();
+  const dot = { ok: colors.success, // ink مو primary: primary في الوضع الداكن كهرماني، والمالك شال الأصفر من الحالات.
+    info: colors.ink, wait: colors.inkMuted, bad: colors.danger }[tone];
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing["1"] + 2 }}>
+      <View style={{ width: 8, height: 8, borderRadius: radius.full, backgroundColor: dot }} />
+      <AppText variant="caption" weight={600} color={tone === "bad" ? "danger" : "ink"}>
+        {label}
+      </AppText>
+    </View>
   );
 }

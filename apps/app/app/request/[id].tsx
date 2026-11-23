@@ -346,7 +346,7 @@ export default function RequestDetails() {
   const side = (
     <>
       <SideCard title={t("requestData")}>
-        <Fact label={t("detailsLabel")} value={request.details} />
+        <Fact label={t("detailsLabel")} value={request.details} long />
         {!!request.area && <Fact label={t("areaLabel")} value={request.area} />}
         <Fact label={t("locationLabel")} value={request.location} />
         <Fact label={t("whenLabel")} value={t(request.when === "today" ? "whenToday" : request.when === "tomorrow" ? "whenTomorrow" : "whenThisWeek")} />

@@ -3,7 +3,7 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import type { JobSummary, MyOffer } from "@/api/types";
-import { RequestStatusBadge } from "@/components/domain";
+import { RequestStatusDot } from "@/components/domain";
 import { useAutoRefresh } from "@/components/flow";
 import { Grid, Screen, SectionTitle } from "@/components/layout";
 import { JobCard } from "@/components/provider";
@@ -104,7 +104,7 @@ export default function Work() {
                       <AppText variant="bodySm" weight={600} style={{ flex: 1 }}>
                         {tl(categoryById(j.category).types.find((x) => x.id === j.typeId)?.name ?? categoryById(j.category).name)}
                       </AppText>
-                      <RequestStatusBadge status={j.status} viewer="provider" />
+                      <RequestStatusDot status={j.status} viewer="provider" />
                     </Row>
                   </Card>
                 ))}

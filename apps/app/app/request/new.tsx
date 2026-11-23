@@ -11,7 +11,7 @@ import { View } from "react-native";
 import { CategoryTile } from "@/components/domain";
 import { Field } from "@/components/Field";
 import { Screen, SectionTitle } from "@/components/layout";
-import { AppText, Button, Chips, Notice } from "@/components/ui";
+import { AppText, Button, Chips, Notice, OptionTiles } from "@/components/ui";
 import { CATEGORIES, categoryById, type CategoryId } from "@/data/categories";
 import { useStore } from "@/data/store";
 import type { When } from "@/data/types";
@@ -179,7 +179,8 @@ export default function NewRequest() {
       {cat && cat.types.length > 1 && (
         <>
           <SectionTitle title={t("chooseType")} />
-          <Chips value={typeId} onChange={setTypeId} options={cat.types.map((x) => ({ value: x.id, label: tl(x.name) }))} />
+          {/* مربعات بإطار ووصف قصير (فكرة ايكيا، المهمة ٤)، بدون فرق سعر: السعر من المزوّد. */}
+          <OptionTiles value={typeId} onChange={setTypeId} options={cat.types.map((x) => ({ value: x.id, label: tl(x.name), hint: x.hint ? tl(x.hint) : undefined }))} />
         </>
       )}
 
