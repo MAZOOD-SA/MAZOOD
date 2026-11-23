@@ -1,6 +1,7 @@
 // إعدادات المنصة من اللوحة (settings.manage): كل قسم يتحفظ لحاله، والخادم يتحقق من القيمة ويسجّل التعديل (من كم لكم).
 // العمولة قرار المالك بس (CLAUDE.md): الحقل يظهر للكل، ويتعدّل بس لو الخادم قال canEditCommission، والخادم يرفض غيره.
-// سياسة رسوم الإلغاء ما تتعدّل من هنا الحين (قرار المالك مع الشريك، القرار ٣٠): بالأمر pnpm api:set-setting.
+// رسوم الإلغاء من هنا (القرار ٥٩): المالك بس يغيّرها، مثل العمولة. الشاشة تعرض الأساسي بس (مبلغ ونسبة لكل حالة)،
+// والحد الأدنى والأعلى يبقون مثل ما هم محفوظين (الشرح الكامل في packages/shared/src/cancellation.ts).
 import { spacing } from "@mazood/brand";
 import type { Settings } from "@mazood/shared";
 import { useEffect, useState } from "react";
@@ -25,6 +26,9 @@ const SMS: { value: SmsEvent; label: StringKey }[] = [
 ];
 
 const int = (s: string) => (/^\d+$/.test(s.trim()) ? Number(s.trim()) : NaN);
+/** «١٢٫٥» ← ١٢٥٠: ريال لهللة، أو ٪ لنقطة أساس. رقمين بعد الفاصلة بالكثير، والصفر مسموح. */
+const hundredths = (s: string) => (/^\d+([.,]\d{1,2})?$/.test(s.trim()) ? Math.round(Number(s.trim().replace(",", ".")) * 100) : NaN);
+const fromHundredths = (n: number) => String(n / 100);
 
 /** اختيار متعدد بنفس شكل Chips: الضغط يضيف أو يشيل. */
 function MultiChips<T extends string>({ options, value, onChange }: { options: { value: T; label: string }[]; value: T[]; onChange: (v: T[]) => void }) {
@@ -67,6 +71,16 @@ export default function SettingsScreen() {
       expiryWarningDays: String(s.market.expiryWarningDays),
       commissionPct: String(s.market.commissionBps / 100),
       windowMonths: String(s.commitment.windowMonths),
+      cGrace: String(s.cancellation.graceMinutesAfterAccept),
+      cResponse: String(s.cancellation.responseHours),
+      cBeforeFixed: fromHundredths(s.cancellation.factory.afterAccept.fixedHalalas),
+      cBeforePct: fromHundredths(s.cancellation.factory.afterAccept.percentBps),
+      cAfterFixed: fromHundredths(s.cancellation.factory.afterStart.fixedHalalas),
+      cAfterPct: fromHundredths(s.cancellation.factory.afterStart.percentBps),
+      cToProvider: fromHundredths(s.cancellation.providerShareBps),
+      cProvFixed: fromHundredths(s.cancellation.provider.afterAccept.fixedHalalas),
+      cProvPct: fromHundredths(s.cancellation.provider.afterAccept.percentBps),
+      cToCustomer: fromHundredths(s.cancellation.provider.toFactoryBps),
       minOrders: String(s.commitment.minOrders),
     });
     setSms(s.smsEvents);
@@ -90,6 +104,29 @@ export default function SettingsScreen() {
       <Button label={t("saveSetting")} variant="secondary" disabled={busy || !Number.isInteger(int(f(k))) || int(f(k)) === s?.[k]} onPress={() => save(k, int(f(k)))} />
     </View>
   );
+
+  // رسوم الإلغاء: الحقول بالريال والنسبة، والخادم يتحقق من الحدود (النسبة ما تتعدّى ١٠٠٪).
+  const cancelFields = ["cBeforeFixed", "cBeforePct", "cAfterFixed", "cAfterPct", "cToProvider", "cProvFixed", "cProvPct", "cToCustomer"];
+  const cancelValid = cancelFields.every((k) => Number.isInteger(hundredths(f(k)))) && Number.isInteger(int(f("cGrace"))) && Number.isInteger(int(f("cResponse")));
+  const canEditFees = !!data?.canEditCommission;
+  const moneyField = (k: string, label: StringKey, pct?: boolean) => (
+    <Field key={k} label={t(label)} value={f(k)} onChangeText={setF(k)} keyboardType="decimal-pad" maxLength={pct ? 6 : 10} editable={canEditFees} ltr />
+  );
+  const saveCancellation = () => {
+    if (!s) return;
+    const c = s.cancellation;
+    save("cancellation", {
+      ...c,
+      graceMinutesAfterAccept: int(f("cGrace")),
+      responseHours: int(f("cResponse")),
+      factory: {
+        afterAccept: { ...c.factory.afterAccept, fixedHalalas: hundredths(f("cBeforeFixed")), percentBps: hundredths(f("cBeforePct")) },
+        afterStart: { ...c.factory.afterStart, fixedHalalas: hundredths(f("cAfterFixed")), percentBps: hundredths(f("cAfterPct")) },
+      },
+      providerShareBps: hundredths(f("cToProvider")),
+      provider: { afterAccept: { ...c.provider.afterAccept, fixedHalalas: hundredths(f("cProvFixed")), percentBps: hundredths(f("cProvPct")) }, toFactoryBps: hundredths(f("cToCustomer")) },
+    });
+  };
 
   const commission = Number(f("commissionPct"));
   const commissionBps = Number.isFinite(commission) ? Math.round(commission * 100) : NaN;
@@ -181,6 +218,27 @@ export default function SettingsScreen() {
                 })
               }
             />
+          </Card>
+
+          <SectionTitle title={t("setCancelTitle")} />
+          <Card style={{ gap: spacing["3"] }}>
+            <AppText variant="bodySm" color="inkMuted">
+              {t(canEditFees ? "setCancelHint" : "setCancelOwner")}
+            </AppText>
+            <Field label={t("setCancelGrace")} value={f("cGrace")} onChangeText={setF("cGrace")} keyboardType="number-pad" maxLength={4} editable={canEditFees} ltr />
+            <AppText variant="label" weight={700}>{t("setCancelCustomerBefore")}</AppText>
+            {moneyField("cBeforeFixed", "setCancelFixed")}
+            {moneyField("cBeforePct", "setCancelPct", true)}
+            <AppText variant="label" weight={700}>{t("setCancelCustomerAfter")}</AppText>
+            {moneyField("cAfterFixed", "setCancelFixed")}
+            {moneyField("cAfterPct", "setCancelPct", true)}
+            {moneyField("cToProvider", "setCancelToProvider", true)}
+            <Field label={t("setCancelResponse")} value={f("cResponse")} onChangeText={setF("cResponse")} keyboardType="number-pad" maxLength={3} editable={canEditFees} ltr />
+            <AppText variant="label" weight={700}>{t("setCancelProvider")}</AppText>
+            {moneyField("cProvFixed", "setCancelFixed")}
+            {moneyField("cProvPct", "setCancelPct", true)}
+            {moneyField("cToCustomer", "setCancelToCustomer", true)}
+            {canEditFees && <Button label={t("saveSetting")} variant="secondary" disabled={busy || !cancelValid} onPress={saveCancellation} />}
           </Card>
         </>
       )}

@@ -1,5 +1,5 @@
 // لوحة الإدارة (هـ-٢): الصلاحيات القابلة للتغيير، والإعدادات والعمولة، وطلبات الحذف، والأرقام، و«بانتظارك».
-import { DEFAULT_MARKET_SETTINGS, resolvePermissions } from "@mazood/shared";
+import { DEFAULT_CANCELLATION_POLICY, DEFAULT_MARKET_SETTINGS, resolvePermissions } from "@mazood/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { auth, createTestCtx, validRequest, type TestCtx } from "./test-helpers.ts";
 
@@ -85,6 +85,19 @@ describe("الإعدادات والعمولة", () => {
     expect(r.statusCode).toBe(200);
     expect(r.json().settings.market.commissionBps).toBe(250);
     await call("PUT", "/v1/admin/settings/market", owner, { value: DEFAULT_MARKET_SETTINGS });
+  });
+});
+
+describe("رسوم الإلغاء من اللوحة (القرار ٥٩)", () => {
+  it("المدير العام ما يغيّرها، والمالك يغيّرها، والقيمة الغلط تنرفض", async () => {
+    const policy = { ...DEFAULT_CANCELLATION_POLICY, factory: { ...DEFAULT_CANCELLATION_POLICY.factory, afterStart: { fixedHalalas: 10_000, percentBps: 500, minHalalas: 0, maxHalalas: null } } };
+    expect((await call("PUT", "/v1/admin/settings/cancellation", gm, { value: policy })).json().error.code).toBe("owner_only");
+    const r = await call("PUT", "/v1/admin/settings/cancellation", owner, { value: policy });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().settings.cancellation.factory.afterStart).toMatchObject({ fixedHalalas: 10_000, percentBps: 500 });
+    const bad = { ...policy, providerShareBps: 20_000 };
+    expect((await call("PUT", "/v1/admin/settings/cancellation", owner, { value: bad })).statusCode).toBe(400);
+    await call("PUT", "/v1/admin/settings/cancellation", owner, { value: DEFAULT_CANCELLATION_POLICY });
   });
 });
 

@@ -109,6 +109,8 @@ export function platformAdminRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
       const after = (parsed.data as { commissionBps: number }).commissionBps;
       if (before !== after && !can(u.staffRole, "settings.commission", u.perms)) throw new ApiError(403, "owner_only");
     }
+    // رسوم الإلغاء قرار فلوس مثل العمولة: المالك بس يغيّرها (طلب المالك، 23 نوفمبر 2026، القرار ٥٩).
+    if (key === "cancellation" && !can(u.staffRole, "settings.commission", u.perms)) throw new ApiError(403, "owner_only");
     const settings = await setSetting(db, actorOf(u), key, parsed.data as never);
     const { rolePermissions: _hidden, ...editable } = settings;
     return { settings: editable };
