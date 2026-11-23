@@ -1,8 +1,8 @@
 // تصفّح السوق: البحث والتصنيفات والمنتجات. نفس الشاشة في تبويب «السوق» (/shop) وفي الصفحة العامة (/market)
-// اللي تنفتح بدون دخول (للتسويق والظهور في محركات البحث).
+// اللي تنفتح بدون دخول (للتسويق والظهور في محركات البحث)، وفي تبويب «السوق» للمزوّد (القرار ٥٦).
 import { spacing } from "@mazood/brand";
 import { router } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { ProductList } from "@/api/market-types";
 import { Field } from "@/components/Field";
 import { Grid, Screen } from "@/components/layout";
@@ -11,7 +11,8 @@ import { AppText, Button, Card, Chips } from "@/components/ui";
 import { useStore } from "@/data/store";
 import { useI18n } from "@/i18n/I18nProvider";
 
-export function MarketBrowse({ publicPage }: { publicPage?: boolean }) {
+/** top: شي يظهر فوق البحث (مثل رابط «طلباتي من السوق» عند المزوّد). */
+export function MarketBrowse({ publicPage, top }: { publicPage?: boolean; top?: ReactNode }) {
   const { t, tl } = useI18n();
   const { authed, state } = useStore();
   const categories = useMarketCategories();
@@ -46,6 +47,7 @@ export function MarketBrowse({ publicPage }: { publicPage?: boolean }) {
   return (
     <Screen title={t("marketTitle")} back={publicPage && state.signedIn} width="page" onRefresh={() => load(0)} contentStyle={{ gap: spacing["3"] }}>
       <AppText color="inkMuted">{t("marketSubtitle")}</AppText>
+      {top}
       <Field label={t("marketSearch")} value={q} onChangeText={setQ} maxLength={80} returnKeyType="search" />
       <Chips
         value={category}

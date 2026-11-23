@@ -371,6 +371,7 @@ export function navItemsFor(
     return [
       { href: "/provider/requests", label: t("tabAvailable"), icon: IconListDetails, also: ["/provider/request"] },
       { href: "/provider/work", label: t("tabWork"), icon: IconBriefcase, also: ["/provider/job"] },
+      { href: "/provider/market", label: t("tabMarket"), icon: IconShoppingBag, also: ["/provider/purchases", "/market", "/purchase"] },
       { href: "/provider/account", label: t("tabAccount"), icon: IconUser, also: ["/provider/profile", "/provider/upload", "/provider"] },
     ];
   if (role === "staff")

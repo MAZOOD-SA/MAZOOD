@@ -1,10 +1,10 @@
-// تبويبات المزوّد بعد التوثيق: الطلبات المتاحة، وشغلي، وحسابي (docs/plans/phase-4.md، القسم ٦).
+// تبويبات المزوّد بعد التوثيق: الطلبات المتاحة، وشغلي، والسوق (القرار ٥٦)، وحسابي (docs/plans/phase-4.md، القسم ٦).
 // قبل التوثيق ما يوصل هنا: يرجع لشاشة حالة التوثيق (/provider)، وهي الشاشة الوحيدة له.
 // في التابلت والكمبيوتر التبويبات تختفي والقائمة الجانبية (app/_layout.tsx) تاخذ مكانها.
 import { fontFamilyByWeight } from "@mazood/brand";
 import { Redirect, Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { IconBriefcase, IconListDetails, IconUser } from "@/components/icons";
+import { IconBriefcase, IconListDetails, IconShoppingBag, IconUser } from "@/components/icons";
 import { SkeletonList } from "@/components/layout";
 import { useProvider } from "@/data/useProvider";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -33,6 +33,7 @@ export default function ProviderTabs() {
     >
       <Tabs.Screen name="requests" options={{ title: t("tabAvailable"), tabBarIcon: ({ color }) => <IconListDetails size={22} color={color} strokeWidth={1.75} /> }} />
       <Tabs.Screen name="work" options={{ title: t("tabWork"), tabBarIcon: ({ color }) => <IconBriefcase size={22} color={color} strokeWidth={1.75} /> }} />
+      <Tabs.Screen name="market" options={{ title: t("tabMarket"), tabBarIcon: ({ color }) => <IconShoppingBag size={22} color={color} strokeWidth={1.75} /> }} />
       <Tabs.Screen name="account" options={{ title: t("tabAccount"), tabBarIcon: ({ color }) => <IconUser size={22} color={color} strokeWidth={1.75} /> }} />
     </Tabs>
   );

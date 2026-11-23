@@ -4,7 +4,7 @@
 //  - مين يشتري حسب الإعداد (المنشآت الحين)، والطلب بدون أرقام أو روابط، والتواصل بعد القبول بس.
 //  - كل حالة لطلب الشراء فيها زر للمشتري («ولا مرة طريق مسدود»).
 //  - كل عميل يشوف طلبات الشراء الخاصة فيه بس.
-import { buyerPurchaseActions, PURCHASE_STATUSES } from "@mazood/shared";
+import { buyerPurchaseActions, PURCHASE_STATUSES, type MarketBuyerKind } from "@mazood/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { setSetting } from "./settings.ts";
 import { auth, createTestCtx, multipart, PDF, PNG, type TestCtx } from "./test-helpers.ts";
@@ -301,6 +301,107 @@ describe("طلب السعر والرد", () => {
         for (const rated of [false, true]) expect(buyerPurchaseActions(status, { revisionUsed, rated }).length).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+// القرار ٥٦: المزوّد الموثّق يشتري من المصانع بحسابه هو (بدون حساب عميل ثاني).
+describe("المزوّد يشتري من السوق", () => {
+  let seller: Session & { factoryId: string };
+  let productId: string;
+  const market = (buyerKinds: MarketBuyerKind[]) =>
+    setSetting(ctx.db, SYS, "market", { buyerKinds, trialDays: 0, commissionBps: 0, publicMinProducts: 0, expiryWarningDays: 7 });
+  beforeAll(async () => {
+    ({ s: seller, productId } = await listedSeller("0519000001"));
+    await market(["business", "provider"]);
+  });
+  const request = (token: string) =>
+    call("POST", `/v1/market/products/${productId}/purchase-requests`, token, { quantity: 60, when: "this_week" });
+
+  it("الإعداد الافتراضي فيه المزوّد", async () => {
+    const { DEFAULT_MARKET_SETTINGS } = await import("@mazood/shared");
+    expect(DEFAULT_MARKET_SETTINGS.buyerKinds).toContain("provider");
+  });
+
+  it("المزوّد الموثّق يطلب ويتابع: البائع يشوف «مزوّد» قبل الاتفاق، والاسم التجاري بعده", async () => {
+    const p = await ctx.verifiedProvider("0519000002");
+    const r = await request(p.token);
+    expect(r.statusCode).toBe(201);
+    const id = r.json().purchaseRequest.id;
+    const [row] = await ctx.db.query<{ buyer_provider_id: string; buyer_factory_id: string | null }>(
+      "SELECT buyer_provider_id, buyer_factory_id FROM purchase_requests WHERE id=$1",
+      [id],
+    );
+    expect(row).toEqual({ buyer_provider_id: p.providerId, buyer_factory_id: null });
+
+    const list = (await call("GET", "/v1/market/purchase-requests", p.token)).json().purchaseRequests;
+    expect(list.map((x: { id: string }) => x.id)).toEqual([id]);
+
+    const before = (await call("GET", `/v1/market/seller/purchase-requests/${id}`, seller.token)).json().purchaseRequest;
+    expect(before.buyer).toEqual({ kind: "provider", name: null });
+
+    await call("POST", `/v1/market/seller/purchase-requests/${id}/quote`, seller.token, { unitPriceHalalas: 3400, leadTimeDays: 2, deliveryIncluded: true, validDays: 3 });
+    const acc = await call("POST", `/v1/market/purchase-requests/${id}/accept`, p.token);
+    expect(acc.statusCode).toBe(200);
+    expect(acc.json().purchaseRequest.contact).toMatchObject({ phone: expect.any(String) });
+    const after = (await call("GET", `/v1/market/seller/purchase-requests/${id}`, seller.token)).json().purchaseRequest;
+    expect(after.buyer).toEqual({ kind: "provider", name: "مزوّد 0002" });
+    expect(after.contact.phone).toBe("+966519000002");
+
+    expect((await call("POST", `/v1/market/purchase-requests/${id}/received`, p.token)).statusCode).toBe(200);
+    expect((await call("POST", `/v1/market/purchase-requests/${id}/rating`, p.token, { stars: 5 })).statusCode).toBe(200);
+  });
+
+  it("المزوّد اللي ما توثّق يُرفض", async () => {
+    const s = await ctx.signIn("0519000003", "provider");
+    const r = await request(s.token);
+    expect(r.statusCode).toBe(403);
+    expect(r.json().error.code).toBe("provider_not_verified");
+  });
+
+  it("المزوّد الموقوف ما يطلب طلب جديد، بس يقدر يتابع ويلغي طلبه القديم (ولا مرة طريق مسدود)", async () => {
+    const p = await ctx.verifiedProvider("0519000004");
+    const id = (await request(p.token)).json().purchaseRequest.id;
+    await ctx.db.query("UPDATE providers SET status='suspended' WHERE id=$1", [p.providerId]);
+    expect((await request(p.token)).statusCode).toBe(403);
+    const view = await call("GET", `/v1/market/purchase-requests/${id}`, p.token);
+    expect(view.statusCode).toBe(200);
+    expect(view.json().purchaseRequest.actions).toContain("cancel");
+    expect((await call("POST", `/v1/market/purchase-requests/${id}/cancel`, p.token)).statusCode).toBe(200);
+  });
+
+  it("كل مشتري يشوف طلباته بس: مزوّد ثاني وعميل ما يوصلون لطلب المزوّد", async () => {
+    const p = await ctx.verifiedProvider("0519000005");
+    const other = await ctx.verifiedProvider("0519000006");
+    const customer = await ctx.factory("0519000007");
+    const id = (await request(p.token)).json().purchaseRequest.id;
+    expect((await call("GET", `/v1/market/purchase-requests/${id}`, other.token)).statusCode).toBe(404);
+    expect((await call("GET", `/v1/market/purchase-requests/${id}`, customer.token)).statusCode).toBe(404);
+    expect((await call("POST", `/v1/market/purchase-requests/${id}/cancel`, other.token)).statusCode).toBe(404);
+    expect((await call("GET", "/v1/market/purchase-requests", other.token)).json().purchaseRequests).toEqual([]);
+  });
+
+  it("لو الإدارة شالت «مزوّد» من الإعداد، يُرفض", async () => {
+    const p = await ctx.verifiedProvider("0519000008");
+    await market(["business"]);
+    try {
+      const r = await request(p.token);
+      expect(r.statusCode).toBe(403);
+      expect(r.json().error.code).toBe("market_buyer_not_allowed");
+    } finally {
+      await market(["business", "provider"]);
+    }
+  });
+
+  it("قاعدة البيانات ترفض طلب بدون مشتري أو بمشتريين", async () => {
+    const [pr] = await ctx.db.query<{ product_id: string; seller_id: string; buyer_user_id: string; city_id: string }>(
+      "SELECT product_id, seller_id, buyer_user_id, city_id FROM purchase_requests LIMIT 1",
+    );
+    await expect(
+      ctx.db.query(
+        "INSERT INTO purchase_requests (product_id, seller_id, buyer_user_id, quantity, city_id, needed_when) VALUES ($1,$2,$3,60,$4,'today')",
+        [pr.product_id, pr.seller_id, pr.buyer_user_id, pr.city_id],
+      ),
+    ).rejects.toThrow();
   });
 });
 

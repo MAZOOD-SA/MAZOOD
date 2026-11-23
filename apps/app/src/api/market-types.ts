@@ -64,7 +64,7 @@ export type PurchaseRequest = {
   id: string;
   product: { id: string; name: string; unit: ProductUnit; imageUrl: string | null };
   seller: { id: string; name: string | null };
-  buyer?: { kind: "business" | "individual"; name: string | null };
+  buyer?: { kind: "business" | "individual" | "provider"; name: string | null };
   quantity: number;
   cityId: string;
   when: "today" | "tomorrow" | "this_week" | "this_month";

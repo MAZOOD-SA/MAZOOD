@@ -1,5 +1,6 @@
 // «اطلب سعر» على منتج (/purchase/new?product=ID): الكمية والموعد وملاحظة. والتقدير من السعر المعلن يتحدّث مع الكمية.
 // المكافأة: بعد الإرسال تنفتح تفاصيل الطلب ومعها «وصل طلبك للمصنع».
+// المشتري عميل أو مزوّد (القرار ٥٦). العميل يكمّل بياناته أول، والمزوّد لازم يكون موثّق (والخادم يتأكد بنفسه).
 import { spacing } from "@mazood/brand";
 import { containsContactInfo, purchaseRequestBody, unitPriceFor } from "@mazood/shared";
 import { router, useLocalSearchParams } from "expo-router";
@@ -13,15 +14,41 @@ import { Screen, SectionTitle } from "@/components/layout";
 import { PriceText, ProductImage, useUnit } from "@/components/market";
 import { AppText, Button, Card, Chips, Notice, Row } from "@/components/ui";
 import { useStore } from "@/data/store";
+import { useProvider } from "@/data/useProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 
 type When = "today" | "tomorrow" | "this_week" | "this_month";
 const toLatin = (s: string) => s.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).trim();
 
 export default function NewPurchase() {
+  const { role } = useStore();
+  return role === "provider" ? <ProviderGate /> : <PurchaseForm />;
+}
+
+/** المزوّد: يطلب بعد التوثيق بس. قبله يشوف السبب وزر يكمّل فيه التوثيق (ولا مرة طريق مسدود). */
+function ProviderGate() {
+  const { t } = useI18n();
+  const { provider } = useProvider();
+  if (provider === undefined) return <Screen title={t("purchaseNewTitle")} back>{null}</Screen>;
+  if (!provider?.verified) {
+    return (
+      <Screen title={t("purchaseNewTitle")} back contentStyle={{ gap: spacing["3"] }}>
+        <AppText variant="h2" weight={700}>
+          {t("providerVerifyToBuy")}
+        </AppText>
+        <Button label={t("finishVerification")} variant="primary" size="lg" full onPress={() => router.push("/provider")} />
+      </Screen>
+    );
+  }
+  return <PurchaseForm buyer="provider" />;
+}
+
+function PurchaseForm({ buyer = "customer" }: { buyer?: "customer" | "provider" }) {
   const { product: productId } = useLocalSearchParams<{ product: string }>();
   const { t, num, money } = useI18n();
-  const { authed, profileComplete } = useStore();
+  const { authed, profileComplete: customerComplete } = useStore();
+  // بيانات المزوّد اتراجعت في التوثيق، فما يحتاج «كمّل بياناتك».
+  const profileComplete = buyer === "provider" || customerComplete;
   const unit = useUnit();
   const [product, setProduct] = useState<MarketProduct | null>(null);
   const [qty, setQty] = useState("");
