@@ -13,3 +13,4 @@ export * from "./rating.ts";
 export * from "./commitment.ts";
 export * from "./market.ts";
 export * from "./notifications.ts";
+export * from "./deal-room.ts";

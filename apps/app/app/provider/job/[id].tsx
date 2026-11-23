@@ -1,11 +1,11 @@
 // الطلب المنفّذ للمزوّد: «بدأت التنفيذ»، و«تم التنفيذ» مع الصور، و«اطلب تعديل السعر»، والرد على طلب
-// الإلغاء، والاعتذار قبل البدء، والبلاغ. هنا بس يشوف اسم المصنع والموقع بالضبط ورقم التواصل (بعد القبول).
+// الإلغاء، والاعتذار قبل البدء، والبلاغ. هنا بس يشوف اسم المصنع والموقع بالضبط والمحادثة مع العميل (غرفة الصفقة، بعد القبول).
 // الزر الكهرماني (واحد) هو الخطوة الجاية في التنفيذ.
 import { spacing } from "@mazood/brand";
 import { DISPUTE_REASONS } from "@mazood/shared";
 import { useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
-import { Linking, View } from "react-native";
+import { View } from "react-native";
 import { ApiClientError } from "@/api/client";
 import { errorKey } from "@/api/mapping";
 import type { JobView } from "@/api/types";
@@ -13,7 +13,8 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { RequestStatusBadge } from "@/components/domain";
 import { Field } from "@/components/Field";
 import { Fact, PhotoStrip, SideCard, Timeline, useAutoRefresh } from "@/components/flow";
-import { IconAlertTriangle, IconCamera, IconCircleCheck, IconHourglass, IconPhone } from "@/components/icons";
+import { IconAlertTriangle, IconCamera, IconCircleCheck, IconHourglass } from "@/components/icons";
+import { DealRoom } from "@/components/deal-room";
 import { Screen, SkeletonList, TwoColumn } from "@/components/layout";
 import { pickAndUploadPhoto } from "@/components/provider";
 import { parseRiyals } from "@/lib/money";
@@ -213,6 +214,8 @@ export default function ProviderJob() {
         {(status === "in_progress" || status === "delivered") && !cancellation && <Button label={t("openDispute")} variant="secondary" onPress={() => open("dispute")} />}
         {status === "disputed" && <Button label={t("addNote")} variant="secondary" onPress={() => open("note")} />}
       </Row>
+      {/* غرفة الصفقة (القرار ٣٥): التواصل مع العميل هنا بدل رقم الجوال. */}
+      <DealRoom path={`/v1/provider/jobs/${job.orderId}/messages`} viewer="provider" />
     </>
   );
 
@@ -222,14 +225,6 @@ export default function ProviderJob() {
         <AppText variant="body" weight={600}>
           {job.factory.name ?? t("factory")}
         </AppText>
-        {ACTIVE.includes(status) && (
-          <Button
-            label={digits(`0${job.factory.contactPhone.slice(4)}`)}
-            icon={IconPhone}
-            variant="secondary"
-            onPress={() => Linking.openURL(`tel:${job.factory.contactPhone}`)}
-          />
-        )}
         <Fact label={t("agreedPrice")} value={`${money(job.priceHalalas)} · ${t("priceExcludesVat")}`} />
         <Fact label={t("locationLabel")} value={job.location} />
         {!!job.area && <Fact label={t("areaLabel")} value={job.area} />}
@@ -351,7 +346,6 @@ export default function ProviderJob() {
   );
 }
 
-const ACTIVE = ["accepted", "in_progress", "delivered", "disputed"];
 
 const JOB_HINTS: Partial<Record<JobView["status"], StringKey>> = {
   accepted: "jobHintAccepted",

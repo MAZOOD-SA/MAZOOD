@@ -11,14 +11,15 @@ import { radius, spacing } from "@mazood/brand";
 import { DISPUTE_REASONS, type FactoryUiAction } from "@mazood/shared";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Linking, View } from "react-native";
+import { View } from "react-native";
 import { ApiClientError } from "@/api/client";
 import { errorKey } from "@/api/mapping";
 import type { FactoryOffer, FactoryRequestView } from "@/api/types";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Field } from "@/components/Field";
 import { CountUp, Fact, PhotoStrip, ProviderLine, SideCard, Stars, Timeline, useAutoRefresh } from "@/components/flow";
-import { IconAlertTriangle, IconCircleCheck, IconHourglass, IconPhone } from "@/components/icons";
+import { IconAlertTriangle, IconCircleCheck, IconHourglass } from "@/components/icons";
+import { DealRoom } from "@/components/deal-room";
 import { Grid, Screen, SectionTitle, SkeletonList, TwoColumn } from "@/components/layout";
 import { AppText, Badge, Button, Card, Chips, Divider, Notice, Row } from "@/components/ui";
 import { RequestStatusBadge } from "@/components/domain";
@@ -248,17 +249,8 @@ export default function RequestDetails() {
                 {t("priceExcludesVat")}
               </AppText>
             </View>
-            {["accepted", "in_progress", "delivered", "disputed"].includes(status) && (
-              <Button
-                label={digits(`0${order.provider.contactPhone.slice(4)}`)}
-                icon={IconPhone}
-                variant="secondary"
-                onPress={() => Linking.openURL(`tel:${order.provider.contactPhone}`)}
-              />
-            )}
           </Row>
           {status === "accepted" && <AppText variant="caption" color="inkMuted">{t("freeCancelUntilStart")}</AppText>}
-          {/* غرفة الصفقة (القرار ٣٥) تنضاف هنا بعد التنبيهات: المحادثة بين المصنع والمزوّد بعد القبول. */}
         </Card>
       )}
 
@@ -345,6 +337,9 @@ export default function RequestDetails() {
           {others.map(otherButton)}
         </Row>
       )}
+
+      {/* غرفة الصفقة (القرار ٣٥): التواصل مع المزوّد هنا بدل رقم الجوال. آخر الصفحة عشان ما تدفّ أزرار الطلب لتحت. */}
+      {order && <DealRoom path={`/v1/requests/${view.request.id}/messages`} viewer="customer" />}
     </>
   );
 

@@ -17,6 +17,7 @@ export type ServerRequest = {
   createdAt: string;
   offerCount?: number;
   newOfferCount?: number;
+  unreadMessages?: number;
 };
 
 export function fromServerRequest(r: ServerRequest): ServiceRequest {
@@ -36,6 +37,7 @@ export function fromServerRequest(r: ServerRequest): ServiceRequest {
     status: r.status,
     offerCount: r.offerCount,
     newOfferCount: r.newOfferCount,
+    unreadMessages: r.unreadMessages,
   };
 }
 
@@ -90,7 +92,7 @@ export type ErrorKey =
   | "errContactInfo" | "errOfferExists" | "errOffersFull" | "errOfferNotActive" | "errOfferLocked" | "errValidityTooLong"
   | "errPriceChangePending" | "errCancellationPending" | "errAlreadyRated" | "errInvalidTransition" | "errDeletionPending"
   | "errDemoUnsupported" | "errPhotosLimit" | "errPhotoNotAllowed" | "errPhoneInUse" | "errProviderNotVerified" | "errNotFound"
-  | "errPriceUnchanged" | "errManagerApproval" | "errProviderUnavailable"
+  | "errPriceUnchanged" | "errManagerApproval" | "errProviderUnavailable" | "errChatClosed"
   | "errProfileIncomplete" | "errIdentityUnverified" | "errKindLocked" | "errIndividualNoMembers"
   | "errProductsLimit" | "errImagesLimit" | "errBelowMinOrder" | "errOwnProduct" | "errSellerNotEnabled" | "errProductRemoved"
   | "errMarketBuyerNotAllowed" | "errSellerBusinessOnly";
@@ -169,6 +171,8 @@ export function errorKey(code: string): ErrorKey {
       return "errManagerApproval";
     case "provider_unavailable":
       return "errProviderUnavailable";
+    case "chat_closed":
+      return "errChatClosed";
     case "profile_incomplete":
       return "errProfileIncomplete";
     case "identity_unverified":

@@ -29,7 +29,14 @@ import {
   republishBody,
   requiredDocsFor,
   SETTING_DEFAULTS,
+  CHAT_SYSTEM_EVENTS,
+  chatClosedReason,
+  chatWritable,
+  sendMessageBody,
   type CancellationPolicy,
+  type ChatItem,
+  type ChatSystemEvent,
+  type ChatView,
   type FlowAction,
   type FlowActor,
   type RequestStatus,
@@ -98,6 +105,8 @@ type PriceChange = { id: string; orderId: string; oldPriceHalalas: number; newPr
 type Cancellation = { id: string; orderId: string; requestId: string; kind: "after_start" | "provider_withdrawal"; status: "pending" | "agreed" | "declined" | "withdrawn"; reason: string | null; requestedAt: string; respondBy: string | null; respondedAt: string | null; responseNote: string | null };
 type Dispute = { id: string; orderId: string; number: number; reason: string; details: string | null; openedBy: string; status: "open" | "closed"; openedAt: string; notes: { by: string; body: string; at: string }[] };
 type Rating = { requestId: string; providerId: string; stars: number; createdAt: string };
+/** رسالة في غرفة الصفقة. هنا بدون تشفير لأنها داخل متصفحك بس (الخادم الحقيقي يشفّرها). */
+type Message = { id: string; seq: number; orderId: string; senderId: string; from: "customer" | "provider"; body: string; at: string };
 
 type Db = {
   seq: number;
@@ -114,6 +123,9 @@ type Db = {
   disputes: Dispute[];
   ratings: Rating[];
   deletions: { userId: string; requestedAt: string }[];
+  /** غرفة الصفقة: الرسائل، وآخر رسالة قرأها كل مستخدم في كل طلب («orderId:userId» ← seq). */
+  messages: Message[];
+  reads: Record<string, number>;
   /** السوق (src/demo/market.ts). */
   market: MarketState;
   /** جلسة «الكوكي» في الموقع (الخادم الحقيقي يحطها في كوكي محمي). */
@@ -122,8 +134,8 @@ type Db = {
 
 const CITY = "sudair";
 const HOUR = 3600_000;
-// v2: نوع العميل والسوق (خطة العميل الفرد والسوق). النسخة القديمة المحفوظة تنتهي وتبدأ من جديد.
-const STORAGE_KEY = "mazood.demo.v2";
+// v3: غرفة الصفقة (الرسائل). النسخة القديمة المحفوظة تنتهي وتبدأ من جديد.
+const STORAGE_KEY = "mazood.demo.v3";
 /** كم ثانية بعد رفع الطلب توصل العروض الوهمية من مزوّدين ثانيين. */
 const SIMULATED_OFFER_DELAY_MS = 5000;
 /** أرقام جاهزة للتجربة: تظهر في شاشة الدخول. */
@@ -157,6 +169,8 @@ function seed(): Db {
     disputes: [],
     ratings: [],
     deletions: [],
+    messages: [],
+    reads: {},
     market: seedMarket(t, iso),
     session: null,
   };
@@ -215,6 +229,14 @@ function seed(): Db {
   req("r8", "f2", "maintenance", "smith", "تركيب درابزين حديد للدرج الخارجي، طوله ١٢ متر.", "المدينة الصناعية الثانية", 8, "accepted");
   offer("o9", "r8", "pme", 2800, 16, null, 7, "accepted");
   order("d8", "r8", "o9", "pme", 2800, 1, { factoryId: "f2", acceptedBy: "u3" });
+
+  // غرفة الصفقة: محادثة سابقة في الطلب الجاري، عشان يبان شكلها من أول ما يدخل المصنع.
+  const msg = (orderId: string, senderId: string, from: Message["from"], body: string, hoursAgo: number) =>
+    db.messages.push({ id: `m${db.messages.length + 1}`, seq: db.messages.length + 1, orderId, senderId, from, body, at: iso(t - hoursAgo * HOUR) });
+  msg("d2", "u1", "customer", "الدخول من البوابة الشرقية، واسأل عن مشرف الإنتاج.", 27);
+  msg("d2", "p4", "provider", "تمام. نوصل الساعة ٨ الصبح ومعنا غاز للمكيف اللي ما يبرّد.", 26);
+  db.reads["d2:u1"] = 1;
+  msg("d8", "u3", "customer", "الدرج جنب المستودع رقم ٢. نبي اللون أسود مطفي.", 0.5);
   return db;
 }
 
@@ -395,7 +417,7 @@ function factoryView(u: User, requestId: string) {
             deliveredAt: order.deliveredAt,
             confirmedAt: order.confirmedAt,
             cancellationPolicy: order.policy,
-            provider: { tradeName: p.tradeName, contactPhone: p.userId ? db.users.find((x) => x.id === p.userId)!.phone : "+966511111111", verified: true },
+            provider: { tradeName: p.tradeName, verified: true },
           }
         : null,
     execution: order ? execution(order) : null,
@@ -411,6 +433,7 @@ function factoryView(u: User, requestId: string) {
     withdrawal: withdrawal ? { at: withdrawal.requestedAt, reason: withdrawal.reason } : null,
     dispute: order ? disputeView(order.id, "factory") : null,
     rating: rated ? { stars: rated.stars, createdAt: rated.createdAt } : null,
+    unreadMessages: order ? unread(order.id, u.id) : 0,
   };
 }
 
@@ -468,7 +491,6 @@ function myOfferView(o: Offer) {
 function jobSummary(o: Order) {
   const r = db.requests.find((x) => x.id === o.requestId)!;
   const f = db.factories.find((x) => x.id === o.factoryId)!;
-  const acceptedBy = db.users.find((x) => x.id === o.acceptedBy)!;
   return {
     orderId: o.id,
     requestId: r.id,
@@ -483,7 +505,8 @@ function jobSummary(o: Order) {
     acceptedAt: o.acceptedAt,
     startedAt: o.startedAt,
     deliveredAt: o.deliveredAt,
-    factory: { name: f.name, kind: f.kind ?? "business", contactPhone: acceptedBy.phone },
+    factory: { name: f.name, kind: f.kind ?? "business" },
+    unreadMessages: unread(o.id, db.providers.find((x) => x.id === o.providerId)?.userId ?? ""),
   };
 }
 
@@ -660,7 +683,8 @@ on("GET", "/v1/requests", ({ u }) => {
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
       .map((r) => {
         const offers = db.offers.filter((o) => o.requestId === r.id && live(o, t));
-        return { ...reqView(r), offerCount: offers.length, newOfferCount: offers.filter((o) => !o.firstSeenAt).length };
+        const order = orderOf(r.id);
+        return { ...reqView(r), offerCount: offers.length, newOfferCount: offers.filter((o) => !o.firstSeenAt).length, unreadMessages: order ? unread(order.id, u().id) : 0 };
       }),
   };
 });
@@ -926,6 +950,50 @@ on("POST", "/v1/account/deletion", ({ u, body }) => {
   db.deletions.push(d);
   return { request: { id: `del-${user.id}`, status: "pending", requestedAt: d.requestedAt } };
 });
+
+
+// ───────── غرفة الصفقة (القرار ٣٥) ─────────
+// نفس قواعد الخادم الحقيقي (apps/api/src/deal-room.ts): الكتابة والطلب شغّال، وبعدها قراءة بس،
+// والأرقام والروابط ممنوعة. والتنبيهات ما تشتغل هنا.
+
+const unread = (orderId: string, userId: string) =>
+  db.messages.filter((m) => m.orderId === orderId && m.senderId !== userId && m.seq > (db.reads[`${orderId}:${userId}`] ?? 0)).length;
+
+function chatView(o: Order, userId: string): ChatView {
+  const r = db.requests.find((x) => x.id === o.requestId)!;
+  const status = effectiveStatus(r);
+  const msgs = db.messages.filter((m) => m.orderId === o.id);
+  // «قرأت» مع كل تحميل، مثل الخادم.
+  db.reads[`${o.id}:${userId}`] = msgs.at(-1)?.seq ?? 0;
+  const evs = db.events.filter((e) => e.requestId === r.id && e.at >= o.acceptedAt && (CHAT_SYSTEM_EVENTS as readonly string[]).includes(e.event));
+  const items: ChatItem[] = [
+    ...evs.map((e, i): ChatItem => ({ kind: "event", id: `e${o.id}-${i}`, seq: 0, event: e.event as ChatSystemEvent, at: e.at })),
+    ...msgs.map((m): ChatItem => ({ kind: "message", id: m.id, seq: m.seq, from: m.from, mine: m.senderId === userId, body: m.body, at: m.at })),
+  ].sort((a, b) => (a.at === b.at ? a.seq - b.seq : a.at < b.at ? -1 : 1));
+  const writable = o.state === "active" && chatWritable(status);
+  return { items, writable, closedReason: writable ? null : chatClosedReason(status), lastSeq: msgs.at(-1)?.seq ?? 0 };
+}
+
+function sendMessage(o: Order, senderId: string, from: Message["from"], body: unknown): ChatView {
+  const b = parseBody(sendMessageBody, body);
+  noContact(b.body);
+  const r = db.requests.find((x) => x.id === o.requestId)!;
+  if (o.state !== "active" || !chatWritable(effectiveStatus(r))) fail(409, "chat_closed");
+  const seq = (db.messages.at(-1)?.seq ?? 0) + 1;
+  db.messages.push({ id: id("m"), seq, orderId: o.id, senderId, from, body: b.body, at: iso(now()) });
+  return chatView(o, senderId);
+}
+
+on("GET", "/v1/requests/:id/messages", ({ u, params }) => {
+  const user = u();
+  return chatView(orderOf(ownRequest(user, params[0]).id) ?? fail(404, "not_found"), user.id);
+});
+on("POST", "/v1/requests/:id/messages", ({ u, params, body }) => {
+  const user = u();
+  return sendMessage(orderOf(ownRequest(user, params[0]).id) ?? fail(404, "not_found"), user.id, "customer", body);
+});
+on("GET", "/v1/provider/jobs/:id/messages", ({ u, params }) => chatView(ownJob(u(), params[0]), u().id));
+on("POST", "/v1/provider/jobs/:id/messages", ({ u, params, body }) => sendMessage(ownJob(u(), params[0]), u().id, "provider", body));
 
 /** الطلب للخادم التجريبي. يرمي ApiClientError مثل الخادم الحقيقي بالضبط. */
 // السوق: مسارات منفصلة في src/demo/market.ts.

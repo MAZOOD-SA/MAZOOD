@@ -1,4 +1,5 @@
 // الخادم التجريبي (رابط النسخة التجريبية): الدورة كاملة من الطلب للتقييم، بنفس شكل ردود الخادم الحقيقي.
+import type { ChatView } from "@mazood/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { FactoryRequestView, JobView, MyOffer, OpenRequest } from "@/api/types";
 import { demoApi, resetDemo } from "./server";
@@ -36,10 +37,22 @@ describe("الخادم التجريبي", () => {
 
     v = await demoApi<FactoryRequestView>("POST", `/v1/requests/${id}/offers/${offer.id}/accept`, undefined, f);
     expect(v.request.status).toBe("accepted");
-    expect(v.order!.provider.contactPhone).toBeTruthy();
+    // رقم الجوال ما يطلع (القرار ٣٥): التواصل من غرفة الصفقة.
+    expect(v.order!.provider).not.toHaveProperty("contactPhone");
 
     const jobs = await demoApi<{ jobs: { orderId: string; requestId: string }[] }>("GET", "/v1/provider/jobs", undefined, p);
     const orderId = jobs.jobs.find((j) => j.requestId === id)!.orderId;
+
+    // غرفة الصفقة: المصنع يكتب، والمزوّد يشوف «غير مقروء» ويرد.
+    await demoApi("POST", `/v1/requests/${id}/messages`, { body: "متى توصلون؟" }, f);
+    await expect(demoApi("POST", `/v1/requests/${id}/messages`, { body: "كلمني 0551234567" }, f)).rejects.toMatchObject({ code: "contact_info_not_allowed" });
+    expect((await demoApi<{ job: JobView }>("GET", `/v1/provider/jobs/${orderId}`, undefined, p)).job.unreadMessages).toBe(1);
+    const chat = await demoApi<ChatView>("POST", `/v1/provider/jobs/${orderId}/messages`, { body: "بعد ساعة" }, p);
+    expect(chat.items.filter((i) => i.kind === "message").map((m) => (m.kind === "message" ? [m.mine, m.body] : null))).toEqual([
+      [false, "متى توصلون؟"],
+      [true, "بعد ساعة"],
+    ]);
+    expect((await demoApi<{ job: JobView }>("GET", `/v1/provider/jobs/${orderId}`, undefined, p)).job.unreadMessages).toBe(0);
     await demoApi<JobView>("POST", `/v1/provider/jobs/${orderId}/start`, undefined, p);
     await demoApi("POST", `/v1/provider/jobs/${orderId}/price-change`, { newPriceHalalas: 170_000, reason: "زادت المسافة ٣٠ كيلو" }, p);
     // «تم التنفيذ» ممنوع لين ينحسم السعر.
@@ -55,6 +68,9 @@ describe("الخادم التجريبي", () => {
     v = await demoApi<FactoryRequestView>("POST", `/v1/requests/${id}/confirm`, undefined, f);
     expect(v.request.status).toBe("completed");
     expect(v.actions.others).toContain("rate");
+    // بعد الاكتمال: المحادثة قراءة بس.
+    await expect(demoApi("POST", `/v1/requests/${id}/messages`, { body: "شكرًا" }, f)).rejects.toMatchObject({ code: "chat_closed" });
+    expect(await demoApi<ChatView>("GET", `/v1/requests/${id}/messages`, undefined, f)).toMatchObject({ writable: false, closedReason: "completed" });
     v = await demoApi<FactoryRequestView>("POST", `/v1/requests/${id}/rating`, { stars: 5 }, f);
     expect(v.actions.others).not.toContain("rate");
     await expect(demoApi("POST", `/v1/requests/${id}/rating`, { stars: 4 }, f)).rejects.toMatchObject({ code: "already_rated" });

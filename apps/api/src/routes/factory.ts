@@ -1,4 +1,5 @@
 // مسارات المصنع: الحساب والطلبات. كل استعلام مقيّد بمصنع الجلسة.
+import { unreadCount } from "../deal-room.ts";
 import {
   addFactoryMemberBody,
   createRequestBody,
@@ -106,14 +107,18 @@ export function factoryRoutes(app: FastifyInstance, ctx: Ctx, g: Guards) {
   });
 
   app.get("/v1/requests", async (req) => {
-    const { factoryId } = await g.requireFactory(req);
+    const { user, factoryId } = await g.requireFactory(req);
     // مع كل طلب: عدد العروض الصالحة، وكم واحد منها ما انفتح للحين (الرئيسية ترفع الطلبات اللي فيها عروض جديدة فوق).
     const rows = await db.query<RequestRow>(
       `SELECT ${REQUEST_COLUMNS},
               (SELECT count(*)::int FROM offers o WHERE o.request_id = requests.id AND ${liveOffer("$2")}) AS "offerCount",
-              (SELECT count(*)::int FROM offers o WHERE o.request_id = requests.id AND ${liveOffer("$2")} AND o.first_seen_at IS NULL) AS "newOfferCount"
+              (SELECT count(*)::int FROM offers o WHERE o.request_id = requests.id AND ${liveOffer("$2")} AND o.first_seen_at IS NULL) AS "newOfferCount",
+              -- غرفة الصفقة: رسائل المزوّد اللي ما قرأها هذا المستخدم، في الطلب المنفّذ الحالي.
+              (SELECT count(*)::int FROM orders od JOIN order_messages m ON m.order_id = od.id
+                WHERE od.request_id = requests.id AND od.state <> 'withdrawn' AND m.sender_role = 'provider'
+                  AND m.seq > COALESCE((SELECT last_seq FROM order_message_reads rd WHERE rd.order_id = od.id AND rd.user_id = $3), 0)) AS "unreadMessages"
          FROM requests WHERE factory_id = $1 ORDER BY created_at DESC LIMIT 200`,
-      [factoryId, ctx.now()],
+      [factoryId, ctx.now(), user.id],
     );
     return { requests: rows.map((r) => withStatus(r, ctx.now())) };
   });
@@ -295,6 +300,8 @@ export async function factoryRequestView(ctx: Ctx, factoryId: string, id: string
     withdrawal,
     dispute: orderId ? await disputeForParty(db, orderId, "factory") : null,
     rating,
+    // غرفة الصفقة: كم رسالة من المزوّد ما قرأها هذا المستخدم.
+    unreadMessages: orderId ? await unreadCount(db, orderId, viewerId) : 0,
   };
 }
 
@@ -306,7 +313,7 @@ function withStatus(r: RequestRow, now: Date) {
 /**
  * العروض والترشيح والطلب المنفّذ لطلب معيّن (للمصنع صاحبه).
  * فتح التفاصيل يسجّل «المصنع شاف العروض» على العروض الجديدة (يظهر للمزوّد).
- * بيانات تواصل المزوّد ما تطلع إلا بعد القبول.
+ * رقم جوال المزوّد ما يطلع أبدًا (القرار ٣٥): التواصل بعد القبول من غرفة الصفقة.
  */
 async function requestDetails(db: Db, requestId: string, now: Date) {
   await db.query("UPDATE offers SET first_seen_at=$2 WHERE request_id=$1 AND first_seen_at IS NULL AND status='active'", [requestId, now]);
@@ -360,16 +367,15 @@ async function requestDetails(db: Db, requestId: string, now: Date) {
     price_halalas: string;
     provider_id: string;
     trade_name: string;
-    provider_phone: string;
     accepted_at: Date;
     started_at: Date | null;
     delivered_at: Date | null;
     confirmed_at: Date | null;
     cancellation_policy: unknown;
   }>(
-    `SELECT o.id, o.state, o.price_halalas, o.provider_id, p.trade_name, u.phone AS provider_phone, o.accepted_at, o.started_at,
+    `SELECT o.id, o.state, o.price_halalas, o.provider_id, p.trade_name, o.accepted_at, o.started_at,
             o.delivered_at, o.confirmed_at, o.cancellation_policy
-       FROM orders o JOIN providers p ON p.id = o.provider_id JOIN users u ON u.id = p.user_id
+       FROM orders o JOIN providers p ON p.id = o.provider_id
       WHERE o.request_id=$1 AND o.state <> 'withdrawn' ORDER BY o.accepted_at DESC LIMIT 1`,
     [requestId],
   );
@@ -386,7 +392,7 @@ async function requestDetails(db: Db, requestId: string, now: Date) {
           deliveredAt: order.delivered_at && new Date(order.delivered_at).toISOString(),
           confirmedAt: order.confirmed_at && new Date(order.confirmed_at).toISOString(),
           cancellationPolicy: parseCancellationPolicy(order.cancellation_policy),
-          provider: { tradeName: order.trade_name, contactPhone: order.provider_phone, verified: await providerIsActive(db, order.provider_id, now) },
+          provider: { tradeName: order.trade_name, verified: await providerIsActive(db, order.provider_id, now) },
         }
       : null,
   };
