@@ -29,6 +29,21 @@
   --success: #176B47;
   --success-soft: #E3F4EC;
   --danger: #B93A26;
+  /* ألوان الأقسام: للأيقونة ودائرتها بس، وما تعني حالة أبد */
+  --cat-transport: #1D63A8;
+  --cat-transport-soft: #E3EEF9;
+  --cat-maintenance: #7A3FB0;
+  --cat-maintenance-soft: #F1E8FA;
+  --cat-materials: #8A5A2B;
+  --cat-materials-soft: #F5ECE2;
+  --cat-security: #0E7381;
+  --cat-security-soft: #DFF2F4;
+  --cat-cleaning: #B0306E;
+  --cat-cleaning-soft: #FBE7F0;
+  --cat-customs: #4A4FB5;
+  --cat-customs-soft: #E9EAF8;
+  --cat-pest_control: #5F6E12;
+  --cat-pest_control-soft: #EEF2DA;
 }
 
 [data-theme="dark"] {
@@ -49,6 +64,20 @@
   --success: #4CC38A;
   --success-soft: #12352A;
   --danger: #F08A73;
+  --cat-transport: #7DB4EC;
+  --cat-transport-soft: #14304D;
+  --cat-maintenance: #C39BEA;
+  --cat-maintenance-soft: #2C1E40;
+  --cat-materials: #D9A877;
+  --cat-materials-soft: #35281B;
+  --cat-security: #5CC6D3;
+  --cat-security-soft: #0F3338;
+  --cat-cleaning: #EE8DBA;
+  --cat-cleaning-soft: #3A1A2A;
+  --cat-customs: #9EA3F0;
+  --cat-customs-soft: #1F2247;
+  --cat-pest_control: #B8C85A;
+  --cat-pest_control-soft: #283010;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -70,6 +99,20 @@
     --success: #4CC38A;
     --success-soft: #12352A;
     --danger: #F08A73;
+    --cat-transport: #7DB4EC;
+    --cat-transport-soft: #14304D;
+    --cat-maintenance: #C39BEA;
+    --cat-maintenance-soft: #2C1E40;
+    --cat-materials: #D9A877;
+    --cat-materials-soft: #35281B;
+    --cat-security: #5CC6D3;
+    --cat-security-soft: #0F3338;
+    --cat-cleaning: #EE8DBA;
+    --cat-cleaning-soft: #3A1A2A;
+    --cat-customs: #9EA3F0;
+    --cat-customs-soft: #1F2247;
+    --cat-pest_control: #B8C85A;
+    --cat-pest_control-soft: #283010;
   }
 }
 
