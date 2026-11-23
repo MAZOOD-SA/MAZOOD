@@ -116,3 +116,18 @@ describe("تصغير صورة المنتج", () => {
     expect(fitWithin(800, 600)).toEqual({ width: 800, height: 600 });
   });
 });
+
+describe("ألوان الأقسام", () => {
+  it("لكل قسم توكنين موجودين في الفاتح والداكن ومختلفين", async () => {
+    const { colors } = await import("@mazood/brand");
+    const { CATEGORIES, categoryColorKeys } = await import("@/data/categories");
+    for (const c of CATEGORIES) {
+      const { fg, soft } = categoryColorKeys(c.id);
+      expect(colors.light[fg], `${c.id} fg`).toBeTruthy();
+      expect(colors.light[soft], `${c.id} soft`).toBeTruthy();
+      expect(colors.dark[fg], `${c.id} fg dark`).toBeTruthy();
+      expect(colors.dark[soft], `${c.id} soft dark`).toBeTruthy();
+      expect(fg).not.toBe(soft);
+    }
+  });
+});

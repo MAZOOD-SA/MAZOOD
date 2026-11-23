@@ -7,12 +7,12 @@ import type { ServiceRequest } from "@/data/types";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { StringKey } from "@/i18n/strings";
 import { useTheme } from "@/theme/ThemeProvider";
+import { CategoryIcon } from "./CategoryIcon";
 import { AppText, Badge, Card, Row, type BadgeTone } from "./ui";
 
 export function CategoryTile({ category, onPress, compact }: { category: Category; onPress: () => void; compact?: boolean }) {
   const { colors } = useTheme();
   const { tl } = useI18n();
-  const Icon = category.icon;
   return (
     <Pressable
       accessibilityRole="button"
@@ -30,13 +30,7 @@ export function CategoryTile({ category, onPress, compact }: { category: Categor
         opacity: pressed ? 0.85 : 1,
       })}
     >
-      {compact ? (
-        <Icon size={22} color={colors.ink} strokeWidth={1.75} />
-      ) : (
-        <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.surfaceAlt, alignItems: "center", justifyContent: "center" }}>
-          <Icon size={24} color={colors.ink} strokeWidth={1.75} />
-        </View>
-      )}
+      <CategoryIcon category={category} size={compact ? 36 : 44} />
       <AppText variant={compact ? "caption" : "body"} weight={600} style={compact ? { fontSize: 13, lineHeight: 20 } : undefined}>
         {tl(category.name)}
       </AppText>
@@ -100,13 +94,12 @@ export function RequestCard({ request, onPress }: { request: ServiceRequest; onP
   const { t, tl, relative, num } = useI18n();
   const { colors } = useTheme();
   const cat = categoryById(request.category);
-  const Icon = cat.icon;
   const fresh = request.newOfferCount ?? 0;
   const unread = request.unreadMessages ?? 0;
   return (
     <Card onPress={onPress} style={{ paddingVertical: spacing["3"], paddingHorizontal: spacing["4"], borderColor: fresh || unread ? colors.accent : colors.line }}>
       <Row gap="3" style={{ justifyContent: "space-between" }}>
-        <Icon size={22} color={colors.inkMuted} strokeWidth={1.75} />
+        <CategoryIcon category={cat} size={36} />
         <View style={{ flex: 1, gap: 2 }}>
           <AppText variant="bodySm" weight={600} numberOfLines={1}>
             {tl(request.title)}
