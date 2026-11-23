@@ -65,6 +65,7 @@
 | impeccable | github.com/pbakaus/impeccable | 4.10.0 (`b49177d`) | Apache-2.0 (ومراجع iOS وAndroid مأخوذة من عمل برخصة MIT، مذكور في `NOTICE.md`) |
 | animate-expo، gestures، review-animations، improve-animations، find-animation-opportunities، remove-animations، emil-design-eng، break-ui | github.com/emilkowalski/skills | `64eb3de` | MIT |
 | brand-identity | github.com/fatihaydost/brand-identity-skill | `af7ba40` | MIT (وخط Instrument Sans في نماذجه برخصة OFL-1.1، مذكور في `THIRD_PARTY_NOTICES.md`) |
+| watch (يشاهد فيديو ويجاوب عنه) | github.com/bradautomates/claude-video | 0.3.2 (`03ceb42`) | MIT. يستخدم وقت الشغل أدوات مثبّتة على الجهاز (ffmpeg، وyt-dlp) وما ننسخها في المستودع |
 
 **ملاحظة على `brand-identity`:** فيه مكتبة ألوان مقاسة من مواقع شركات حقيقية، وهي للمقارنة بس. الرخصة ما تعطينا أي حق في أسماء هذي الشركات أو شعاراتها أو ألوانها (`TRADEMARKS.md`). وأي خط يقترحه لازم تنفحص رخصته وتنسجل هنا قبل ما نستخدمه.
 
